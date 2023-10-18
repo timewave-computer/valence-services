@@ -373,6 +373,7 @@ fn test_update() {
                     d: "0.5".to_string(),
                 }),
                 max_limit: Some(5000),
+                target_override_strategy: Some(TargetOverrideStrategy::Priority),
             },
         )
         .unwrap();
@@ -407,7 +408,7 @@ fn test_update() {
             max_limit: Decimal::bps(5000),
             last_rebalance: Timestamp::from_seconds(0),
             has_min_balance: true,
-            target_override_strategy: TargetOverrideStrategy::Proportional,
+            target_override_strategy: TargetOverrideStrategy::Priority,
         },
     )
 }

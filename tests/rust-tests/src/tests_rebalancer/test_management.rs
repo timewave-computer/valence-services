@@ -27,6 +27,7 @@ fn test_remove_trustee() {
                 targets: vec![],
                 pid: None,
                 max_limit: None,
+                target_override_strategy: None,
             },
         )
         .unwrap();
@@ -38,7 +39,7 @@ fn test_remove_trustee() {
 }
 
 #[test]
-fn test_note_whitelisted_base_denom() {
+fn test_not_whitelisted_base_denom() {
     let not_whitelisted_base_denom = "not_whitelisted_base_denom".to_string();
     let mut suite = SuiteBuilder::default().build_default();
 
@@ -61,6 +62,7 @@ fn test_note_whitelisted_base_denom() {
                 targets: vec![],
                 pid: None,
                 max_limit: None,
+                target_override_strategy: None,
             },
         )
         .unwrap_err()
@@ -94,6 +96,7 @@ fn test_multiple_min_balance_on_update() {
                 targets: data.targets,
                 pid: None,
                 max_limit: None,
+                target_override_strategy: None,
             },
         )
         .unwrap_err()
@@ -127,6 +130,7 @@ fn test_not_whitelisted_denom_on_update() {
                 targets: data.targets,
                 pid: None,
                 max_limit: None,
+                target_override_strategy: None,
             },
         )
         .unwrap_err()
@@ -160,6 +164,7 @@ fn test_invalid_targets_perc_on_update() {
                 targets: data.targets,
                 pid: None,
                 max_limit: None,
+                target_override_strategy: None,
             },
         )
         .unwrap_err()

@@ -15,7 +15,7 @@ pub enum RebalancerExecuteMsg<A = RebalancerData, B = RebalancerUpdateData> {
 
 #[cw_serde]
 pub struct RebalancerData {
-  /// The trustee address that can pause/resume the service
+    /// The trustee address that can pause/resume the service
     pub trustee: Option<String>,
     /// Base denom we will be calculating everything based on
     pub base_denom: String,
