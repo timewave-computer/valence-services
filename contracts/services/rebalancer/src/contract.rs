@@ -120,7 +120,7 @@ pub fn execute(
             }
             if total_bps != 10000 {
                 return Err(ContractError::InvalidTargetPercentage(
-                  total_bps.to_string(),
+                    total_bps.to_string(),
                 ));
             }
 
@@ -192,6 +192,10 @@ pub fn execute(
 
             if let Some(max_limit) = data.max_limit {
                 config.max_limit = Decimal::bps(max_limit);
+            }
+
+            if let Some(target_override_strategy) = data.target_override_strategy {
+                config.target_override_strategy = target_override_strategy;
             }
 
             CONFIGS.save(deps.storage, account, &config)?;
