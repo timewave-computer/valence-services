@@ -120,7 +120,7 @@ pub fn execute(
             }
             if total_bps != 10000 {
                 return Err(ContractError::InvalidTargetPercentage(
-                    Decimal::bps(total_bps).to_string(),
+                  total_bps.to_string(),
                 ));
             }
 

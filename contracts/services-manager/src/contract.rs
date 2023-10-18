@@ -158,18 +158,6 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    // Tick messages are dispatched with reply ID 0 and reply on
-    // error. If an error occurs, we ignore it but stop the parent
-    // message from failing, so the state change which moved the tick
-    // receiver to the end of the message queue gets committed. This
-    // prevents an erroring tick receiver from locking the clock.
-    // if msg.id != 0 {
-    //     Err(ContractError::UnexpectedReplyId(msg.id))
-    // } else {
-    //     Ok(Response::default()
-    //         .add_attribute("method", "reply_on_error")
-    //         .add_attribute("error", msg.result.unwrap_err()))
-    // }
     unimplemented!()
 }
 

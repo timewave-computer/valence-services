@@ -15,11 +15,17 @@ pub enum RebalancerExecuteMsg<A = RebalancerData, B = RebalancerUpdateData> {
 
 #[cw_serde]
 pub struct RebalancerData {
+  /// The trustee address that can pause/resume the service
     pub trustee: Option<String>,
+    /// Base denom we will be calculating everything based on
     pub base_denom: String,
+    /// List of targets to rebalance for this account
     pub targets: Vec<Target>,
+    /// PID parameters the account want to calculate the rebalance with
     pub pid: PID,
+    /// The max limit in percentage the rebalancer is allowed to sell in cycle
     pub max_limit: Option<u64>, // BPS
+    /// The strategy to use when overriding targets
     pub target_override_strategy: TargetOverrideStrategy,
 }
 
