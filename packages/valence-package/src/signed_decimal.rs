@@ -14,6 +14,16 @@ use cosmwasm_schema::{
 };
 use cosmwasm_std::{Decimal, StdError, Uint128};
 
+/// A helper struct to have a signed decimal
+/// This allows us to keep track if the number is positive or negative
+///
+/// Our usecse / example:
+/// In the rebalancer, when we are doing the rebalance calculation, we can either have
+/// a positive number or a negetive number.
+/// positive number means we need to buy the asset, while negetive menas we need to sell.
+///
+/// This struct makes it easier for us to do the calculation, and act upon the sign only after
+/// the calculation is done, in order to know if we should buy or sell.
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, JsonSchema, Debug)]
 #[schemars(crate = "::cosmwasm_schema::schemars")]
 pub struct SignedDecimal(pub Decimal, pub bool);

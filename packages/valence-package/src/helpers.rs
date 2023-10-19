@@ -9,12 +9,22 @@ use crate::{
     states::{ADMIN, SERVICES_MANAGER},
 };
 
+/// An optional helper for Option, for when we need to update an optional field in storage.
+/// Ex:
+/// We want to update an optional field in storage: `sample: Option<String>`
+/// but we also want to have it optional on the update message: `sample: Option<OptionalField<String>>`
+///
+/// This allows us to have 3 options:
+/// 1. None: Do nothing, keep storage as is.
+/// 2. Some(OptionalField::Clear): Clear the field in storage and set it to None.
+/// 3. Some(OptionalField::Set(value)): Set the field in storage to Some(value)
 #[cw_serde]
 pub enum OptionalField<T> {
     Set(T),
     Clear,
 }
 
+/// Price helper struct, allow us to have a price and denom in a single struct.
 #[cw_serde]
 pub struct Price {
     pub denom: String,
@@ -34,6 +44,7 @@ pub fn forward_to_services_manager(
     Ok(Response::default().add_message(msg))
 }
 
+/// Verify the sender address is a service
 pub fn sender_is_a_service(
     deps: DepsMut,
     info: &MessageInfo,
@@ -51,6 +62,7 @@ pub fn sender_is_a_service(
     }
 }
 
+/// Verify the sender is the admin of the contract
 pub fn verify_admin(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> {
     if ADMIN.load(deps.storage)? != info.sender {
         return Err(ValenceError::NotAdmin {});
@@ -58,6 +70,7 @@ pub fn verify_admin(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> 
     Ok(())
 }
 
+/// Verify the sender is the services manager
 pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> {
     if SERVICES_MANAGER.load(deps.storage)? != info.sender {
         return Err(ValenceError::NotServicesManager {});
@@ -65,6 +78,7 @@ pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), Val
     Ok(())
 }
 
+/// Get the timestomt of the start of the day (00:00 midnight)
 pub fn start_of_day(time: Timestamp) -> Timestamp {
     let leftover = time.seconds() % (60 * 60 * 24); // How much leftover from the start of the day (mid night UTC)
     time.minus_seconds(leftover)

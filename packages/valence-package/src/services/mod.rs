@@ -17,7 +17,9 @@ pub enum GeneralServiceExecuteMsg<A, B> {}
 /// An enum that represent all services that available for valence accounts
 #[cw_serde]
 pub enum ValenceServices {
+    /// The rebalancer service
     Rebalancer,
+    /// A boilerplate placeholder for a future services
     Test,
 }
 
@@ -180,6 +182,7 @@ impl ValenceServices {
 }
 
 // TODO: make a macro for the below
+/// Turn a string into a ValenceServices enum
 impl FromStr for ValenceServices {
     type Err = ValenceError;
 
@@ -192,6 +195,7 @@ impl FromStr for ValenceServices {
     }
 }
 
+/// Turn a ValenceServices enum into a string
 impl fmt::Display for ValenceServices {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

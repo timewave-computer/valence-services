@@ -22,9 +22,13 @@ pub enum AccountBaseExecuteMsg {}
 #[cw_serde]
 pub enum ServicesManagerExecuteMsg {}
 
+/// Admin messages for services manager
 #[cw_serde]
 pub enum ServicesManagerAdminMsg {
+    /// Add a service to the services manager
     AddService { name: ValenceServices, addr: String },
+    /// Update a service address
     UpdateService { name: ValenceServices, addr: String },
+    /// Delete service from the services manager
     RemoveService { name: ValenceServices },
 }

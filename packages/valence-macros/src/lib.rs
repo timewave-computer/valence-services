@@ -15,22 +15,28 @@ pub fn valence_service_manager_execute_msgs(
 ) -> TokenStream {
     let quote = quote! {
       enum ServiceManagerExecuteMsg {
-          /// Register this account to a service.
+          /// Register sender to a service.
           RegisterToService {
               service_name: ValenceServices,
               data: Option<Binary>,
           },
+          /// Deregister sender from a service.
           DeregisterFromService {
               service_name: ValenceServices,
           },
+          /// Update the config of a service for the sender
           UpdateService {
               service_name: ValenceServices,
               data: Binary,
           },
+          /// Pause service for the pause_for address
+          /// Only callable by the account or the trustee
           PauseService {
               service_name: ValenceServices,
               pause_for: String
           },
+          /// Resume service for the pause_for address
+          /// Only callable by the account or the trustee
           ResumeService {
               service_name: ValenceServices,
               resume_for: String

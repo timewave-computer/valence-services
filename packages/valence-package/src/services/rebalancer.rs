@@ -83,26 +83,38 @@ pub struct RebalancerConfig {
     pub target_override_strategy: TargetOverrideStrategy,
 }
 
+/// The strategy we will use when overriding targets
 #[cw_serde]
 pub enum TargetOverrideStrategy {
     Proportional,
     Priority,
 }
 
+/// The target struct that holds all info about a single denom target
 #[cw_serde]
 pub struct Target {
+    /// The name of the denom
     pub denom: String,
+    /// The percentage of the total balance we want to have in this denom
     pub percentage: u64,
+    /// The minimum balance the account should hold for this denom.
+    /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
 }
 
 /// A parsed target struct that contains all info about a single denom target
 #[cw_serde]
 pub struct ParsedTarget {
+    /// The name of the denom
     pub denom: String,
+    /// The percentage of the total balance we want to have in this denom
     pub percentage: Decimal,
+        /// The minimum balance the account should hold for this denom.
+    /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
+    /// The input we got from the last rebalance.
     pub last_input: Option<Decimal>,
+    /// The last I value we got from the last rebalance PID calculation.
     pub last_i: SignedDecimal,
 }
 
@@ -118,6 +130,7 @@ impl From<Target> for ParsedTarget {
     }
 }
 
+/// The PID parameters we use to calculate the rebalance amounts
 #[cw_serde]
 pub struct PID {
     pub p: String,
