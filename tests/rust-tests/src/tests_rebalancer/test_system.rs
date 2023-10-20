@@ -197,7 +197,7 @@ fn test_register() {
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
         err,
-        rebalancer::error::ContractError::InvalidTargetPercentage("1.1".to_string())
+        rebalancer::error::ContractError::InvalidTargetPercentage("11000".to_string())
     );
 }
 

@@ -3,6 +3,7 @@ members = [
   "packages/*",
   "contracts/services/*",
   "contracts/services-manager/",
+  "contracts/account/",
   "tests/rust-tests",
 ]
 
@@ -10,7 +11,7 @@ members = [
 edition    = "2021"
 license    = "BSD-3"
 version    = "0.1.0"
-repository = "https://github.com/timewave-computer/rebalancer"
+repository = "https://github.com/timewave-computer/valence-services"
 
 rust-version = "1.66"
 
@@ -27,7 +28,7 @@ rpath            = false
 
 [workspace.dependencies]
 # Contracts
-valence-account  = { git = "ssh://git@github.com/timewave-computer/valence-account.git", branch = "main", package = "valence-account" }
+valence-account  = { path = "contracts/account" }
 rebalancer       = { path = "contracts/services/rebalancer" }
 services-manager = { path = "contracts/services-manager" }
 
