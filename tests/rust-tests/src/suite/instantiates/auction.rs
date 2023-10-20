@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use auction_package::{helpers::ChainHaltConfig, AuctionStrategy, Pair, PriceFreshnessStrategy};
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::Decimal;
 
 use crate::suite::suite::{ATOM, NTRN, OSMO};
 
@@ -23,7 +23,6 @@ impl AuctionInstantiate {
 
     pub fn atom_ntrn() -> Self {
         Self::new(
-            Uint128::new(5_u128),
             Pair(ATOM.to_string(), NTRN.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -34,7 +33,6 @@ impl AuctionInstantiate {
 
     pub fn atom_osmo() -> Self {
         Self::new(
-            Uint128::new(5_u128),
             Pair(ATOM.to_string(), OSMO.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -45,7 +43,6 @@ impl AuctionInstantiate {
 
     pub fn ntrn_atom() -> Self {
         Self::new(
-            Uint128::new(10_u128),
             Pair(NTRN.to_string(), ATOM.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -56,7 +53,6 @@ impl AuctionInstantiate {
 
     pub fn osmo_atom() -> Self {
         Self::new(
-            Uint128::new(10_u128),
             Pair(OSMO.to_string(), ATOM.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -67,7 +63,6 @@ impl AuctionInstantiate {
 
     pub fn osmo_ntrn() -> Self {
         Self::new(
-            Uint128::new(10_u128),
             Pair(OSMO.to_string(), NTRN.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -78,7 +73,6 @@ impl AuctionInstantiate {
 
     pub fn ntrn_osmo() -> Self {
         Self::new(
-            Uint128::new(10_u128),
             Pair(NTRN.to_string(), OSMO.to_string()),
             AuctionStrategy {
                 start_price_perc: 2000,
@@ -87,10 +81,9 @@ impl AuctionInstantiate {
         )
     }
 
-    pub fn new(min_auction_amount: Uint128, pair: Pair, auction_strategy: AuctionStrategy) -> Self {
+    pub fn new(pair: Pair, auction_strategy: AuctionStrategy) -> Self {
         Self {
             msg: auction::msg::InstantiateMsg {
-                min_auction_amount,
                 pair,
                 auction_strategy,
                 chain_halt_config: ChainHaltConfig {
@@ -106,10 +99,6 @@ impl AuctionInstantiate {
     }
 
     /* Change functions */
-    pub fn change_min_amount(&mut self, min_auction_amount: Uint128) {
-        self.msg.min_auction_amount = min_auction_amount;
-    }
-
     pub fn change_pair(&mut self, pair: Pair) {
         self.msg.pair = pair;
     }
