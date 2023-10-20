@@ -27,20 +27,20 @@ rpath            = false
 
 [workspace.dependencies]
 # Contracts
-valence-account  = { git = "ssh://git@github.com/timewave-computer/valence-account.git", branch = "dev", package = "valence-account" }
+valence-account  = { git = "ssh://git@github.com/timewave-computer/valence-account.git", branch = "main", package = "valence-account" }
 rebalancer       = { path = "contracts/services/rebalancer" }
 services-manager = { path = "contracts/services-manager" }
 
 # Auction related packages/contracts
-# auction-package  = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main2", package = "auction-package" }
-# auctions-manager = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main2", package = "auctions-manager" }
-# auction          = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main2", package = "auction" }
-# price-oracle           = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main2", package = "price-oracle" }
+auction-package  = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction-package" }
+auctions-manager = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auctions-manager" }
+auction          = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction" }
+price-oracle     = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "price-oracle" }
 
-auction-package  = { path = "../auction/packages/auction-package" }
-auctions-manager = { path = "../auction/contracts/auctions_manager" }
-auction          = { path = "../auction/contracts/auction" }
-price-oracle     = { path = "../auction/contracts/price_oracle" }
+# auction-package  = { path = "../auction/packages/auction-package" }
+# auctions-manager = { path = "../auction/contracts/auctions_manager" }
+# auction          = { path = "../auction/contracts/auction" }
+# price-oracle     = { path = "../auction/contracts/price_oracle" }
 
 # packages
 valence-macros  = { path = "packages/valence-macros" }

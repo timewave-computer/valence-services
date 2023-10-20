@@ -1,7 +1,7 @@
 [package]
 name         = "services-manager"
 authors      = ["Art3miX <r3mix.il@gmail.com>"]
-description  = "A clock that advances the covenant state machine."
+description  = "A manager contract for services"
 edition      = { workspace = true }
 license      = { workspace = true }
 rust-version = { workspace = true }
