@@ -13,7 +13,7 @@ use crate::helpers::{get_service_addr, save_service};
 use crate::msg::{InstantiateMsg, MigrateMsg};
 use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
-const CONTRACT_NAME: &str = "crates.io:covenant-clock";
+const CONTRACT_NAME: &str = "crates.io:services-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -17,7 +17,7 @@ use crate::state::{
     SYSTEM_REBALANCE_STATUS,
 };
 
-const CONTRACT_NAME: &str = "crates.io:covenant-clock";
+const CONTRACT_NAME: &str = "crates.io:rebalancer";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // TODO: Make cycle period configurable
