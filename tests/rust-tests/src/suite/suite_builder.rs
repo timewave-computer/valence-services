@@ -444,6 +444,7 @@ impl SuiteBuilder {
             rebalancer_addr,
             account_addrs,
             _auction_addrs,
+            pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
         }
     }
 

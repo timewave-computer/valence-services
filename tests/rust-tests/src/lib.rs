@@ -5,3 +5,6 @@ mod suite;
 mod test_service_management;
 #[cfg(test)]
 mod tests_rebalancer;
+
+#[cfg(test)]
+mod tests_auctions;

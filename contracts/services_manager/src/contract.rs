@@ -101,7 +101,6 @@ mod admin {
 
     use super::*;
 
-    #[cfg_attr(not(feature = "library"), entry_point)]
     pub fn handle_msg(
         deps: DepsMut,
         _env: Env,

@@ -22,11 +22,12 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 [[package]]
 name = "auction"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -37,7 +38,6 @@ dependencies = [
 [[package]]
 name = "auction-package"
 version = "0.0.1"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -49,12 +49,13 @@ dependencies = [
 [[package]]
 name = "auctions-manager"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -714,11 +715,12 @@ dependencies = [
 [[package]]
 name = "price-oracle"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -1159,6 +1161,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
+ "cw-storage-plus",
  "price-oracle",
  "rebalancer",
  "rgb",

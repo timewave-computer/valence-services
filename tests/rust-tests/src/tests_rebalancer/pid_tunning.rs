@@ -184,7 +184,7 @@ fn terminal_play() {
                 } else if info[0] == "set_price" {
                     let new_price = info[1];
 
-                    suite.change_price(&pair, Some(Decimal::from_str(new_price).unwrap()))
+                    suite.update_price(&pair, Some(Decimal::from_str(new_price).unwrap())).unwrap();
                 } else {
                     println!("Command wasn't recognized");
                     continue;

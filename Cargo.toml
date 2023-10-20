@@ -2,8 +2,9 @@
 members = [
   "packages/*",
   "contracts/services/*",
-  "contracts/services-manager/",
+  "contracts/services_manager/",
   "contracts/account/",
+  "contracts/auction/*",
   "tests/rust-tests",
 ]
 
@@ -28,24 +29,19 @@ rpath            = false
 
 [workspace.dependencies]
 # Contracts
-valence-account  = { path = "contracts/account" }
-rebalancer       = { path = "contracts/services/rebalancer" }
-services-manager = { path = "contracts/services-manager" }
+valence-account  = { path = "contracts/account", features = ["library"] }
+rebalancer       = { path = "contracts/services/rebalancer", features = ["library"] }
+services-manager = { path = "contracts/services_manager", features = ["library"] }
 
-# Auction related packages/contracts
-auction-package  = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction-package" }
-auctions-manager = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auctions-manager" }
-auction          = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction" }
-price-oracle     = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "price-oracle" }
-
-# auction-package  = { path = "../auction/packages/auction-package" }
-# auctions-manager = { path = "../auction/contracts/auctions_manager" }
-# auction          = { path = "../auction/contracts/auction" }
-# price-oracle     = { path = "../auction/contracts/price_oracle" }
+# Auction related contracts
+auctions-manager = { path = "contracts/auction/auctions_manager", features = ["library"] }
+auction          = { path = "contracts/auction/auction", features = ["library"] }
+price-oracle     = { path = "contracts/auction/price_oracle", features = ["library"] }
 
 # packages
 valence-macros  = { path = "packages/valence-macros" }
 valence-package = { path = "packages/valence-package" }
+auction-package = { path = "packages/auction-package" }
 
 # the sha2 version here is the same as the one used by
 # cosmwasm-std. when bumping cosmwasm-std, this should also be
