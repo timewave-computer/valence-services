@@ -22,10 +22,10 @@ fi
 EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
 
 ## You can change value manually and uncomment it here
-PAIR='[\"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\", \"ujunox\"]'
-AUCTION_STRATEGY='{ \"start_price_perc\": 2000, \"end_price_perc\": 2000 }'
-CHAIN_HALT='{ \"cap\": "14400", \"block_avg\": "3" }'
-PRICE_FRESHNESS='{ \"limit\": "3", \"multipliers\": [[\"2\", \"2\"], [\"1\", \"1.5\"]] }'
+PAIR='["ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "ujunox"]'
+AUCTION_STRATEGY='{ "start_price_perc": 2000, "end_price_perc": 2000 }'
+CHAIN_HALT='{ "cap": "14400", "block_avg": "3" }'
+PRICE_FRESHNESS='{ "limit": "3", "multipliers": [["2", "2"], ["1", "1.5"]] }'
 
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -37,7 +37,7 @@ while [[ "$#" -gt 0 ]]; do
     AUCTION_STRATEGY="$2"
     shift
     ;;
-  -chc | --chain-halt)
+  -ch | --chain-halt)
     CHAIN_HALT="$2"
     shift
     ;;
@@ -54,10 +54,10 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 execute_msg=$(jq -n \
-  --arg pair "$PAIR" \
-  --arg auction_strategy "$AUCTION_STRATEGY" \
-  --arg chain_halt_config "$CHAIN_HALT" \
-  --arg price_freshness_strategy "$PRICE_FRESHNESS" \
+  --argjson pair "$PAIR" \
+  --argjson auction_strategy "$AUCTION_STRATEGY" \
+  --argjson chain_halt_config "$CHAIN_HALT" \
+  --argjson price_freshness_strategy "$PRICE_FRESHNESS" \
   '{admin: {
       new_auction: {
         msg: {

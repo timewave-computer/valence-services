@@ -1,8 +1,8 @@
 #!/bin/bash
 
-COMMAND=$1
-shift
 CHAIN=$1
+shift
+COMMAND=$1
 shift
 
 if [[ "$CHAIN" == 'juno' ]]; then
@@ -91,6 +91,10 @@ elif [[ "$COMMAND" == 'auctions-manager' ]]; then
 ################## Rebalancer ##################
 ################################################
 elif [[ "$COMMAND" == 'rebalancer' ]]; then
+
+  if [ -z "$ADDR_SERVICES_MANAGER" ]; then echo "[ERROR] Services manager address is missing for $CHAIN" && exit 1; fi
+  if [ -z "$ADDR_AUCTIONS_MANAGER" ]; then echo "[ERROR] Auctions manager address is missing for $CHAIN" && exit 1; fi
+
   init_msg=$(jq -n \
     --arg services_manager_addr "$ADDR_SERVICES_MANAGER" \
     --arg auctions_manager_addr "$ADDR_AUCTIONS_MANAGER" \

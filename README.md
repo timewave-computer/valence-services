@@ -46,6 +46,7 @@ junod keys add valence-owner --recover
 #### Auctions
 
 - (ujunox, usdc) - `juno1yhgtfm5pl6vk8ll0tr999aj5954cyhmuf5a0ppqxgp28uy4tlw9sgyxdzh`
+- (usdc, ujunox) - `juno10glh9r7rh4shhn6tfkz0254m8r8h0pedht6s2u8zkymucn9m9ykqztf64a`
 
 # FIGMA
 
