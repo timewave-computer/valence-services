@@ -18,8 +18,8 @@ use crate::msg::{
     ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, MigrateMsg, NewAuctionParams, QueryMsg,
 };
 use crate::state::{
-    ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_IDS,
-    AUCTION_STRATEGY, AUCTION_FUNDS, AUCTION_FUNDS_SUM,
+    ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_FUNDS,
+    AUCTION_FUNDS_SUM, AUCTION_IDS, AUCTION_STRATEGY,
 };
 
 const CONTRACT_NAME: &str = "crates.io:auction";
@@ -454,7 +454,9 @@ fn clean_auction(deps: DepsMut) -> Result<Response, ContractError> {
     let curr_auction_id = AUCTION_IDS.load(deps.storage)?.curr;
 
     // Clean the funds at the id of ended auction
-    AUCTION_FUNDS.prefix(curr_auction_id).clear(deps.storage, None);
+    AUCTION_FUNDS
+        .prefix(curr_auction_id)
+        .clear(deps.storage, None);
     // Clean the funds sum
     AUCTION_FUNDS_SUM.remove(deps.storage, curr_auction_id);
 

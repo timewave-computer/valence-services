@@ -12,35 +12,37 @@ use crate::suite::{
 #[test]
 fn test_instantiate_auction_manager() {
     let mut builder = SuiteBuilder::default();
-    let (mut app, suite_builder) = builder.setup();
+    let mut app = builder.set_app();
+    builder.upload_contracts(&mut app);
 
-    let manager_addr = suite_builder.init_manager(
+    let manager_addr = builder.init_auctions_manager(
         app.borrow_mut(),
-        AuctionsManagerInstantiate::default(suite_builder.auction_code_id).into(),
+        AuctionsManagerInstantiate::default(builder.auction_code_id).into(),
     );
 
     let admin_addr = SuiteBuilder::query_wasm_raw_item(&app, manager_addr.clone(), ADMIN);
-    assert_eq!(admin_addr, suite_builder.admin);
+    assert_eq!(admin_addr, builder.admin);
 
     let auction_code_id = SuiteBuilder::query_wasm_raw_item(
         &app,
         manager_addr,
         auctions_manager::state::AUCTION_CODE_ID,
     );
-    assert_eq!(auction_code_id, suite_builder.auction_code_id);
+    assert_eq!(auction_code_id, builder.auction_code_id);
 }
 
 #[test]
 fn test_instantiate_oracle() {
     let mut builder = SuiteBuilder::default();
-    let (mut app, suite_builder) = builder.setup();
+    let mut app = builder.set_app();
+    builder.upload_contracts(&mut app);
 
-    let manager_addr = suite_builder.init_manager(
+    let manager_addr = builder.init_auctions_manager(
         app.borrow_mut(),
-        AuctionsManagerInstantiate::default(suite_builder.auction_code_id).into(),
+        AuctionsManagerInstantiate::default(builder.auction_code_id).into(),
     );
 
-    let oracle_addr = suite_builder.init_oracle(
+    let oracle_addr = builder.init_oracle(
         app.borrow_mut(),
         OracleInstantiate::default(manager_addr.clone()).into(),
     );
@@ -49,7 +51,7 @@ fn test_instantiate_oracle() {
     assert_eq!(
         config,
         price_oracle::state::Config {
-            admin: suite_builder.admin.clone(),
+            admin: builder.admin.clone(),
             auction_manager_addr: manager_addr,
         }
     )
@@ -60,12 +62,13 @@ fn test_instantiate_auction() {
     let mut suite = SuiteBuilder::default().build_basic();
 
     let init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
-    suite.init_auction(init_msg.clone(), None);
+    suite.init_auction(suite.pair.clone(), init_msg.clone(), None);
 
-    let admin = SuiteBuilder::query_wasm_raw_item(&suite.app, suite.auction_addr.clone(), ADMIN);
-    assert_eq!(admin, suite.manager_addr);
+    let admin =
+        SuiteBuilder::query_wasm_raw_item(&suite.app, suite.get_default_auction_addr(), ADMIN);
+    assert_eq!(admin, suite.auctions_manager_addr);
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert_eq!(
         config,
         auction_package::helpers::AuctionConfig {

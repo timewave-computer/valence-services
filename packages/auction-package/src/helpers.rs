@@ -18,7 +18,7 @@ pub struct GetPriceResponse {
 
 #[cw_serde]
 pub struct ChainHaltConfig {
-  /// Time in seconds of how much of a halt we accept
+    /// Time in seconds of how much of a halt we accept
     pub cap: u128,
     /// seconds each block is generated
     pub block_avg: Decimal,

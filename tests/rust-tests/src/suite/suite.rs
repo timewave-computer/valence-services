@@ -41,7 +41,7 @@ pub(crate) struct Suite {
     pub manager_addr: Addr,
     pub rebalancer_addr: Addr,
     pub account_addrs: Vec<Addr>,
-    pub _auction_addrs: HashMap<(String, String), String>,
+    pub auction_addrs: HashMap<(String, String), Addr>,
     /// Used mainly for auction tests, a default pair of (ATOM, NTRN)
     pub pair: Pair,
 }

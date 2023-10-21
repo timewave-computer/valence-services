@@ -21,7 +21,7 @@ pub const FUNDS_PROVIDER3: &str = "funds_provider3";
 pub const MM: &str = "market_maker";
 
 pub const DEFAULT_BLOCK_TIME: u64 = 4;
-pub const DEFAULT_PRICE_BPS: u64 = 15000;
+
 
 pub const DAY: u64 = 60 * 60 * 24;
 pub const HALF_DAY: u64 = 60 * 60 * 12;
@@ -68,36 +68,6 @@ impl Suite {}
 
 // Execute Auction
 impl Suite {
-    pub fn auction_funds(&mut self, user: Option<Addr>, amount: &[Coin]) -> &mut Self {
-        self.app
-            .execute_contract(
-                user.unwrap_or(self.funds_provider.clone()),
-                self.auction_addr.clone(),
-                &auction::msg::ExecuteMsg::AuctionFunds,
-                amount,
-            )
-            .unwrap();
-
-        self
-    }
-
-    pub fn auction_funds_err(
-        &mut self,
-        user: Option<Addr>,
-        amount: &[Coin],
-    ) -> auction::error::ContractError {
-        self.app
-            .execute_contract(
-                user.unwrap_or(self.funds_provider.clone()),
-                self.auction_addr.clone(),
-                &auction::msg::ExecuteMsg::AuctionFunds,
-                amount,
-            )
-            .unwrap_err()
-            .downcast()
-            .unwrap()
-    }
-
     pub fn start_auction(&mut self, start_block: Option<u64>, end_block: u64) -> &mut Self {
         self.app
             .execute_contract(

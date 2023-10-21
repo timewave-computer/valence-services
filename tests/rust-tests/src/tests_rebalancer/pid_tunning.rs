@@ -83,7 +83,7 @@ fn pid_tunning_stable() {
     let (config, mut suite, pair) = setup();
 
     for x in 1..100 {
-        let price = suite.get_price(&pair);
+        let price = suite.get_price(pair.clone());
         let (atom_target, ntrn_target) = get_traget(&suite, config.clone(), price);
 
         println!("\n{}", format!("Step: {x}").underline());
@@ -184,7 +184,9 @@ fn terminal_play() {
                 } else if info[0] == "set_price" {
                     let new_price = info[1];
 
-                    suite.update_price(&pair, Some(Decimal::from_str(new_price).unwrap())).unwrap();
+                    suite
+                        .update_price(pair.clone(), Some(Decimal::from_str(new_price).unwrap()))
+                        .unwrap();
                 } else {
                     println!("Command wasn't recognized");
                     continue;
@@ -198,28 +200,28 @@ fn terminal_play() {
         // Do price changes every X days
         if x % 100 == 0 && x % 200 != 0 {
             suite.change_price_perc(
-                &pair,
+                pair.clone(),
                 SignedDecimal(Decimal::from_str("0.05").unwrap(), true),
             );
         } else if x % 20 == 0 {
             suite.change_price_perc(
-                &pair,
+                pair.clone(),
                 SignedDecimal(Decimal::from_str("0.10").unwrap(), false),
             );
         } else if x % 5 == 0 {
             suite.change_price_perc(
-                &pair,
+                pair.clone(),
                 SignedDecimal(Decimal::from_str("0.02").unwrap(), false),
             );
         } else {
             suite.change_price_perc(
-                &pair,
+                pair.clone(),
                 SignedDecimal(Decimal::from_str("0.01").unwrap(), true),
             );
         }
 
         // Get values before rebalance
-        let price = suite.get_price(&pair);
+        let price = suite.get_price(pair.clone());
         let (atom_target, ntrn_target) = get_traget(&suite, config.clone(), price);
 
         // Clear terminal to see nicer
@@ -319,7 +321,7 @@ fn pid_tunning_balance_vary() {
     let (config, mut suite, pair) = setup();
 
     for x in 1..200 {
-        let price = suite.get_price(&pair);
+        let price = suite.get_price(pair.clone());
         let (atom_target, ntrn_target) = get_traget(&suite, config.clone(), price);
         let _balance: Coin = suite.get_balance(0, ATOM);
 

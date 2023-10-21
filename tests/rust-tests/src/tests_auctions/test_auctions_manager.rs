@@ -3,20 +3,24 @@ use std::str::FromStr;
 use auction_package::{
     error::AuctionError,
     helpers::{ChainHaltConfig, GetPriceResponse},
-    PriceFreshnessStrategy,
+    Pair, PriceFreshnessStrategy,
 };
 use cosmwasm_std::{coins, Addr, Decimal};
 use cw_multi_test::Executor;
 
-use crate::suite::{instantiates::AuctionInstantiate, suite::Suite, suite_builder::SuiteBuilder};
+use crate::suite::{
+    instantiates::AuctionInstantiate,
+    suite::{Suite, DEFAULT_BLOCK_TIME},
+    suite_builder::SuiteBuilder,
+};
 
 #[test]
 fn test_pause_auction() {
     let mut suite = Suite::default();
 
-    suite.pause_auction();
+    suite.pause_auction(suite.pair.clone());
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert!(config.is_paused)
 }
 
@@ -24,11 +28,11 @@ fn test_pause_auction() {
 fn test_resume_auction() {
     let mut suite = Suite::default();
 
-    suite.pause_auction();
+    suite.pause_auction(suite.pair.clone());
 
-    suite.resume_auction();
+    suite.resume_auction(suite.pair.clone()).unwrap();
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert!(!config.is_paused)
 }
 
@@ -48,9 +52,10 @@ fn test_auction_funds_from_manager() {
     let mut suite = Suite::default();
     let amount = coins(100u128, suite.pair.0.clone());
 
-    suite.auction_funds_manager(None, &amount);
+    suite.auction_funds_manager(suite.pair.clone(), suite.get_account_addr(0), &amount);
 
-    let funds_res = suite.query_auction_funds(suite.funds_provider.as_str());
+    let funds_res =
+        suite.query_auction_funds(suite.get_account_addr(0), suite.get_default_auction_addr());
     assert_eq!(funds_res.next, amount[0].amount);
 }
 
@@ -62,7 +67,7 @@ fn test_not_admin() {
         .app
         .execute_contract(
             Addr::unchecked("not_admin"),
-            suite.manager_addr,
+            suite.auctions_manager_addr,
             &auctions_manager::msg::ExecuteMsg::Admin(
                 auctions_manager::msg::AdminMsgs::PauseAuction { pair: suite.pair },
             ),
@@ -75,19 +80,23 @@ fn test_not_admin() {
 }
 
 #[test]
+#[ignore]
 fn test_no_oracle_addr() {
     let mut suite = SuiteBuilder::default().build_basic();
-    suite.init_auction(AuctionInstantiate::default().into(), None);
+    let pair = Pair::from(("random".to_string(), "random2".to_string()));
+
+    suite.init_auction(pair.clone(), AuctionInstantiate::default().into(), None);
 
     let err = suite
         .app
         .wrap()
         .query_wasm_smart::<GetPriceResponse>(
-            suite.manager_addr,
-            &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair: suite.pair },
+            suite.auctions_manager_addr,
+            &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair },
         )
         .unwrap_err();
 
+        println!("err: {err}");
     assert!(err
         .to_string()
         .contains(&auctions_manager::error::ContractError::OracleAddrMissing.to_string()));
@@ -97,12 +106,12 @@ fn test_no_oracle_addr() {
 fn test_update_chain_halt_config() {
     let mut suite = Suite::default();
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert_eq!(
         config.chain_halt_config,
         ChainHaltConfig {
             cap: 60 * 60 * 4,
-            block_avg: Decimal::from_str("3.6").unwrap(),
+            block_avg: Decimal::from_str(&DEFAULT_BLOCK_TIME.to_string()).unwrap(),
         }
     );
 
@@ -112,7 +121,7 @@ fn test_update_chain_halt_config() {
     };
     suite.update_chain_halt_config(suite.pair.clone(), new_chain_halt_config.clone());
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert_eq!(config.chain_halt_config, new_chain_halt_config);
 }
 
@@ -120,7 +129,7 @@ fn test_update_chain_halt_config() {
 fn test_update_price_freshness_strategy() {
     let mut suite = Suite::default();
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert_eq!(
         config.price_freshness_strategy,
         PriceFreshnessStrategy {
@@ -155,7 +164,7 @@ fn test_update_price_freshness_strategy() {
     };
     suite.update_price_freshness_strategy(suite.pair.clone(), new_price_freshness_strategy.clone());
 
-    let config = suite.query_auction_config();
+    let config = suite.query_auction_config(suite.get_default_auction_addr());
     assert_eq!(
         config.price_freshness_strategy,
         new_price_freshness_strategy

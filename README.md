@@ -48,10 +48,14 @@ junod keys add valence-owner --recover
 - (ujunox, usdc) - `juno1yhgtfm5pl6vk8ll0tr999aj5954cyhmuf5a0ppqxgp28uy4tlw9sgyxdzh`
 - (usdc, ujunox) - `juno10glh9r7rh4shhn6tfkz0254m8r8h0pedht6s2u8zkymucn9m9ykqztf64a`
 
-# FIGMA
+# FIGMA - flow
 
 1. init a services manager
 2. init a auctions manager
 3. init services (rebalancer)
-4. init account
-5. init auctions
+4. add service to manager
+5. init account
+6. init auctions
+7. init price oracle
+8. set initial prices for auctions
+
