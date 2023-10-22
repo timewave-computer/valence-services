@@ -74,7 +74,7 @@ pub enum TargetOverrideStrategy {
 
 `Priority` - will fulfil the override amount in order of priority. The priority is determined by the order of the targets in the targets list.
 
-Ex: Lets assume we have the next targets
+Example: Lets assume we have the following targets:
 1. Target A - 25%
 2. Target B - 25%
 3. Target C - 50%
