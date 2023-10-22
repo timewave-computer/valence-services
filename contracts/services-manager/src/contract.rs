@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 use valence_package::msgs::core_execute::ServicesManagerExecuteMsg;
@@ -127,6 +127,13 @@ mod admin {
             }
             ServicesManagerAdminMsg::UpdateService { name, addr } => {
                 let addr = deps.api.addr_validate(&addr)?;
+
+                if ADDR_TO_SERVICES.has(deps.storage, addr.clone()) {
+                    return Err(ContractError::ServiceAddressAlreadyExists(addr.to_string()));
+                } else if !SERVICES_TO_ADDR.has(deps.storage, name.to_string()) {
+                    return Err(ContractError::ServiceDoesntExistYet(name.to_string()));
+                }
+
                 save_service(deps, name.to_string(), addr)?;
 
                 Ok(Response::default().add_attribute("method", "update_service"))
@@ -146,12 +153,21 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
     match msg {
         ServicesManagerQueryMsg::IsService { addr } => {
             let is_service = ADDR_TO_SERVICES.has(deps.storage, deps.api.addr_validate(&addr)?);
-            Ok(to_binary(&is_service)?)
+            to_binary(&is_service)
         }
         ServicesManagerQueryMsg::GetServiceAddr { service } => {
             let addr = get_service_addr(deps, service.to_string())
                 .map_err(|e| StdError::GenericErr { msg: e.to_string() })?;
-            Ok(to_binary(&addr)?)
+            to_binary(&addr)
+        }
+        ServicesManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        ServicesManagerQueryMsg::GetAllServices => {
+            let services = SERVICES_TO_ADDR
+                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .map(|item| item.map(|(name, addr)| (name, addr)))
+                .collect::<StdResult<Vec<(String, Addr)>>>()?;
+
+            to_binary(&services)
         }
     }
 }

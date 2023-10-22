@@ -8,9 +8,10 @@ use crate::{
 pub(crate) fn get_service_addr(deps: Deps, service: String) -> Result<Addr, ContractError> {
     SERVICES_TO_ADDR
         .load(deps.storage, service.clone())
-        .map_err(|_| ContractError::ServiceDoesntExists(service.to_string()))
+        .map_err(|_| ContractError::ServiceDoesntExist(service.to_string()))
 }
 
+/// Save given service name and address to storages
 pub(crate) fn save_service(
     deps: DepsMut,
     service: String,
@@ -21,6 +22,7 @@ pub(crate) fn save_service(
     Ok(())
 }
 
+/// Remvoe service from storrages
 pub(crate) fn remove_service(
     deps: DepsMut,
     service: String,

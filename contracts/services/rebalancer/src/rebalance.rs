@@ -13,7 +13,7 @@ use valence_package::{
 };
 
 use crate::{
-    contract::{CYCLE_PERIOD, DEFAULT_LIMIT, REPLY_DEFAULT_REBALANCE},
+    contract::{CYCLE_PERIOD, DEFAULT_SYSTEM_LIMIT, REPLY_DEFAULT_REBALANCE},
     error::ContractError,
     helpers::{TargetHelper, TradesTuple},
     state::{
@@ -28,7 +28,7 @@ pub fn execute_system_rebalance(
     env: &Env,
     limit: Option<u64>,
 ) -> Result<Response, ContractError> {
-    // start_from tells us if we should start form a specific addr or from 0
+    // start_from tells us if we should start form a specific addr or from the begining
     // cycle_start tells us when the cycle started to calculate for processing and finished status
     let (start_from, cycle_start, prices) = match SYSTEM_REBALANCE_STATUS.load(deps.storage)? {
         SystemRebalanceStatus::NotStarted { cycle_start } => {
@@ -43,7 +43,7 @@ pub fn execute_system_rebalance(
             start_from,
             prices,
         } => {
-            if env.block.time > cycle_started.plus_seconds(CYCLE_PERIOD) {
+            if env.block.time >= cycle_started.plus_seconds(CYCLE_PERIOD) {
                 Ok((None, start_of_day(env.block.time), None))
             } else {
                 Ok((Some(start_from), cycle_started, Some(prices)))
@@ -65,10 +65,13 @@ pub fn execute_system_rebalance(
         None => get_prices(deps.borrow_mut(), &auction_manager),
     }?;
 
+    // `start_from` is the last address we looped over in the previous message
+    // if exists we do have an address we should continue from
+    // if its None, then we start the loop from the begining.
     let mut last_addr = start_from.clone();
 
     let start_from = start_from.map(Bound::exclusive);
-    let limit = limit.unwrap_or(DEFAULT_LIMIT);
+    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT);
 
     let mut total_accounts: u64 = 0;
     let mut msgs: Vec<SubMsg> = vec![];
@@ -125,7 +128,7 @@ pub fn execute_system_rebalance(
     } else {
         SystemRebalanceStatus::Processing {
             cycle_started: cycle_start,
-            start_from: last_addr.unwrap_or(Addr::unchecked("")),
+            start_from: last_addr.unwrap(),
             prices,
         }
     };
@@ -172,7 +175,7 @@ pub fn do_rebalance(
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
     // get minimum amount we can send to each auction
-    get_auction_min_amount(deps, auction_manager, &mut to_sell, min_amount_limits)?;
+    set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
     println!("to_sell: {to_sell:?} | to_buy: {to_buy:?}");
     // Generate the trades msgs, how much funds to send to what auction.
     let msgs = generate_trades_msgs(deps, to_sell, to_buy, auction_manager, &config, total_value);
@@ -202,8 +205,10 @@ pub fn do_rebalance(
     Ok((config, msg))
 }
 
-/// Get the min amount an auction is willing to accept for a specific token
-pub(crate) fn get_auction_min_amount(
+/// Set the min amount an auction is willing to accept for a specific token
+/// If we have it in our min_amount_limit list, we take it from there
+/// if not, we query the auction to get the min amount
+pub(crate) fn set_auction_min_amounts(
     deps: Deps,
     auction_manager: &Addr,
     to_sell: &mut Vec<TargetHelper>,

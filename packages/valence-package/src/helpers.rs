@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, Decimal, Deps, DepsMut, MessageInfo, Response, Timestamp, WasmMsg,
+    to_binary, CosmosMsg, Deps, DepsMut, MessageInfo, Response, Timestamp, WasmMsg,
 };
 
 use crate::{
@@ -22,13 +22,6 @@ use crate::{
 pub enum OptionalField<T> {
     Set(T),
     Clear,
-}
-
-/// Price helper struct, allow us to have a price and denom in a single struct.
-#[cw_serde]
-pub struct Price {
-    pub denom: String,
-    pub price: Decimal,
 }
 
 /// Forward the message to the services manager contract.
@@ -58,7 +51,7 @@ pub fn sender_is_a_service(
     )? {
         Ok(())
     } else {
-        Err(ValenceError::UnauthorizedService {})
+        Err(ValenceError::UnauthorizedService)
     }
 }
 

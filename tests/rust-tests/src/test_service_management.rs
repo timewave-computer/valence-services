@@ -129,7 +129,7 @@ fn test_register() {
     // Test a config with changed numbers
     let mut register_data_1 = SuiteBuilder::get_default_rebalancer_register_data();
     register_data_1.trustee = Some(suite.trustee.to_string());
-    register_data_1.max_limit = Some(1000);
+    register_data_1.max_limit_bps = Some(1000);
 
     suite
         .register_to_service(
@@ -187,7 +187,7 @@ fn test_register() {
 
     assert_eq!(
         err,
-        services_manager::error::ContractError::ServiceDoesntExists(
+        services_manager::error::ContractError::ServiceDoesntExist(
             ValenceServices::Test.to_string()
         )
     )

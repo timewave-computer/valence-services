@@ -22,7 +22,9 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // TODO: Make cycle period configurable
 pub const CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
-pub const DEFAULT_LIMIT: u64 = 50;
+/// The default limit of how many accounts we loop over in a single message
+/// If wasn't specified in the message
+pub const DEFAULT_SYSTEM_LIMIT: u64 = 50;
 
 pub const REPLY_DEFAULT_REBALANCE: u64 = 0;
 

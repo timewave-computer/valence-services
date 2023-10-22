@@ -30,8 +30,12 @@ An optional trustee address that is only allowed to pause/resume the rebalancer 
 ### Base Denom
 The base denom this account is calculating the portfolio in. This is the denom that will be used to calculate the portfolio value and the target value.
 
+- Can only be one of the whitelisted denoms.
+
 ### Targets
 A list of targets you want to rebalance into. Each target has a denom and a weight. The weight is the percentage of the portfolio you want to allocate to this target.
+
+- Can only be one of the whitelisted denoms.
 
 ```rust
 pub struct Target {
@@ -41,6 +45,12 @@ pub struct Target {
 }
 ```
 Each target needs to specify what is the denom, the percentage of the portfolio you want to allocate to this target and an optional min balance. The min balance is the minimum amount of funds you want to keep in this target.
+
+### Order of that targets in the list
+The order of the targets is very important mainly for 2 reasons:
+
+1. Calculations happens in order of the targets in the list, so the first target will be calculated first, the higher the target is in the list, the higher the chance it will be rebalanced if limits are reached.
+2. When `TargetOverrideStrategy::Priority` is used (read below), the priority is determined by the order of the targets in the list.
 
 ### PID
 The PID parameters that will be used to calculate the rebalance amount. [Read more about PID](https://en.wikipedia.org/wiki/Proportional%E2%80%93integral%E2%80%93derivative_controller)
@@ -74,16 +84,18 @@ pub enum TargetOverrideStrategy {
 
 `Priority` - will fulfil the override amount in order of priority. The priority is determined by the order of the targets in the targets list.
 
-Ex: Lets assume we have the next targets
-1. Target A - 25%
-2. Target B - 25%
-3. Target C - 50%
+Example: A user has set the following rebalancing targets for tokens with denominations A, B, and C:
 
-Target C has min_balance that is equal to 60% of the portfolio value, this means that we have 40% remaining to allocate to the other targets.
+Target A - 25%, no min_balance
+Target B - 25%, no min_balance
+Target C - 50%, must maintain min_balance of 100 tokens.
+
+Now suppose at one particular rebalancing interval, 100 tokens of the C denomination make up 60% of the total portfolio valuation. This a problem because the user has also required the Rebalancer to maintain 50% cumulatively in token A and B, with 25% of the total portfolio value in denomination A and another 25% in denomination B. Given that it can only maintain a total of 40% of the total value in A and B, what strategy should the Rebalancer pursue to reassign weights in A and B?
 
 If we choose `Proportional` strategy, the 40% will be spread between Target A and Target B based on their weight, so each target will get 20%.
 
 If we choose `Priority` strategy, the 40% will be allocated to Target A and Target B in order of priority, so Target A will get 25% and Target B will get 15%.
+The order of priority is determined by the order of the targets in the targets list.
 
 ## Target's min_balance
 The minimum amount of tokens this target should have in the account, we never rebalance below this amount, and will rebalance to this amount overriding other targets percentage if needed.
