@@ -16,6 +16,7 @@ pub enum ContractError {
     #[error("This address already exists: {0}")]
     ServiceAddressAlreadyExists(String),
 
-    #[error("This services doesn't exists: {0}")]
+    #[error("This services doesn't exist: {0}")]
+    ServiceDoesntExist(String),
     ServiceDoesntExists(String),
 }

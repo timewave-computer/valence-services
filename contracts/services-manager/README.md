@@ -1,8 +1,7 @@
 # Services manager
 
-This is the manager of the services, it keeps track of registered services with their addresses.
+The services manager maintains a registry of services. It allows services users to conveniently access services by their name, rather than by the services' addresses.
 
-It allows everyone to talk in names instead of addresses, so instead of showing a random address, we can use names of services to talk to them.
 
 ## How to use it
 
@@ -27,7 +26,7 @@ RegisterToService {
 
 `ValenceServices` is the name of the service you would like to register to, ex: `"rebalancer"`
 
-`data` - base64 encoded data the service expects upon resgitering to it, some services might not require any data so its optional for those services.
+`data` - base64 encoded data the service expects upon registering to it, some services might not require any data so its optional for those services.
 
 Example:
 
@@ -64,7 +63,7 @@ UpdateService {
 },
 ```
 
-`ValenceServices` is the name of the service you would like to register to, ex: `"rebalancer"`
+`ValenceServices` is the name of the service you would like to update, ex: `"rebalancer"`
 
 `data` - base64 encoded data the service expects for an update of the config.
 
@@ -91,7 +90,7 @@ PauseService {
 }
 ```
 
-`ValenceServices` is the name of the service you would like to register to, ex: `"rebalancer"`
+`ValenceServices` is the name of the service you would like to pause, ex: `"rebalancer"`
 
 `pause_for` - the address of the account you want to pause for, this allows trustee to pause the service for a specific account.
 
@@ -111,7 +110,7 @@ let account_addr = "some_address"
 
 Allows you to resume the service.
 
-- A trustee can only resume the service if it was paused by the trusee, if the account owner paused the service, trustee cannot resume it, only the account owner can.
+- A trustee can only resume the service if it was paused by the trustee, if the account owner paused the service, trustee cannot resume it, only the account owner can.
 
 ```rust
 ResumeService {
@@ -120,7 +119,7 @@ ResumeService {
 }
 ```
 
-`ValenceServices` is the name of the service you would like to register to, ex: `"rebalancer"`
+`ValenceServices` is the name of the service you would like to resume, ex: `"rebalancer"`
 
 `resume_for` - the address of the account you want to resume for, this allows trustee to resume the service for a specific account if it was the trustee who paused it.
 
