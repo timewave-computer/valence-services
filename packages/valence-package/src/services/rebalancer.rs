@@ -109,7 +109,7 @@ pub struct ParsedTarget {
     pub denom: String,
     /// The percentage of the total balance we want to have in this denom
     pub percentage: Decimal,
-        /// The minimum balance the account should hold for this denom.
+    /// The minimum balance the account should hold for this denom.
     /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
     /// The input we got from the last rebalance.

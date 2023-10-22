@@ -143,9 +143,9 @@ pub fn execute(
             let mut config = CONFIGS.load(deps.storage, account.clone())?;
 
             if let Some(trustee) = data.trustee {
-                match trustee {
-                    OptionalField::Set(trustee) => config.trustee = Some(trustee),
-                    OptionalField::Clear => config.trustee = None,
+                config.trustee = match trustee {
+                    OptionalField::Set(trustee) => Some(trustee),
+                    OptionalField::Clear => None,
                 };
             }
 

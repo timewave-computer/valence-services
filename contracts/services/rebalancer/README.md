@@ -7,11 +7,11 @@ This is the rebalancer contract, a single contract where accounts can register t
 1. Create Valence account and deposit funds
 2. Register the account to the rebalancer contract with desired config
 3. The rebalancer will run daily rebalancing the account funds into the desired portfolio based on the PID parameters specified in the config.
-4. You can pause or deregister from the service at anytime.
+4. You or the trustee can pause or deregister from the service at anytime.
 
 ## How to register
 
-Rebalacner expects the next config:
+Rebalancer expects the following config:
 
 ```rust
 pub struct RebalancerData {
@@ -66,12 +66,12 @@ Each parameter is a string that represents a decimal number.
 
 ### Max Limit
 An optional limit of the max amount of tokens we can sell during a single rebalance cycle.
-This is BPS from the total value of your portfolio, so if for example an account has 1000$ in their account, and the max limit is 1000 BPS (10%), the max amount of tokens that can be sold is 100$ (10% of 1000$).
+This is BPS from the total value of your portfolio, so if for example an account has 1000$, and the max limit is 1000 BPS (10%), the max amount of tokens that can be sold is 100$ (10% of 1000$).
 
 ### Target Override Strategy
 In some cases the rebalancer will have to override the target percentage because of other priority settings (like min_balance of a specific target).
 
-This field allow the account to choose what strategy they want to override to go by:
+This field allows the account to choose what strategy to follow when overriding:
 
 ```rust
 pub enum TargetOverrideStrategy {
