@@ -24,7 +24,7 @@ pub struct RebalancerData {
     /// PID parameters the account want to calculate the rebalance with
     pub pid: PID,
     /// The max limit in percentage the rebalancer is allowed to sell in cycle
-    pub max_limit: Option<u64>, // BPS
+    pub max_limit_bps: Option<u64>, // BPS
     /// The strategy to use when overriding targets
     pub target_override_strategy: TargetOverrideStrategy,
 }
@@ -41,7 +41,7 @@ pub struct RebalancerUpdateData {
 
 impl RebalancerData {
     pub fn to_config(self) -> Result<RebalancerConfig, ValenceError> {
-        let max_limit = if let Some(max_limit) = self.max_limit {
+        let max_limit = if let Some(max_limit) = self.max_limit_bps {
             Decimal::bps(max_limit)
         } else {
             Decimal::one()
@@ -75,8 +75,8 @@ pub struct RebalancerConfig {
     pub targets: Vec<ParsedTarget>,
     /// The PID parameters the account want to rebalance with
     pub pid: ParsedPID,
-    /// The max amount of tokens we should sell in 1 trade
-    pub max_limit: Decimal, // BPS
+    /// Percentage from the total balance that we are allowed to sell in 1 rebalance cycle.
+    pub max_limit: Decimal, // percentage
     /// When the last rebalance happened.
     pub last_rebalance: Timestamp,
     pub has_min_balance: bool,

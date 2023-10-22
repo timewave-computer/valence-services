@@ -94,7 +94,7 @@ impl SuiteBuilder {
                 i: DEFAULT_I.to_string(),
                 d: DEFAULT_D.to_string(),
             },
-            max_limit: None,
+            max_limit_bps: None,
             target_override_strategy: TargetOverrideStrategy::Proportional,
         }
     }

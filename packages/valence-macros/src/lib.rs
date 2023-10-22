@@ -166,6 +166,12 @@ pub fn valence_services_manager_query_msgs(
         GetServiceAddr {
             service: ValenceServices,
         },
+        /// Get the admin of the services manager
+        #[returns(Addr)]
+        GetAdmin,
+        /// Get list of all services and their addresses
+        #[returns(Vec<(String, Addr)>)]
+        GetAllServices,
       }
     };
 

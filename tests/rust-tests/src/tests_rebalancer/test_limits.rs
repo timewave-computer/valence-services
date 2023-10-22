@@ -82,7 +82,7 @@ fn test_max_limit() {
         d: "0".to_string(),
     };
     // Set config to have min_balance for ATOM
-    config.max_limit = Some(100); // 1%
+    config.max_limit_bps = Some(100); // 1%
 
     let mut suite = SuiteBuilder::default()
         .with_rebalancer_data(vec![config])

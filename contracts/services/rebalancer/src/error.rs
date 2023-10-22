@@ -37,7 +37,7 @@ pub enum ContractError {
     #[error("Service is not paused")]
     NotPaused,
 
-    #[error("Targets percentage doesn't add to 100%: {0}")]
+    #[error("Targets percentages don't add up to 100%: {0}")]
     InvalidTargetPercentage(String),
 
     #[error("Can't rebalance, cycle not started yet, next: {0}")]
@@ -61,7 +61,7 @@ pub enum ContractError {
     #[error("Account balance is zero")]
     AccountBalanceIsZero,
 
-    #[error("Ivalid rebalance limit, Each base denom must have a limit")]
+    #[error("Invalid rebalance limit, Each base denom must have a limit")]
     InvalidRebalanceLimit,
 
     #[error("Couldn't find minimum amount for this token in auction manager")]
