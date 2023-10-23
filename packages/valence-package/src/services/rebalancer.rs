@@ -65,7 +65,8 @@ pub struct RebalancerUpdateData {
 impl RebalancerData {
     pub fn to_config(self) -> Result<RebalancerConfig, ValenceError> {
         let max_limit = if let Some(max_limit) = self.max_limit_bps {
-            if max_limit > 10000 || max_limit < 1 {
+            // Suggested by clippy to check for a range of 1-10000
+            if !(1..=10000).contains(&max_limit) {
                 return Err(ValenceError::InvalidMaxLimitRange);
             }
 

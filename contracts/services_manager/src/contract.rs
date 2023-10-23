@@ -173,9 +173,7 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
             let service_addr = SERVICES_TO_ADDR.load(deps.storage, "rebalancer".to_string())?;
             let config = deps.querier.query_wasm_smart::<RebalancerConfig>(
                 service_addr,
-                &rebalancer::msg::QueryMsg::GetConfig {
-                    addr: account.clone(),
-                },
+                &rebalancer::msg::QueryMsg::GetConfig { addr: account },
             )?;
 
             to_binary(&config)

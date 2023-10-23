@@ -36,7 +36,7 @@ pub enum AdminMsgs {
         pair: Pair,
     },
     UpdateAuctionId {
-      code_id: u64
+        code_id: u64,
     },
     UpdateStrategy {
         pair: Pair,

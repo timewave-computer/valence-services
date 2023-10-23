@@ -4,7 +4,10 @@ use valence_package::services::{
     ValenceServices,
 };
 
-use crate::suite::{suite::{TRUSTEE, ATOM, NTRN}, suite_builder::SuiteBuilder};
+use crate::suite::{
+    suite::{ATOM, NTRN, TRUSTEE},
+    suite_builder::SuiteBuilder,
+};
 
 #[test]
 fn test_remove_trustee() {
@@ -239,55 +242,63 @@ fn test_update_status() {
 
 #[test]
 fn test_update_whitelist() {
-  let mut suite = SuiteBuilder::default().build_default();
+    let mut suite = SuiteBuilder::default().build_default();
 
-  let whitelist = suite.query_rebalancer_whitelists().unwrap();
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
 
-  // lets make sure the whitelist is what we expect for the tests
-  assert!(whitelist.denom_whitelist.contains(&ATOM.to_string()));
-  assert!(whitelist.denom_whitelist.len() == 3);
-  assert!(whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
-  assert!(whitelist.base_denom_whitelist.len() == 2);
+    // lets make sure the whitelist is what we expect for the tests
+    assert!(whitelist.denom_whitelist.contains(&ATOM.to_string()));
+    assert!(whitelist.denom_whitelist.len() == 3);
+    assert!(whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
+    assert!(whitelist.base_denom_whitelist.len() == 2);
 
-  // remove atom, add random
-  let to_add: Vec<String> = vec!["random".to_string()];
-  let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
+    // remove atom, add random
+    let to_add: Vec<String> = vec!["random".to_string()];
+    let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
 
-  suite.update_rebalancer_denom_whitelist(suite.admin.clone(), to_add, to_remove).unwrap();
+    suite
+        .update_rebalancer_denom_whitelist(suite.admin.clone(), to_add, to_remove)
+        .unwrap();
 
-  let whitelist = suite.query_rebalancer_whitelists().unwrap();
-  assert!(!whitelist.denom_whitelist.contains(&ATOM.to_string()));
-  assert!(!whitelist.denom_whitelist.contains(&NTRN.to_string()));
-  assert!(whitelist.denom_whitelist.len() == 2);
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
+    assert!(!whitelist.denom_whitelist.contains(&ATOM.to_string()));
+    assert!(!whitelist.denom_whitelist.contains(&NTRN.to_string()));
+    assert!(whitelist.denom_whitelist.len() == 2);
 
-  // remove atom, add random
-  let to_add: Vec<String> = vec!["random".to_string()];
-  let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
+    // remove atom, add random
+    let to_add: Vec<String> = vec!["random".to_string()];
+    let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
 
-  suite.update_rebalancer_base_denom_whitelist(suite.admin.clone(), to_add, to_remove).unwrap();
+    suite
+        .update_rebalancer_base_denom_whitelist(suite.admin.clone(), to_add, to_remove)
+        .unwrap();
 
-  let whitelist = suite.query_rebalancer_whitelists().unwrap();
-  assert!(!whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
-  assert!(!whitelist.base_denom_whitelist.contains(&NTRN.to_string()));
-  assert!(whitelist.base_denom_whitelist.len() == 1);
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
+    assert!(!whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
+    assert!(!whitelist.base_denom_whitelist.contains(&NTRN.to_string()));
+    assert!(whitelist.base_denom_whitelist.len() == 1);
 }
 
 #[test]
 fn test_update_addrs() {
-  let mut suite = SuiteBuilder::default().build_default();
+    let mut suite = SuiteBuilder::default().build_default();
 
-  // make sure addresses are correct first
-  let addrs = suite.query_rebalancer_managers().unwrap();
+    // make sure addresses are correct first
+    let addrs = suite.query_rebalancer_managers().unwrap();
 
-  assert_eq!(addrs.services, suite.manager_addr);
-  assert_eq!(addrs.auctions, suite.auctions_manager_addr);
+    assert_eq!(addrs.services, suite.manager_addr);
+    assert_eq!(addrs.auctions, suite.auctions_manager_addr);
 
-  let random_addr = Addr::unchecked("random");
-  suite.update_rebalancer_services_manager_address(suite.admin.clone(), random_addr.clone()).unwrap();
-  suite.update_rebalancer_auctions_manager_address(suite.admin.clone(), random_addr.clone()).unwrap();
+    let random_addr = Addr::unchecked("random");
+    suite
+        .update_rebalancer_services_manager_address(suite.admin.clone(), random_addr.clone())
+        .unwrap();
+    suite
+        .update_rebalancer_auctions_manager_address(suite.admin.clone(), random_addr.clone())
+        .unwrap();
 
-  let addrs = suite.query_rebalancer_managers().unwrap();
+    let addrs = suite.query_rebalancer_managers().unwrap();
 
-  assert_eq!(addrs.services, random_addr);
-  assert_eq!(addrs.auctions, random_addr);
+    assert_eq!(addrs.services, random_addr);
+    assert_eq!(addrs.auctions, random_addr);
 }
