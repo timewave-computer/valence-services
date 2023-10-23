@@ -6,6 +6,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use valence_package::msgs::core_execute::ServicesManagerExecuteMsg;
 use valence_package::msgs::core_query::ServicesManagerQueryMsg;
+use valence_package::services::rebalancer::RebalancerConfig;
 use valence_package::states::ADMIN;
 
 use crate::error::ContractError;
@@ -167,6 +168,17 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
                 .collect::<StdResult<Vec<(String, Addr)>>>()?;
 
             to_binary(&services)
+        }
+        ServicesManagerQueryMsg::GetRebalancerConfig { account } => {
+            let service_addr = SERVICES_TO_ADDR.load(deps.storage, "rebalancer".to_string())?;
+            let config = deps.querier.query_wasm_smart::<RebalancerConfig>(
+                service_addr,
+                &rebalancer::msg::QueryMsg::GetConfig {
+                    addr: account.clone(),
+                },
+            )?;
+
+            to_binary(&config)
         }
     }
 }
