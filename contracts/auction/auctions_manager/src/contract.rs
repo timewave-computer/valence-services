@@ -151,11 +151,6 @@ mod admin {
 
                 Ok(Response::default().add_message(msg))
             }
-            AdminMsgs::UpdateOracle { oracle_addr } => {
-                ORACLE_ADDR.save(deps.storage, &deps.api.addr_validate(&oracle_addr)?)?;
-
-                Ok(Response::default())
-            }
             AdminMsgs::OpenAuction { pair, params } => {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
@@ -167,6 +162,16 @@ mod admin {
                 };
 
                 Ok(Response::default().add_message(msg))
+            }
+            AdminMsgs::UpdateAuctionId { code_id } => {
+                AUCTION_CODE_ID.save(deps.storage, &code_id)?;
+
+                Ok(Response::default())
+            }
+            AdminMsgs::UpdateOracle { oracle_addr } => {
+                ORACLE_ADDR.save(deps.storage, &deps.api.addr_validate(&oracle_addr)?)?;
+
+                Ok(Response::default())
             }
             AdminMsgs::UpdateStrategy { pair, strategy } => {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
