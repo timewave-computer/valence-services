@@ -19,8 +19,9 @@ pub enum GeneralServiceExecuteMsg<A, B> {}
 pub enum ValenceServices {
     /// The rebalancer service
     Rebalancer,
-    /// A boilerplate placeholder for a future services
-    Test,
+    // /// A boilerplate placeholder for a future services
+    // // also look at service management tests
+    // Test,
 }
 
 impl ValenceServices {
@@ -69,20 +70,19 @@ impl ValenceServices {
                 };
 
                 Ok(msg.into())
-            }
-            // Example to a service that doesn't require a register message
-            ValenceServices::Test => {
-                let msg = WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Register {
-                        register_for: sender.to_string(),
-                        data: None,
-                    })?,
-                    funds: vec![],
-                };
+            } // // Example to a service that doesn't require a register message
+              // ValenceServices::Test => {
+              //     let msg = WasmMsg::Execute {
+              //         contract_addr: contract_addr.to_string(),
+              //         msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Register {
+              //             register_for: sender.to_string(),
+              //             data: None,
+              //         })?,
+              //         funds: vec![],
+              //     };
 
-                Ok(msg.into())
-            }
+              //     Ok(msg.into())
+              // }
         }
     }
 
@@ -111,20 +111,19 @@ impl ValenceServices {
                 };
 
                 Ok(msg.into())
-            }
-            // Example to a service that doesn't require a register message
-            ValenceServices::Test => {
-                let msg = WasmMsg::Execute {
-                    contract_addr: contract_addr.to_string(),
-                    msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Update {
-                        update_for: sender.to_string(),
-                        data: Empty {},
-                    })?,
-                    funds: vec![],
-                };
+            } // // Example to a service that doesn't require a register message
+              // ValenceServices::Test => {
+              //     let msg = WasmMsg::Execute {
+              //         contract_addr: contract_addr.to_string(),
+              //         msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Update {
+              //             update_for: sender.to_string(),
+              //             data: Empty {},
+              //         })?,
+              //         funds: vec![],
+              //     };
 
-                Ok(msg.into())
-            }
+              //     Ok(msg.into())
+              // }
         }
     }
 
@@ -189,7 +188,7 @@ impl FromStr for ValenceServices {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "rebalancer" => Ok(ValenceServices::Rebalancer),
-            "test" => Ok(ValenceServices::Test),
+            // "test" => Ok(ValenceServices::Test),
             _ => Err(ValenceError::InvalidService(s.to_string())),
         }
     }
@@ -200,7 +199,7 @@ impl fmt::Display for ValenceServices {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ValenceServices::Rebalancer => write!(f, "rebalancer"),
-            ValenceServices::Test => write!(f, "test"),
+            // ValenceServices::Test => write!(f, "test"),
         }
     }
 }
@@ -218,8 +217,8 @@ mod test {
         let str = ValenceServices::from_str("rebalancer").unwrap();
         assert_eq!(str, ValenceServices::Rebalancer);
 
-        let str = ValenceServices::from_str("test").unwrap();
-        assert_eq!(str, ValenceServices::Test);
+        // let str = ValenceServices::from_str("test").unwrap();
+        // assert_eq!(str, ValenceServices::Test);
 
         let err = ValenceServices::from_str("random_unknown_service").unwrap_err();
         assert_eq!(
@@ -230,7 +229,7 @@ mod test {
         let str = ValenceServices::Rebalancer.to_string();
         assert_eq!(str, "rebalancer");
 
-        let str = ValenceServices::Test.to_string();
-        assert_eq!(str, "test");
+        // let str = ValenceServices::Test.to_string();
+        // assert_eq!(str, "test");
     }
 }

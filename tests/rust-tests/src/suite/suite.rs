@@ -4,8 +4,14 @@ use auction_package::Pair;
 use cosmwasm_schema::serde;
 use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
-use rebalancer::{contract::CYCLE_PERIOD, state::SystemRebalanceStatus};
-use valence_package::services::{rebalancer::RebalancerConfig, ValenceServices};
+use rebalancer::{
+    contract::CYCLE_PERIOD,
+    msg::{ManagersAddrsResponse, WhitelistsResponse},
+};
+use valence_package::services::{
+    rebalancer::{RebalancerConfig, SystemRebalanceStatus},
+    ValenceServices,
+};
 
 use super::suite_builder::SuiteBuilder;
 
@@ -182,6 +188,106 @@ impl Suite {
         self.update_block_cycle();
 
         self.rebalance(limit)
+    }
+
+    pub fn update_rebalancer_system_status(
+        &mut self,
+        sender: Addr,
+        status: SystemRebalanceStatus,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateSystemStatus {
+                    status,
+                },
+            ),
+            &[],
+        )
+    }
+
+    pub fn update_rebalancer_system_status_err(
+        &mut self,
+        sender: Addr,
+        status: SystemRebalanceStatus,
+    ) -> rebalancer::error::ContractError {
+        self.update_rebalancer_system_status(sender, status)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
+    }
+
+    pub fn update_rebalancer_denom_whitelist(
+        &mut self,
+        sender: Addr,
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateDenomWhitelist {
+                    to_add,
+                    to_remove,
+                },
+            ),
+            &[],
+        )
+    }
+
+    pub fn update_rebalancer_base_denom_whitelist(
+        &mut self,
+        sender: Addr,
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+          sender,
+          self.rebalancer_addr.clone(),
+          &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+              valence_package::services::rebalancer::RebalancerAdminMsg::UpdateBaseDenomWhitelist {
+                  to_add,
+                  to_remove,
+              },
+          ),
+          &[]
+      )
+    }
+
+    pub fn update_rebalancer_services_manager_address(
+        &mut self,
+        sender: Addr,
+        addr: Addr,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateServicesManager {
+                    addr: addr.to_string(),
+                },
+            ),
+            &[],
+        )
+    }
+
+    pub fn update_rebalancer_auctions_manager_address(
+        &mut self,
+        sender: Addr,
+        addr: Addr,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateAuctionsManager {
+                    addr: addr.to_string(),
+                },
+            ),
+            &[],
+        )
     }
 }
 
@@ -372,7 +478,7 @@ impl Suite {
 // Queries
 impl Suite {
     pub fn query_rebalancer_config(&self, account: Addr) -> Result<RebalancerConfig, StdError> {
-        self.app.wrap().query_wasm_smart::<RebalancerConfig>(
+        self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetConfig {
                 addr: account.to_string(),
@@ -384,14 +490,14 @@ impl Suite {
         &self,
         service: ValenceServices,
     ) -> Result<Addr, StdError> {
-        self.app.wrap().query_wasm_smart::<Addr>(
+        self.app.wrap().query_wasm_smart(
             self.manager_addr.clone(),
             &valence_package::msgs::core_query::ServicesManagerQueryMsg::GetServiceAddr { service },
         )
     }
 
     pub fn query_is_service_on_manager(&self, addr: &str) -> Result<bool, StdError> {
-        self.app.wrap().query_wasm_smart::<bool>(
+        self.app.wrap().query_wasm_smart(
             self.manager_addr.clone(),
             &valence_package::msgs::core_query::ServicesManagerQueryMsg::IsService {
                 addr: addr.to_string(),
@@ -400,9 +506,23 @@ impl Suite {
     }
 
     pub fn query_rebalancer_system_status(&self) -> Result<SystemRebalanceStatus, StdError> {
-        self.app.wrap().query_wasm_smart::<SystemRebalanceStatus>(
+        self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetSystemStatus {},
+        )
+    }
+
+    pub fn query_rebalancer_whitelists(&self) -> Result<WhitelistsResponse, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetWhiteLists,
+        )
+    }
+
+    pub fn query_rebalancer_managers(&self) -> Result<ManagersAddrsResponse, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetManagersAddrs,
         )
     }
 }

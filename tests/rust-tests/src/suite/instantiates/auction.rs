@@ -3,7 +3,7 @@ use std::str::FromStr;
 use auction_package::{helpers::ChainHaltConfig, AuctionStrategy, Pair, PriceFreshnessStrategy};
 use cosmwasm_std::Decimal;
 
-use crate::suite::suite::{ATOM, NTRN, OSMO, DEFAULT_BLOCK_TIME};
+use crate::suite::suite::{ATOM, DEFAULT_BLOCK_TIME, NTRN, OSMO};
 
 #[derive(Clone)]
 pub struct AuctionInstantiate {
@@ -92,7 +92,10 @@ impl AuctionInstantiate {
                 },
                 price_freshness_strategy: PriceFreshnessStrategy {
                     limit: Decimal::bps(30000),
-                    multipliers: vec![(Decimal::bps(20000), Decimal::bps(20000)), (Decimal::bps(10000), Decimal::bps(15000))],
+                    multipliers: vec![
+                        (Decimal::bps(20000), Decimal::bps(20000)),
+                        (Decimal::bps(10000), Decimal::bps(15000)),
+                    ],
                 },
             },
         }

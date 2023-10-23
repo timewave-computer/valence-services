@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 use valence_macros::valence_service_execute_msgs;
@@ -10,7 +11,29 @@ use crate::{error::ValenceError, helpers::OptionalField, signed_decimal::SignedD
 #[valence_service_execute_msgs]
 #[cw_serde]
 pub enum RebalancerExecuteMsg<A = RebalancerData, B = RebalancerUpdateData> {
+    Admin(RebalancerAdminMsg),
     SystemRebalance { limit: Option<u64> },
+}
+
+#[cw_serde]
+pub enum RebalancerAdminMsg {
+    UpdateSystemStatus {
+        status: SystemRebalanceStatus,
+    },
+    UpdateDenomWhitelist {
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    },
+    UpdateBaseDenomWhitelist {
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    },
+    UpdateServicesManager {
+        addr: String,
+    },
+    UpdateAuctionsManager {
+        addr: String,
+    },
 }
 
 #[cw_serde]
@@ -88,6 +111,21 @@ pub struct RebalancerConfig {
 pub enum TargetOverrideStrategy {
     Proportional,
     Priority,
+}
+
+#[cw_serde]
+pub enum SystemRebalanceStatus {
+    NotStarted {
+        cycle_start: Timestamp,
+    },
+    Processing {
+        cycle_started: Timestamp,
+        start_from: Addr,
+        prices: Vec<(Pair, Decimal)>,
+    },
+    Finished {
+        next_cycle: Timestamp,
+    },
 }
 
 /// The target struct that holds all info about a single denom target

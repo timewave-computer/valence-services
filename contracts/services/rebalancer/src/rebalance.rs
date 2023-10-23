@@ -8,7 +8,9 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 use valence_package::{
     helpers::start_of_day,
-    services::rebalancer::{ParsedPID, RebalancerConfig, TargetOverrideStrategy},
+    services::rebalancer::{
+        ParsedPID, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
+    },
     signed_decimal::SignedDecimal,
 };
 
@@ -17,8 +19,8 @@ use crate::{
     error::ContractError,
     helpers::{TargetHelper, TradesTuple},
     state::{
-        SystemRebalanceStatus, AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS,
-        DENOM_WHITELIST, SYSTEM_REBALANCE_STATUS,
+        AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, DENOM_WHITELIST,
+        SYSTEM_REBALANCE_STATUS,
     },
 };
 

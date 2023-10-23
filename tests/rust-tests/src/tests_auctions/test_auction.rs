@@ -264,7 +264,10 @@ fn test_exact_bid() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
-    assert_eq!(Uint128::from(1000000000_u128) - mm_balance.amount, ntrn_to_send);
+    assert_eq!(
+        Uint128::from(1000000000_u128) - mm_balance.amount,
+        ntrn_to_send
+    );
     assert_eq!(active_auction.status, ActiveAuctionStatus::Finished)
 }
 

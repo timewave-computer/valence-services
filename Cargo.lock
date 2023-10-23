@@ -1141,6 +1141,7 @@ dependencies = [
 name = "valence-package"
 version = "0.0.1"
 dependencies = [
+ "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",

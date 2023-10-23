@@ -1,8 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Timestamp;
-use valence_package::services::rebalancer::RebalancerConfig;
-
-use crate::state::SystemRebalanceStatus;
+use cosmwasm_std::{Addr, Timestamp};
+use valence_package::services::rebalancer::{RebalancerConfig, SystemRebalanceStatus};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -22,7 +20,23 @@ pub enum QueryMsg {
     GetConfig { addr: String },
     #[returns(SystemRebalanceStatus)]
     GetSystemStatus {},
+    #[returns(WhitelistsResponse)]
+    GetWhiteLists,
+    #[returns(ManagersAddrsResponse)]
+    GetManagersAddrs,
 }
 
 #[cw_serde]
 pub enum MigrateMsg {}
+
+#[cw_serde]
+pub struct WhitelistsResponse {
+    pub denom_whitelist: Vec<String>,
+    pub base_denom_whitelist: Vec<String>,
+}
+
+#[cw_serde]
+pub struct ManagersAddrsResponse {
+    pub services: Addr,
+    pub auctions: Addr,
+}

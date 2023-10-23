@@ -66,4 +66,10 @@ pub enum ContractError {
 
     #[error("Couldn't find minimum amount for this token in auction manager")]
     NoMinAuctionAmountFound,
+
+    #[error("cycle_start must be up to 30 days from now")]
+    CycleStartTooFarInFuture,
+
+    #[error("System status can't be updated to processing")]
+    CantUpdateStatusToProcessing,
 }

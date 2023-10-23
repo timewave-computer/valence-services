@@ -96,7 +96,7 @@ fn test_no_oracle_addr() {
         )
         .unwrap_err();
 
-        println!("err: {err}");
+    println!("err: {err}");
     assert!(err
         .to_string()
         .contains(&auctions_manager::error::ContractError::OracleAddrMissing.to_string()));

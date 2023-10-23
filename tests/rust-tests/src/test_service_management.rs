@@ -49,24 +49,24 @@ fn test_add_service() {
         )
     );
 
-    // test adding different service name with same address
-    let err: services_manager::error::ContractError = suite
-        .add_service_to_manager(
-            suite.admin.clone(),
-            suite.manager_addr.clone(),
-            ValenceServices::Test,
-            suite.rebalancer_addr.to_string(),
-        )
-        .unwrap_err()
-        .downcast()
-        .unwrap();
+    // // test adding different service name with same address
+    // let err: services_manager::error::ContractError = suite
+    //     .add_service_to_manager(
+    //         suite.admin.clone(),
+    //         suite.manager_addr.clone(),
+    //         ValenceServices::Test,
+    //         suite.rebalancer_addr.to_string(),
+    //     )
+    //     .unwrap_err()
+    //     .downcast()
+    //     .unwrap();
 
-    assert_eq!(
-        err,
-        services_manager::error::ContractError::ServiceAddressAlreadyExists(
-            suite.rebalancer_addr.to_string()
-        )
-    );
+    // assert_eq!(
+    //     err,
+    //     services_manager::error::ContractError::ServiceAddressAlreadyExists(
+    //         suite.rebalancer_addr.to_string()
+    //     )
+    // );
 }
 
 #[test]
@@ -173,24 +173,24 @@ fn test_register() {
         },
     );
 
-    // Try to register to a service that doesn't exists
-    let err: services_manager::error::ContractError = suite
-        .register_to_service(
-            suite.owner.clone(),
-            0,
-            ValenceServices::Test,
-            SuiteBuilder::get_default_rebalancer_register_data(),
-        )
-        .unwrap_err()
-        .downcast()
-        .unwrap();
+    // // Try to register to a service that doesn't exists
+    // let err: services_manager::error::ContractError = suite
+    //     .register_to_service(
+    //         suite.owner.clone(),
+    //         0,
+    //         ValenceServices::Test,
+    //         SuiteBuilder::get_default_rebalancer_register_data(),
+    //     )
+    //     .unwrap_err()
+    //     .downcast()
+    //     .unwrap();
 
-    assert_eq!(
-        err,
-        services_manager::error::ContractError::ServiceDoesntExist(
-            ValenceServices::Test.to_string()
-        )
-    )
+    // assert_eq!(
+    //     err,
+    //     services_manager::error::ContractError::ServiceDoesntExist(
+    //         ValenceServices::Test.to_string()
+    //     )
+    // )
 }
 
 #[test]
@@ -427,9 +427,9 @@ fn test_manager_queries() {
     assert!(is_service);
     assert!(is_service);
 
-    suite
-        .query_service_addr_from_manager(ValenceServices::Test)
-        .unwrap_err();
+    // suite
+    //     .query_service_addr_from_manager(ValenceServices::Test)
+    //     .unwrap_err();
 }
 
 #[test]

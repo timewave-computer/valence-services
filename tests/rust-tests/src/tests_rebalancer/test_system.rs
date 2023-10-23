@@ -1,9 +1,12 @@
 use auction_package::Pair;
 use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
-use rebalancer::{contract::CYCLE_PERIOD, state::SystemRebalanceStatus};
+use rebalancer::contract::CYCLE_PERIOD;
 use valence_package::{
     helpers::start_of_day,
-    services::{rebalancer::Target, ValenceServices},
+    services::{
+        rebalancer::{SystemRebalanceStatus, Target},
+        ValenceServices,
+    },
 };
 
 use crate::suite::{
