@@ -65,6 +65,10 @@ pub struct RebalancerUpdateData {
 impl RebalancerData {
     pub fn to_config(self) -> Result<RebalancerConfig, ValenceError> {
         let max_limit = if let Some(max_limit) = self.max_limit_bps {
+            if max_limit > 10000 || max_limit < 1 {
+                return Err(ValenceError::InvalidMaxLimitRange);
+            }
+
             Decimal::bps(max_limit)
         } else {
             Decimal::one()

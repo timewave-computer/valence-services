@@ -2,6 +2,7 @@ use auction_package::Pair;
 use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
 use rebalancer::contract::CYCLE_PERIOD;
 use valence_package::{
+    error::ValenceError,
     helpers::start_of_day,
     services::{
         rebalancer::{SystemRebalanceStatus, Target},
@@ -309,4 +310,38 @@ fn test_rebalancer_cycle_next_day_while_processing() {
         .unwrap();
     assert_eq!(config1.last_rebalance, suite.app.block_info().time);
     assert_eq!(config2.last_rebalance, suite.app.block_info().time);
+}
+
+#[test]
+fn test_invalid_max_limit_range() {
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+
+    // Because we have a basic setup here, we need to register the service to the manager
+    suite
+        .add_service_to_manager(
+            suite.admin.clone(),
+            suite.manager_addr.clone(),
+            ValenceServices::Rebalancer,
+            suite.rebalancer_addr.to_string(),
+        )
+        .unwrap();
+
+    let mut init_msg = SuiteBuilder::get_default_rebalancer_register_data();
+
+    // Test below 1 (0)
+    init_msg.max_limit_bps = Some(0);
+
+    let err = suite.register_to_rebalancer_err(0, &init_msg);
+    assert!(err
+        .to_string()
+        .contains(&ValenceError::InvalidMaxLimitRange.to_string()));
+
+    // test above 10000
+    init_msg.max_limit_bps = Some(10001);
+
+    // Try to register when already registered
+    let err = suite.register_to_rebalancer_err(0, &init_msg);
+    assert!(err
+        .to_string()
+        .contains(&ValenceError::InvalidMaxLimitRange.to_string()));
 }
