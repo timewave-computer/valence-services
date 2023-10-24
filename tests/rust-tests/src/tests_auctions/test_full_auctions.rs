@@ -298,6 +298,7 @@ fn test_auction_rounding_leftovers() {
 
     suite.update_block(500);
 
+    // We bid 770, but the total is 771, so 1 pair.0 is left as leftover
     suite.do_full_bid(770_u128);
 
     suite.update_block(500);
@@ -349,9 +350,9 @@ fn test_auction_rounding_leftovers() {
     let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
 
     // resolved and total funds should have 1 extra because those are leftovers from previous auction
-    assert_eq!(active_auction.total_amount, Uint128::from(102_u128)); // 100 funded + 2 leftover
-    assert_eq!(active_auction.available_amount, Uint128::from(102_u128)); // 100 funded + 2 leftover
-    assert_eq!(active_auction.resolved_amount, Uint128::from(2_u128)) // 2 leftover
+    assert_eq!(active_auction.total_amount, Uint128::from(101_u128)); // 100 funded + 1 leftover pair.0
+    assert_eq!(active_auction.available_amount, Uint128::from(101_u128)); // 100 funded + 1 leftover pair.0
+    assert_eq!(active_auction.resolved_amount, Uint128::from(2_u128)) // 2 leftover pair.1
 }
 
 #[test]
