@@ -79,13 +79,13 @@ impl SuiteBuilder {
             targets: vec![
                 Target {
                     denom: ATOM.to_string(),
-                    percentage: 7500,
+                    bps: 7500,
                     // min_balance: Some(7800_u128.into()),
                     min_balance: None,
                 },
                 Target {
                     denom: NTRN.to_string(),
-                    percentage: 2500,
+                    bps: 2500,
                     min_balance: None,
                 },
             ],

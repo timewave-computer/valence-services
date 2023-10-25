@@ -111,7 +111,7 @@ pub fn execute(
             };
 
             for target in data.targets.clone() {
-                total_bps += target.percentage;
+                total_bps += target.bps;
 
                 // Verify we only have a single min_Balance target
                 if target.min_balance.is_some() && has_min_balance {
@@ -170,7 +170,7 @@ pub fn execute(
                 let mut has_min_balance = false;
 
                 for target in data.targets.clone() {
-                    total_bps += target.percentage;
+                    total_bps += target.bps;
 
                     if target.min_balance.is_some() && has_min_balance {
                         return Err(ContractError::MultipleMinBalanceTargets);

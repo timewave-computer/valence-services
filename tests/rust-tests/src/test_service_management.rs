@@ -358,12 +358,12 @@ fn test_update() {
                 targets: vec![
                     Target {
                         denom: ATOM.to_string(),
-                        percentage: 5000,
+                        bps: 5000,
                         min_balance: None,
                     },
                     Target {
                         denom: NTRN.to_string(),
-                        percentage: 5000,
+                        bps: 5000,
                         min_balance: Some(15_u128.into()),
                     },
                 ],

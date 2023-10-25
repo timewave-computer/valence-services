@@ -139,7 +139,7 @@ pub struct Target {
     /// The name of the denom
     pub denom: String,
     /// The percentage of the total balance we want to have in this denom
-    pub percentage: u64,
+    pub bps: u64,
     /// The minimum balance the account should hold for this denom.
     /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
@@ -165,7 +165,7 @@ impl From<Target> for ParsedTarget {
     fn from(val: Target) -> Self {
         ParsedTarget {
             denom: val.denom,
-            percentage: Decimal::bps(val.percentage),
+            percentage: Decimal::bps(val.bps),
             min_balance: val.min_balance,
             last_input: None,
             last_i: SignedDecimal::zero(),

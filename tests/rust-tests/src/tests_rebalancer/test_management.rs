@@ -154,8 +154,8 @@ fn test_invalid_targets_perc_on_update() {
     let mut data = SuiteBuilder::get_default_rebalancer_register_data();
 
     // set min_balance to both targets
-    data.targets[0].percentage = 5000;
-    data.targets[1].percentage = 6000;
+    data.targets[0].bps = 5000;
+    data.targets[1].bps = 6000;
 
     let mut suite = SuiteBuilder::default().build_default();
 

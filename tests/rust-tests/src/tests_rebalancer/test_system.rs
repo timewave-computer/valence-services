@@ -155,7 +155,7 @@ fn test_register() {
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
     register_data.targets = vec![Target {
         denom: ATOM.to_string(),
-        percentage: 10000,
+        bps: 10000,
         min_balance: None,
     }];
 
@@ -167,12 +167,12 @@ fn test_register() {
     register_data.targets = vec![
         Target {
             denom: ATOM.to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
         Target {
             denom: "not_whitelisted_denom".to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
     ];
@@ -188,12 +188,12 @@ fn test_register() {
     register_data.targets = vec![
         Target {
             denom: ATOM.to_string(),
-            percentage: 6000,
+            bps: 6000,
             min_balance: None,
         },
         Target {
             denom: NTRN.to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
     ];
