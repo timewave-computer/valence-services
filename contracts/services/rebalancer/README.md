@@ -11,7 +11,7 @@ This is the rebalancer contract, a single contract where accounts can register t
 
 ## How to register
 
-Rebalancer expects the following config:
+Rebalancer expects the following data structure:
 
 ```rust
 pub struct RebalancerData {
@@ -19,7 +19,7 @@ pub struct RebalancerData {
     pub base_denom: String,
     pub targets: Vec<Target>,
     pub pid: PID,
-    pub max_limit: Option<u64>, // BPS
+    pub max_limit_bps: Option<u64>, // BPS
     pub target_override_strategy: TargetOverrideStrategy,
 }
 ```
