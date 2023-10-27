@@ -8,3 +8,6 @@ mod tests_rebalancer;
 
 #[cfg(test)]
 mod tests_auctions;
+
+#[cfg(test)]
+mod tests_account;

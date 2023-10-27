@@ -328,7 +328,9 @@ fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, Cont
             Ok((addr, total_sent_sold_token, total_sent_bought_token))
         }
         ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
-        _ => Ok((None, Uint128::zero(), Uint128::zero())),
+        ActiveAuctionStatus::Finished | ActiveAuctionStatus::Started => {
+            Ok((None, Uint128::zero(), Uint128::zero()))
+        }
     }?;
 
     let config = AUCTION_CONFIG.load(deps.storage)?;

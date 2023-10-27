@@ -178,7 +178,7 @@ pub fn do_rebalance(
 
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
-    println!("to_sell: {to_sell:?} | to_buy: {to_buy:?}");
+
     // Generate the trades msgs, how much funds to send to what auction.
     let msgs = generate_trades_msgs(deps, to_sell, to_buy, auction_manager, &config, total_value);
 
