@@ -109,9 +109,9 @@ pub fn execute(
                 .into_iter()
                 .map(|msg| {
                     if atomic {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
-                    } else {
                         SubMsg::new(msg)
+                    } else {
+                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
                     }
                 })
                 .collect();
@@ -128,9 +128,9 @@ pub fn execute(
                 .into_iter()
                 .map(|msg| {
                     if atomic {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
+                      SubMsg::new(msg)
                     } else {
-                        SubMsg::new(msg)
+                      SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
                     }
                 })
                 .collect();
