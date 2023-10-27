@@ -123,7 +123,7 @@ fn test_only_admin() {
                 }
                 .into()],
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -136,7 +136,7 @@ fn test_only_admin() {
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::ExecuteByAdmin {
                 msgs: vec![],
             },
-            &vec![],
+            &[],
         )
         .unwrap_err();
 }

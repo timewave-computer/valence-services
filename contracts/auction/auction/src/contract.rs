@@ -1,19 +1,19 @@
 use std::collections::VecDeque;
 
-use auction_package::helpers::{verify_admin, AuctionConfig, ChainHaltConfig, GetPriceResponse};
-use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, TWAP_PRICES};
-use auction_package::Price;
+use auction_package::helpers::{verify_admin, AuctionConfig, GetPriceResponse};
+use auction_package::states::{ADMIN, TWAP_PRICES};
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coin, to_binary, Addr, BankMsg, Binary, BlockInfo, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, Response, StdResult, Uint128,
+    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    Uint128,
 };
 use cw2::set_contract_version;
-use cw_storage_plus::Bound;
-use cw_utils::must_pay;
 
 use crate::error::ContractError;
+use crate::execute;
+use crate::helpers::calc_price;
 use crate::msg::{
     ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, MigrateMsg, NewAuctionParams, QueryMsg,
 };
@@ -25,7 +25,7 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:auction";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const TWAP_PRICE_LIMIT: u64 = 10;
+pub const TWAP_PRICE_LIMIT: u64 = 10;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -101,389 +101,19 @@ pub fn execute(
     match msg {
         ExecuteMsg::AuctionFundsManager { sender } => {
             verify_admin(deps.as_ref(), &info)?;
-            auction_funds(deps, &info, sender)
+            execute::auction_funds(deps, &info, sender)
         }
         ExecuteMsg::WithdrawFundsManager { sender } => {
             verify_admin(deps.as_ref(), &info)?;
-            withdraw_funds(deps, sender)
+            execute::withdraw_funds(deps, sender)
         }
-        ExecuteMsg::AuctionFunds => auction_funds(deps, &info, info.sender.clone()),
-        ExecuteMsg::WithdrawFunds => withdraw_funds(deps, info.sender),
+        ExecuteMsg::AuctionFunds => execute::auction_funds(deps, &info, info.sender.clone()),
+        ExecuteMsg::WithdrawFunds => execute::withdraw_funds(deps, info.sender),
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
-        ExecuteMsg::Bid => do_bid(deps, &info, &env),
-        ExecuteMsg::FinishAuction { limit } => finish_auction(deps, &env, limit),
-        ExecuteMsg::CleanAfterAuction => clean_auction(deps),
+        ExecuteMsg::Bid => execute::do_bid(deps, &info, &env),
+        ExecuteMsg::FinishAuction { limit } => execute::finish_auction(deps, &env, limit),
+        ExecuteMsg::CleanAfterAuction => execute::clean_auction(deps),
     }
-}
-
-pub(crate) fn auction_funds(
-    deps: DepsMut,
-    info: &MessageInfo,
-    sender: Addr,
-) -> Result<Response, ContractError> {
-    let config = AUCTION_CONFIG.load(deps.storage)?;
-    let admin = ADMIN.load(deps.storage)?;
-
-    if config.is_paused {
-        return Err(ContractError::AuctionIsPaused);
-    }
-
-    let funds = must_pay(info, &config.pair.0)?;
-    let min_amount = match MIN_AUCTION_AMOUNT.query(&deps.querier, admin, config.pair.0)? {
-        Some(amount) => Ok(amount),
-        None => Err(ContractError::NoTokenMinAmount),
-    }?;
-
-    if funds < min_amount {
-        return Err(ContractError::AuctionAmountTooLow(min_amount));
-    }
-
-    let next_auction_id: u64 = AUCTION_IDS.load(deps.storage)?.next;
-
-    // Update funds of the sender for next auction
-    AUCTION_FUNDS.update(
-        deps.storage,
-        (next_auction_id, sender),
-        |amount| -> Result<Uint128, ContractError> {
-            match amount {
-                Some(amount) => Ok(amount.checked_add(funds)?),
-                None => Ok(funds),
-            }
-        },
-    )?;
-
-    // update the sum of the next auction
-    AUCTION_FUNDS_SUM.update(
-        deps.storage,
-        next_auction_id,
-        |amount| -> Result<Uint128, ContractError> {
-            match amount {
-                Some(amount) => Ok(amount.checked_add(funds)?),
-                None => Ok(funds),
-            }
-        },
-    )?;
-
-    Ok(Response::default())
-}
-
-pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractError> {
-    let config = AUCTION_CONFIG.load(deps.storage)?;
-
-    let mut send_funds: Coin = coin(0_u128, config.pair.0);
-    let auction_ids = AUCTION_IDS.load(deps.storage)?;
-
-    let funds_amount = AUCTION_FUNDS
-        .load(deps.storage, (auction_ids.next, sender.clone()))
-        .unwrap_or(Uint128::zero());
-
-    if !funds_amount.is_zero() {
-        send_funds.amount += funds_amount;
-        AUCTION_FUNDS.remove(deps.storage, (auction_ids.next, sender.clone()));
-        AUCTION_FUNDS_SUM.update(
-            deps.storage,
-            auction_ids.next,
-            |sum| -> Result<Uint128, ContractError> {
-                Ok(sum.unwrap_or(Uint128::zero()).checked_sub(funds_amount)?)
-            },
-        )?;
-    }
-
-    if send_funds.amount.is_zero() {
-        return Err(ContractError::NoFundsToWithdraw);
-    }
-
-    let bank_msg = BankMsg::Send {
-        to_address: sender.to_string(),
-        amount: vec![send_funds],
-    };
-
-    Ok(Response::default().add_message(bank_msg))
-}
-
-/// Check the diff of blocks and time to see if we had a chain halt of around our time_cap
-fn is_chain_halted(env: &Env, check_block: &BlockInfo, halt_config: &ChainHaltConfig) -> bool {
-    let block_diff = Uint128::from(env.block.height - check_block.height);
-    let time_diff = (env.block.time.seconds() - check_block.time.seconds()) as u128;
-
-    let avg_time_passed = (block_diff * halt_config.block_avg).u128();
-
-    // Chain halted for at least 4 hours
-    if time_diff > avg_time_passed + halt_config.cap {
-        return true;
-    }
-    false
-}
-
-fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, ContractError> {
-    // Verify we have an active auction, else error out
-    let mut active_auction = ACTIVE_AUCTION.load(deps.storage)?;
-
-    // Verify auction is not finished
-    match active_auction.status {
-        ActiveAuctionStatus::Started => Ok(()),
-        _ => Err(ContractError::AuctionFinished),
-    }?;
-
-    // Verify auction started
-    if active_auction.start_block > env.block.height {
-        return Err(ContractError::AuctionNotStarted(active_auction.start_block));
-    }
-
-    let config = AUCTION_CONFIG.load(deps.storage)?;
-
-    if config.is_paused {
-        return Err(ContractError::AuctionIsPaused);
-    }
-
-    let sent_funds = must_pay(info, &config.pair.1)?;
-
-    let (buy_amount, leftover_amount) = if is_chain_halted(
-        env,
-        &active_auction.last_checked_block,
-        &config.chain_halt_config,
-    ) {
-        active_auction.status = ActiveAuctionStatus::Finished;
-        (Uint128::zero(), sent_funds)
-    } else {
-        let curr_price = calc_price(&active_auction, env.block.height);
-        let (buy_amount, mut send_leftover) = calc_buy_amount(curr_price, sent_funds);
-
-        let send_amount = match active_auction.available_amount.checked_sub(buy_amount) {
-            Ok(available_amount) => {
-                if available_amount.is_zero() {
-                    active_auction.status = ActiveAuctionStatus::Finished;
-                }
-
-                active_auction.available_amount = available_amount;
-                active_auction.resolved_amount += sent_funds - send_leftover;
-
-                Ok::<Uint128, ContractError>(buy_amount)
-            }
-            // If we reach here, it means that we have sold all of the available amount
-            // so we can finish the auction
-            Err(_) => {
-                let to_refund =
-                    Decimal::from_atomics(buy_amount - active_auction.available_amount, 0)?;
-                let new_leftover = (to_refund * curr_price).to_uint_floor();
-                send_leftover += new_leftover;
-
-                // Set the buy_amount to be whatever amount we have left, because we know the bidder over paid
-                let buy_amount = active_auction.available_amount;
-
-                active_auction.resolved_amount += sent_funds - send_leftover;
-                active_auction.available_amount = Uint128::zero();
-                active_auction.status = ActiveAuctionStatus::Finished;
-
-                Ok(buy_amount)
-            }
-        }?;
-        (send_amount, send_leftover)
-    };
-
-    let mut send_funds: Vec<Coin> = vec![];
-
-    if !leftover_amount.is_zero() {
-        send_funds.push(coin(leftover_amount.u128(), config.pair.1.clone()));
-    }
-
-    if !buy_amount.is_zero() {
-        send_funds.push(coin(buy_amount.u128(), config.pair.0));
-    }
-
-    let response = if !send_funds.is_empty() {
-        let bank_msg = BankMsg::Send {
-            to_address: info.sender.to_string(),
-            amount: send_funds,
-        };
-        Response::default().add_message(bank_msg)
-    } else {
-        Response::default()
-    };
-
-    active_auction.last_checked_block = env.block.clone();
-    ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
-
-    Ok(
-        response
-            .add_attribute("bought_amount", buy_amount) // pair.0 amount we sent
-            .add_attribute("refunded", leftover_amount), // pair.1 amount we refunded
-    )
-}
-
-fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, ContractError> {
-    let mut active_auction = ACTIVE_AUCTION.load(deps.storage)?;
-
-    if active_auction.status == ActiveAuctionStatus::Started
-        && active_auction.end_block > env.block.height
-        && !active_auction.available_amount.is_zero()
-    {
-        return Err(ContractError::AuctionStillGoing);
-    }
-
-    let (start_from, mut total_sent_sold_token, mut total_sent_bought_token) = match active_auction
-        .status
-    {
-        ActiveAuctionStatus::CloseAuction(addr, total_sent_sold_token, total_sent_bought_token) => {
-            Ok((addr, total_sent_sold_token, total_sent_bought_token))
-        }
-        ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
-        ActiveAuctionStatus::Finished | ActiveAuctionStatus::Started => {
-            Ok((None, Uint128::zero(), Uint128::zero()))
-        }
-    }?;
-
-    let config = AUCTION_CONFIG.load(deps.storage)?;
-    let curr_auction_id = AUCTION_IDS.load(deps.storage)?.curr;
-    let mut last_resolved = start_from.clone();
-    let start_from = start_from.map(Bound::exclusive);
-    let mut total_resolved = 0;
-
-    let mut bank_msgs: Vec<CosmosMsg> = vec![];
-
-    AUCTION_FUNDS
-        .prefix(curr_auction_id)
-        .range(
-            deps.storage,
-            start_from,
-            None,
-            cosmwasm_std::Order::Ascending,
-        )
-        .take(limit as usize)
-        .try_for_each(|res| -> Result<(), ContractError> {
-            total_resolved += 1;
-            let (addr, amount) = res?;
-            let mut send_funds: Vec<Coin> = vec![];
-
-            if active_auction.resolved_amount.is_zero() {
-                // We didn't sell anything, so refund
-                send_funds.push(coin(amount.u128(), &config.pair.0));
-            } else {
-                // We sold something, calculate only what we sold
-                let perc_of_total = Decimal::from_atomics(amount, 0)?
-                    / Decimal::from_atomics(active_auction.total_amount, 0)?;
-                let to_send_amount =
-                    Decimal::from_atomics(active_auction.resolved_amount, 0)? * perc_of_total;
-
-                // TODO: Verify this is correct
-                let to_send_amount =
-                    if to_send_amount - to_send_amount.floor() >= Decimal::bps(9999) {
-                        to_send_amount.to_uint_ceil()
-                    } else {
-                        to_send_amount.to_uint_floor()
-                    };
-
-                total_sent_bought_token += to_send_amount;
-                send_funds.push(coin(to_send_amount.u128(), &config.pair.1));
-
-                // If we still have available amount, we refund based on the perc from total provided
-                if !active_auction.available_amount.is_zero() {
-                    let to_send_amount =
-                        (Decimal::from_atomics(active_auction.available_amount, 0)?
-                            * perc_of_total)
-                            .to_uint_floor();
-                    total_sent_sold_token += to_send_amount;
-                    send_funds.push(coin(to_send_amount.u128(), &config.pair.0));
-                }
-            }
-
-            let send_msg = BankMsg::Send {
-                to_address: addr.to_string(),
-                amount: send_funds,
-            };
-            bank_msgs.push(send_msg.into());
-
-            last_resolved = Some(addr);
-            Ok(())
-        })?;
-
-    // If we looped over less than our limit, it means we resolved everything
-    let status = if total_resolved < limit {
-        // calculate if we have leftover from rounding and add it to the next auction
-        let leftover_sold_token = active_auction
-            .available_amount
-            .checked_sub(total_sent_sold_token)?;
-        let leftover_bought_token = active_auction
-            .resolved_amount
-            .checked_sub(total_sent_bought_token)?;
-
-        active_auction.leftovers[0] = leftover_sold_token;
-        active_auction.leftovers[1] = leftover_bought_token;
-
-        // Update twap price if we have something sold
-        let sold_amount = active_auction
-            .total_amount
-            .checked_sub(active_auction.available_amount)?;
-        if !active_auction.total_amount.is_zero() && !sold_amount.is_zero() {
-            let avg_price = Decimal::from_atomics(active_auction.resolved_amount, 0)?
-                .checked_div(Decimal::from_atomics(sold_amount, 0)?)?;
-
-            let mut prices = TWAP_PRICES.load(deps.storage)?;
-            prices.push_front(Price {
-                price: avg_price,
-                time: env.block.time,
-            });
-
-            if prices.len() > TWAP_PRICE_LIMIT as usize {
-                prices.pop_back();
-            }
-            TWAP_PRICES.save(deps.storage, &prices)?;
-        }
-
-        ActiveAuctionStatus::AuctionClosed
-    } else {
-        ActiveAuctionStatus::CloseAuction(
-            last_resolved,
-            total_sent_sold_token,
-            total_sent_bought_token,
-        )
-    };
-
-    active_auction.status = status;
-    ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
-
-    Ok(Response::default().add_messages(bank_msgs))
-}
-
-fn clean_auction(deps: DepsMut) -> Result<Response, ContractError> {
-    let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
-
-    match active_auction.status {
-        ActiveAuctionStatus::AuctionClosed => Ok::<_, ContractError>(()),
-        _ => return Err(ContractError::AuctionNotClosed),
-    }?;
-
-    let curr_auction_id = AUCTION_IDS.load(deps.storage)?.curr;
-
-    // Clean the funds at the id of ended auction
-    AUCTION_FUNDS
-        .prefix(curr_auction_id)
-        .clear(deps.storage, None);
-    // Clean the funds sum
-    AUCTION_FUNDS_SUM.remove(deps.storage, curr_auction_id);
-
-    Ok(Response::default())
-}
-
-fn calc_price(terms: &ActiveAuction, curr_height: u64) -> Decimal {
-    let block_diff = Decimal::from_atomics(terms.end_block - terms.start_block, 0).unwrap();
-    let price_diff = terms.start_price - terms.end_price;
-
-    let price_per_block = price_diff / block_diff;
-    let block_passed = Decimal::from_atomics(curr_height - terms.start_block, 0).unwrap();
-
-    terms.start_price - (price_per_block * block_passed)
-}
-
-/// Calc how much of pair.0 to send (bought amount) and how much pair.1 to refund (leftover)
-fn calc_buy_amount(price: Decimal, amount: Uint128) -> (Uint128, Uint128) {
-    let amount = Decimal::from_atomics(amount, 0).unwrap();
-
-    let buy_amount = amount / price;
-    let buy_floor = buy_amount.floor();
-    let leftover = (amount - (buy_floor * price)).to_uint_floor();
-
-    (buy_floor.to_uint_floor(), leftover)
 }
 
 mod admin {
@@ -716,7 +346,7 @@ mod test {
 
     use cosmwasm_std::{Decimal, Uint128};
 
-    use crate::contract::calc_buy_amount;
+    use crate::helpers::calc_buy_amount;
 
     #[test]
     fn test_calc_buy_amount() {
