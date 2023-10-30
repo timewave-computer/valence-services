@@ -6,7 +6,7 @@ use crate::state::Config;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub auction_manager_addr: String,
+    pub auctions_manager_addr: String,
 }
 
 #[cw_serde]

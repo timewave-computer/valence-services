@@ -2,10 +2,9 @@
 
 CHAIN=$1
 shift
-SERVICE_NAME=$1
+ORACLE_ADDR=$1
 shift
-SERVICE_ADDR=$1
-shift
+
 
 if [[ "$CHAIN" == 'juno' ]]; then
   BINARY="junod"
@@ -13,14 +12,14 @@ if [[ "$CHAIN" == 'juno' ]]; then
   OWNER_ADDR="juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn"
   FEES="1000ujunox"
 
-  ADDR_SERVICES_MANAGER="juno1wh5gyyd3hhaeq6jgnawcecvgear7k8c94celuqqxcrz65sglemlql37ple"
+  ADDR_AUCTIONS_MANAGER="juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
   GAS_PRICES="0.025ntrn"
   OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
   FEES="1000untrn"
 
-  # ADDR_SERVICES_MANAGER=""
+  # ADDR_AUCTIONS_MANAGER=""
 else
   echo "Unknown chain"
 fi
@@ -29,13 +28,11 @@ fi
 EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
 execute_msg=$(jq -n \
-  --arg service_name "$SERVICE_NAME" \
-  --arg service_addr "$SERVICE_ADDR" \
+  --arg oracle_Addr "$ORACLE_ADDR" \
   '{admin: {
-      add_service: {
-        name: $service_name,
-        addr: $service_addr
+      update_oracle: {
+        oracle_addr: $oracle_Addr,
       }
     }}')
 
-$BINARY tx wasm execute $ADDR_SERVICES_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
+$BINARY tx wasm execute $ADDR_AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS

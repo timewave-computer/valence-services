@@ -10,20 +10,20 @@ if [[ "$CHAIN" == 'juno' ]]; then
   GAS_PRICES="0.025ujunox"
   OWNER_ADDR="juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn"
 
-  CODE_ID_ACCOUNT=3794
-  CODE_ID_SERVICES_MANAGER=3793
-  CODE_ID_REBALANCER=3792
-  CODE_ID_ORACLE=3791
-  CODE_ID_AUCTION=3790
-  CODE_ID_AUCTIONS_MANAGER=3789
+  CODE_ID_ACCOUNT=3811
+  CODE_ID_SERVICES_MANAGER=3815
+  CODE_ID_REBALANCER=3814
+  CODE_ID_ORACLE=3813
+  CODE_ID_AUCTION=3810
+  CODE_ID_AUCTIONS_MANAGER=3812
 
   # Contracts addresses for init below
-  ADDR_SERVICES_MANAGER="juno1gscdr8zw8njrqfad9m3jgw70s4zumqccka4k6cutlxen0krud08sxlqs9d"
-  ADDR_AUCTIONS_MANAGER="juno1arszzw6yytxtq2l07eaqhuhradnmkdwftwc6vp3j3xaxgnlg3scq2fe4cn"
+  ADDR_SERVICES_MANAGER="juno1h2md5367062ypuv93kpwyu84eaq04xx4lfmqwqp5fkqrwa66pynsk6qmk5"
+  ADDR_AUCTIONS_MANAGER="juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j"
 
   # General data per chain
-  WHITELISTED_DENOMS='[\"ujunox\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
-  WHITELISTED_BASE_DENOMS='[\"ujunox\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
+  WHITELISTED_DENOMS='[\"ujunox\", \"factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx\"]'
+  WHITELISTED_BASE_DENOMS='[\"ujunox\", \"factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx\"]'
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
   GAS_PRICES="0.025ntrn"
@@ -75,13 +75,13 @@ elif [[ "$COMMAND" == 'services-manager' ]]; then
     --admin $OWNER_ADDR --from $OWNER_ADDR $EXECUTE_FLAGS
 
 ################################################
-############### Services Manager ###############
+############### Auctions Manager ###############
 ################################################
 elif [[ "$COMMAND" == 'auctions-manager' ]]; then
   init_msg=$(jq -n \
-    --arg auction_code_id "$CODE_ID_AUCTION" \
+    --argjson auction_code_id $CODE_ID_AUCTION \
     '{ auction_code_id: $auction_code_id,
-       min_auction_amount: [["ujunox", "2000"], ["ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "1000"]]
+       min_auction_amount: [["ujunox", "2000"], ["factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx", "1000"]]
       }')
 
   $BINARY tx wasm init $CODE_ID_AUCTIONS_MANAGER "$init_msg" --label "Valence auctions manager" \
@@ -110,6 +110,20 @@ elif [[ "$COMMAND" == 'rebalancer' ]]; then
   $BINARY tx wasm init $CODE_ID_REBALANCER "$init_msg" --label "Valence rebalancer" \
     --admin $OWNER_ADDR --from $OWNER_ADDR $EXECUTE_FLAGS
 
+################################################
+#################### Oracle ####################
+################################################
+elif [[ "$COMMAND" == 'oracle' ]]; then
+  if [ -z "$ADDR_AUCTIONS_MANAGER" ]; then echo "[ERROR] Auctions manager address is missing for $CHAIN" && exit 1; fi
+
+  init_msg=$(
+    jq -n \
+      --arg auctions_manager_addr "$ADDR_AUCTIONS_MANAGER" \
+      '{auctions_manager_addr: $auctions_manager_addr}'
+  )
+
+  $BINARY tx wasm init $CODE_ID_ORACLE "$init_msg" --label "Valence oracle" \
+    --admin $OWNER_ADDR --from $OWNER_ADDR $EXECUTE_FLAGS
 else
   echo "Unknown command"
 fi

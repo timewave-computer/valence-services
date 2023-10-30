@@ -28,7 +28,7 @@ pub fn instantiate(
         deps.storage,
         &Config {
             admin: info.sender,
-            auction_manager_addr: deps.api.addr_validate(&msg.auction_manager_addr)?,
+            auction_manager_addr: deps.api.addr_validate(&msg.auctions_manager_addr)?,
         },
     )?;
 

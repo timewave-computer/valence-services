@@ -70,3 +70,21 @@ Example to add rebalancer:
 ```sh
 ./add_service_to_manager.sh juno rebalancer juno15she5505reyvgvg9cz5g4k6y5ktxg4eja5tuytxmj0x0gs0cyjwq2sjgr0
 ```
+
+## update_oracle_addr.sh
+Helps with adding oracle address to the auctions manager
+
+Call:
+
+```sh
+./update_oracle_addr.sh $CHAIN $ORACLE_ADDR
+```
+
+Example to add oracle address:
+
+```sh
+./update_oracle_addr.sh juno juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2
+```
+
+# TODO
+Change from fixed fees to gas auto once juno testnet is fixed.

@@ -13,18 +13,25 @@
 
 ## Code ids
 
-- auctions manager = `3789`
-- auction = `3790`
-- price oracle = `3791`
-- rebalancer = `3792`
-- services manager = `3793`
-- account = `3794`
+- auctions manager = `3812`
+- auction = `3810`
+- price oracle = `3813`
+- rebalancer = `3814`
+- services manager = `3815`
+- account = `3811`
+
+## Token factory
+
+Token that is created by the token factory is the one that is used in our tests on juno
+
+vuusdcx - `factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx`
 
 ## Owner
 
 The Owner address is the admin of the contracts as well as the account owner.
 
 To add the owner to the keys (in order to use scripts on testnet):
+
 ```
 junod keys add valence-owner --recover
 // Enter mnemonic from below
@@ -38,15 +45,16 @@ junod keys add valence-owner --recover
 
 ### Juno Contracts
 
-- Services manager - `juno1gscdr8zw8njrqfad9m3jgw70s4zumqccka4k6cutlxen0krud08sxlqs9d`
-- Auctions manager - `juno1arszzw6yytxtq2l07eaqhuhradnmkdwftwc6vp3j3xaxgnlg3scq2fe4cn`
-- Rebalancer - `juno15she5505reyvgvg9cz5g4k6y5ktxg4eja5tuytxmj0x0gs0cyjwq2sjgr0`
-- Account - `juno13e646vygsserqdhywky5lmyr9etl6e756g30mf5mgpdgl27gk88q75tmtw`
+- Services manager - `juno1h2md5367062ypuv93kpwyu84eaq04xx4lfmqwqp5fkqrwa66pynsk6qmk5`
+- Auctions manager - `juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j`
+- Rebalancer - `juno18rpfddza4g3h5a05fzwq6xwepzh2t0twhetly4y5aqjyeh8cjflspa8fqr`
+- Account - `juno1rs76w568qe8z4vn9sxch7da84uauul5aek05n29tldmdra3dfk9qrar5ze`
+- Oracle - `juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2`
 
 #### Auctions
 
-- (ujunox, usdc) - `juno1yhgtfm5pl6vk8ll0tr999aj5954cyhmuf5a0ppqxgp28uy4tlw9sgyxdzh`
-- (usdc, ujunox) - `juno10glh9r7rh4shhn6tfkz0254m8r8h0pedht6s2u8zkymucn9m9ykqztf64a`
+- (ujunox, vuusdcx) - ``
+- (vuusdcx, ujunox) - ``
 
 # FIGMA - flow
 
@@ -58,4 +66,3 @@ junod keys add valence-owner --recover
 6. init auctions
 7. init price oracle
 8. set initial prices for auctions
-

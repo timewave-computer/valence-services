@@ -11,20 +11,20 @@ impl From<OracleInstantiate> for price_oracle::msg::InstantiateMsg {
 }
 
 impl OracleInstantiate {
-    pub fn default(auction_manager_addr: Addr) -> Self {
-        Self::new(auction_manager_addr)
+    pub fn default(auctions_manager_addr: Addr) -> Self {
+        Self::new(auctions_manager_addr)
     }
 
-    pub fn new(auction_manager_addr: Addr) -> Self {
+    pub fn new(auctions_manager_addr: Addr) -> Self {
         Self {
             msg: price_oracle::msg::InstantiateMsg {
-                auction_manager_addr: auction_manager_addr.to_string(),
+                auctions_manager_addr: auctions_manager_addr.to_string(),
             },
         }
     }
 
     /* Change functions */
-    pub fn change_auction_manager_addr(&mut self, auction_manager_addr: Addr) {
-        self.msg.auction_manager_addr = auction_manager_addr.to_string();
+    pub fn change_auction_manager_addr(&mut self, auctions_manager_addr: Addr) {
+        self.msg.auctions_manager_addr = auctions_manager_addr.to_string();
     }
 }

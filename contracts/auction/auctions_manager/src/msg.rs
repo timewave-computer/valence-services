@@ -38,6 +38,9 @@ pub enum AdminMsgs {
     UpdateAuctionId {
         code_id: u64,
     },
+    UpdateOracle {
+        oracle_addr: String,
+    },
     UpdateStrategy {
         pair: Pair,
         strategy: AuctionStrategy,
@@ -49,8 +52,5 @@ pub enum AdminMsgs {
     UpdatePriceFreshnessStrategy {
         pair: Pair,
         strategy: PriceFreshnessStrategy,
-    },
-    UpdateOracle {
-        oracle_addr: String,
     },
 }
