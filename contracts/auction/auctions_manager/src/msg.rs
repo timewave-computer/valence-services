@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     AuctionFunds { pair: Pair },
     WithdrawFunds { pair: Pair },
+    FinishAuction { pair: Pair, limit: u64 },
     Admin(AdminMsgs),
 }
 

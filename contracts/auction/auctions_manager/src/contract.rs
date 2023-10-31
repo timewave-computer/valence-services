@@ -73,6 +73,18 @@ pub fn execute(
 
             Ok(Response::default().add_message(msg))
         }
+        ExecuteMsg::FinishAuction { pair, limit } => {
+            pair.verify()?;
+            let pair_addr = PAIRS.load(deps.storage, pair)?;
+
+            let msg = WasmMsg::Execute {
+                contract_addr: pair_addr.to_string(),
+                msg: to_binary(&auction::msg::ExecuteMsg::FinishAuction { limit })?,
+                funds: info.funds,
+            };
+
+            Ok(Response::default().add_message(msg))
+        }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
     }
 }
