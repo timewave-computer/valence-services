@@ -322,7 +322,8 @@ mod admin {
     use crate::{
         error::ContractError,
         state::{
-            AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, DENOM_WHITELIST, SYSTEM_REBALANCE_STATUS,
+            AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CYCLE_PERIOD, DENOM_WHITELIST,
+            SYSTEM_REBALANCE_STATUS,
         },
     };
 
@@ -401,6 +402,11 @@ mod admin {
                 let addr = deps.api.addr_validate(&addr)?;
 
                 AUCTIONS_MANAGER_ADDR.save(deps.storage, &addr)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateCyclePeriod { period } => {
+                CYCLE_PERIOD.save(deps.storage, &period)?;
 
                 Ok(Response::default())
             }

@@ -34,6 +34,9 @@ pub enum RebalancerAdminMsg {
     UpdateAuctionsManager {
         addr: String,
     },
+    UpdateCyclePeriod {
+        period: u64,
+    },
 }
 
 #[cw_serde]
