@@ -1,0 +1,15 @@
+[package]
+name        = "valence-package"
+version     = "0.0.1"
+edition     = "2021"
+authors     = ["Art3miX <r3mix.il@gmail.com>"]
+description = "Package for valence set of contracts"
+license     = { workspace = true }
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std    = { workspace = true }
+cw-storage-plus = { workspace = true }
+valence-macros  = { workspace = true }
+thiserror       = { workspace = true }
+serde       = { workspace = true }

@@ -1,0 +1,34 @@
+use cosmwasm_std::{Addr, Deps, DepsMut};
+
+use crate::{
+    error::ContractError,
+    state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR},
+};
+
+pub(crate) fn get_service_addr(deps: Deps, service: String) -> Result<Addr, ContractError> {
+    SERVICES_TO_ADDR
+        .load(deps.storage, service.clone())
+        .map_err(|_| ContractError::ServiceDoesntExist(service.to_string()))
+}
+
+/// Save given service name and address to storages
+pub(crate) fn save_service(
+    deps: DepsMut,
+    service: String,
+    addr: Addr,
+) -> Result<(), ContractError> {
+    SERVICES_TO_ADDR.save(deps.storage, service.clone(), &addr)?;
+    ADDR_TO_SERVICES.save(deps.storage, addr, &service)?;
+    Ok(())
+}
+
+/// Remvoe service from storrages
+pub(crate) fn remove_service(
+    deps: DepsMut,
+    service: String,
+    addr: Addr,
+) -> Result<(), ContractError> {
+    SERVICES_TO_ADDR.remove(deps.storage, service);
+    ADDR_TO_SERVICES.remove(deps.storage, addr);
+    Ok(())
+}
