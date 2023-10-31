@@ -172,7 +172,8 @@ pub fn do_rebalance(
             0,
         )?;
         diff / Decimal::from_atomics(CYCLE_PERIOD, 0)?
-    };
+    }
+    .min(Decimal::new(10_u128.into()));
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
