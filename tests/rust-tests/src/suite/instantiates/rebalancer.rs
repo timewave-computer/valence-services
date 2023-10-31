@@ -22,6 +22,7 @@ impl RebalancerInstantiate {
                 services_manager_addr: services_manager.to_string(),
                 cycle_start: mock_env().block.time,
                 auctions_manager_addr: auctions_manager.to_string(), // to modify
+                cycle_period: None,
             },
         }
     }
@@ -32,6 +33,7 @@ impl RebalancerInstantiate {
         cycle_start: Timestamp,
         services_manager: &str,
         auctions_manager: &str,
+        cycle_period: Option<u64>,
     ) -> Self {
         Self {
             msg: rebalancer::msg::InstantiateMsg {
@@ -40,28 +42,38 @@ impl RebalancerInstantiate {
                 services_manager_addr: services_manager.to_string(), // to modify
                 cycle_start,
                 auctions_manager_addr: auctions_manager.to_string(), // to modify
+                cycle_period,
             },
         }
     }
 
     /* Change functions */
-    pub fn change_denom_whitelist(&mut self, denom_whitelist: Vec<String>) {
+    pub fn change_denom_whitelist(&mut self, denom_whitelist: Vec<String>)-> &mut Self {
         self.msg.denom_whitelist = denom_whitelist;
+        self
     }
 
-    pub fn change_base_denom_whitelist(&mut self, base_denom_whitelist: Vec<String>) {
+    pub fn change_base_denom_whitelist(&mut self, base_denom_whitelist: Vec<String>) -> &mut Self{
         self.msg.base_denom_whitelist = base_denom_whitelist;
+        self
     }
 
-    pub fn change_service_manager(&mut self, services_manager: &str) {
+    pub fn change_service_manager(&mut self, services_manager: &str) -> &mut Self{
         self.msg.services_manager_addr = services_manager.to_string();
+        self
     }
 
-    pub fn change_cycle_start(&mut self, cycle_start: Timestamp) {
+    pub fn change_cycle_start(&mut self, cycle_start: Timestamp) -> &mut Self{
         self.msg.cycle_start = cycle_start;
+        self
     }
 
-    pub fn change_auctions_manager(&mut self, auctions_manager: &str) {
+    pub fn change_auctions_manager(&mut self, auctions_manager: &str) -> &mut Self{
         self.msg.auctions_manager_addr = auctions_manager.to_string();
+        self
+    }
+    pub fn change_cycle_period(mut self, cycle_period: Option<u64>) -> Self{
+        self.msg.cycle_period = cycle_period;
+        self
     }
 }

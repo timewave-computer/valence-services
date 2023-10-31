@@ -5,7 +5,7 @@ use cosmwasm_schema::serde;
 use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
-    contract::CYCLE_PERIOD,
+    contract::DEFAULT_CYCLE_PERIOD,
     msg::{ManagersAddrsResponse, WhitelistsResponse},
 };
 use valence_package::services::{
@@ -69,7 +69,7 @@ impl Suite {
     }
 
     pub fn update_block_cycle(&mut self) -> &mut Self {
-        self.update_block(CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
+        self.update_block(DEFAULT_CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
     }
 
     pub fn add_block(&mut self) -> &mut Self {
@@ -179,6 +179,10 @@ impl Suite {
         },
         &[],
       )
+    }
+
+    pub fn rebalance_err(&mut self, limit: Option<u64>) -> rebalancer::error::ContractError {
+        self.rebalance(limit).unwrap_err().downcast().unwrap()
     }
 
     pub fn rebalance_with_update_block(

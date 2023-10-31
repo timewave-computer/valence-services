@@ -102,11 +102,13 @@ impl AuctionInstantiate {
     }
 
     /* Change functions */
-    pub fn change_pair(&mut self, pair: Pair) {
+    pub fn change_pair(&mut self, pair: Pair) -> &mut Self {
         self.msg.pair = pair;
+        self
     }
 
-    pub fn change_auction_strategy(&mut self, auction_strategy: AuctionStrategy) {
+    pub fn change_auction_strategy(&mut self, auction_strategy: AuctionStrategy) -> &mut Self {
         self.msg.auction_strategy = auction_strategy;
+        self
     }
 }

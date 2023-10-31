@@ -13,3 +13,5 @@ pub(crate) const SYSTEM_REBALANCE_STATUS: Item<SystemRebalanceStatus> =
     Item::new("system_rebalance_status");
 
 pub(crate) const AUCTIONS_MANAGER_ADDR: Item<Addr> = Item::new("auctions_manager_addr");
+
+pub(crate) const CYCLE_PERIOD: Item<u64> = Item::new("cycle_period");

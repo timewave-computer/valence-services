@@ -1,9 +1,9 @@
 use auction_package::Pair;
 use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
-use rebalancer::contract::CYCLE_PERIOD;
+use rebalancer::contract::DEFAULT_CYCLE_PERIOD;
 use valence_package::{
     error::ValenceError,
-    helpers::start_of_day,
+    helpers::start_of_cycle,
     services::{
         rebalancer::{SystemRebalanceStatus, Target},
         ValenceServices,
@@ -11,6 +11,7 @@ use valence_package::{
 };
 
 use crate::suite::{
+    instantiates::RebalancerInstantiate,
     suite::{ATOM, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS, DEFAULT_OSMO_PRICE_BPS, NTRN, OSMO},
     suite_builder::SuiteBuilder,
 };
@@ -36,7 +37,7 @@ fn test_rebalancer_system() {
     assert_eq!(
         status,
         SystemRebalanceStatus::Processing {
-            cycle_started: start_of_day(suite.app.block_info().time),
+            cycle_started: start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD),
             start_from: suite.get_account_addr(0),
             prices: vec![
                 (
@@ -79,7 +80,8 @@ fn test_rebalancer_system() {
     assert_eq!(
         status,
         SystemRebalanceStatus::Finished {
-            next_cycle: start_of_day(suite.app.block_info().time).plus_seconds(CYCLE_PERIOD)
+            next_cycle: start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD)
+                .plus_seconds(DEFAULT_CYCLE_PERIOD)
         }
     );
 
@@ -108,7 +110,15 @@ fn test_rebalancer_system() {
     assert_eq!(
         err,
         rebalancer::error::ContractError::CycleNotStartedYet(
-            start_of_day(suite.app.block_info().time.plus_seconds(CYCLE_PERIOD)).seconds()
+            start_of_cycle(
+                suite
+                    .app
+                    .block_info()
+                    .time
+                    .plus_seconds(DEFAULT_CYCLE_PERIOD),
+                DEFAULT_CYCLE_PERIOD
+            )
+            .seconds()
         )
     )
 }
@@ -344,4 +354,36 @@ fn test_invalid_max_limit_range() {
     assert!(err
         .to_string()
         .contains(&ValenceError::InvalidMaxLimitRange.to_string()));
+}
+
+#[test]
+fn test_custom_cycle_period() {
+    let hour = 60 * 60;
+    // the addresses are empty because they are populated in the build
+    let rebalancer_init = RebalancerInstantiate::default("", "")
+        .change_cycle_period(Some(hour))
+        .into();
+    let mut suite = SuiteBuilder::default()
+        .with_custom_rebalancer(rebalancer_init)
+        .build_default();
+
+    // Do 1 rebalance
+    suite.rebalance(None).unwrap();
+
+    // Try to do another one before our cycle is passed
+    suite.add_block();
+
+    let err = suite.rebalance_err(None);
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::CycleNotStartedYet(
+            start_of_cycle(suite.app.block_info().time, hour).seconds() + hour
+        )
+    );
+
+    // Pass the time to the next cycle
+    suite.update_block(hour / DEFAULT_BLOCK_TIME);
+
+    // try to do another rebalance
+    suite.rebalance(None).unwrap();
 }

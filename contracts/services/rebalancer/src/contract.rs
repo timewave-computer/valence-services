@@ -13,14 +13,15 @@ use crate::helpers::has_dup;
 use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
-    AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, DENOM_WHITELIST, SYSTEM_REBALANCE_STATUS,
+    AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
+    SYSTEM_REBALANCE_STATUS,
 };
 
 const CONTRACT_NAME: &str = "crates.io:rebalancer";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // TODO: Make cycle period configurable
-pub const CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
+pub const DEFAULT_CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
 /// The default limit of how many accounts we loop over in a single message
 /// If wasn't specified in the message
 pub const DEFAULT_SYSTEM_LIMIT: u64 = 50;
@@ -66,6 +67,12 @@ pub fn instantiate(
     AUCTIONS_MANAGER_ADDR.save(
         deps.storage,
         &deps.api.addr_validate(&msg.auctions_manager_addr)?,
+    )?;
+
+    // Save cycle period time given or the default (24 hours)
+    CYCLE_PERIOD.save(
+        deps.storage,
+        &msg.cycle_period.unwrap_or(DEFAULT_CYCLE_PERIOD),
     )?;
 
     Ok(Response::default().add_attribute("method", "instantiate"))

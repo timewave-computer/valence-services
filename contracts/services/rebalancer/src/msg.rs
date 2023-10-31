@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     pub services_manager_addr: String,
     pub cycle_start: Timestamp,
     pub auctions_manager_addr: String,
+    pub cycle_period: Option<u64>,
 }
 
 #[cw_serde]

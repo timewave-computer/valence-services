@@ -43,6 +43,9 @@ pub(crate) struct SuiteBuilder {
     pub auction_code_id: u64,
     pub auctions_manager_code_id: u64,
     pub oracle_code_id: u64,
+
+    // for custom init of contracts
+    pub custom_rebalancer_init: Option<rebalancer::msg::InstantiateMsg>,
 }
 
 impl Default for SuiteBuilder {
@@ -65,6 +68,7 @@ impl Default for SuiteBuilder {
             auction_code_id: 100000,
             auctions_manager_code_id: 100000,
             oracle_code_id: 100000,
+            custom_rebalancer_init: None,
         }
     }
 }
@@ -119,6 +123,11 @@ impl SuiteBuilder {
         data: Vec<valence_package::services::rebalancer::RebalancerData>,
     ) -> &mut Self {
         self.rebalancer_register_datas = data;
+        self
+    }
+
+    pub fn with_custom_rebalancer(&mut self, data: rebalancer::msg::InstantiateMsg) -> &mut Self {
+        self.custom_rebalancer_init = Some(data);
         self
     }
 }
@@ -357,8 +366,17 @@ impl SuiteBuilder {
         manager_addr: Addr,
     ) -> Addr {
         let rebalancer_instantiate_msg: rebalancer::msg::InstantiateMsg =
-            RebalancerInstantiate::default(manager_addr.as_str(), auctions_manager_addr.as_str())
-                .into();
+            if let Some(mut custom_rebalancer_init) = self.custom_rebalancer_init.clone() {
+                custom_rebalancer_init.auctions_manager_addr = auctions_manager_addr.to_string();
+                custom_rebalancer_init.services_manager_addr = manager_addr.to_string();
+                custom_rebalancer_init
+            } else {
+                RebalancerInstantiate::default(
+                    manager_addr.as_str(),
+                    auctions_manager_addr.as_str(),
+                )
+                .into()
+            };
 
         app.instantiate_contract(
             self.rebalancer_code_id,
