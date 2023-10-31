@@ -80,9 +80,8 @@ fn test_not_admin() {
 }
 
 #[test]
-#[ignore]
 fn test_no_oracle_addr() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().without_oracle_addr().build_basic();
     let pair = Pair::from(("random".to_string(), "random2".to_string()));
 
     suite.init_auction(pair.clone(), AuctionInstantiate::default().into(), None);
@@ -96,7 +95,6 @@ fn test_no_oracle_addr() {
         )
         .unwrap_err();
 
-    println!("err: {err}");
     assert!(err
         .to_string()
         .contains(&auctions_manager::error::ContractError::OracleAddrMissing.to_string()));

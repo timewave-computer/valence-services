@@ -46,6 +46,9 @@ pub(crate) struct SuiteBuilder {
 
     // for custom init of contracts
     pub custom_rebalancer_init: Option<rebalancer::msg::InstantiateMsg>,
+
+    // Flags for adding stuff to builds for tests
+    pub add_oracle_addr: bool,
 }
 
 impl Default for SuiteBuilder {
@@ -69,6 +72,7 @@ impl Default for SuiteBuilder {
             auctions_manager_code_id: 100000,
             oracle_code_id: 100000,
             custom_rebalancer_init: None,
+            add_oracle_addr: true,
         }
     }
 }
@@ -130,6 +134,11 @@ impl SuiteBuilder {
         self.custom_rebalancer_init = Some(data);
         self
     }
+
+    pub fn without_oracle_addr(&mut self) -> &mut Self {
+        self.add_oracle_addr = false;
+        self
+    }
 }
 
 // Modular build process
@@ -189,18 +198,21 @@ impl SuiteBuilder {
             OracleInstantiate::default(auctions_manager_addr.clone()).into(),
         );
 
-        // Update the oracle addr on the manager
-        app.execute_contract(
-            self.admin.clone(),
-            auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
-                auctions_manager::msg::AdminMsgs::UpdateOracle {
-                    oracle_addr: price_oracle_addr.to_string(),
-                },
-            ),
-            &[],
-        )
-        .unwrap();
+        // If we don't want to add it to the manager
+        if self.add_oracle_addr {
+            // Update the oracle addr on the manager
+            app.execute_contract(
+                self.admin.clone(),
+                auctions_manager_addr.clone(),
+                &auctions_manager::msg::ExecuteMsg::Admin(
+                    auctions_manager::msg::AdminMsgs::UpdateOracle {
+                        oracle_addr: price_oracle_addr.to_string(),
+                    },
+                ),
+                &[],
+            )
+            .unwrap();
+        }
 
         // init auction for each pair
         // atom-ntrn

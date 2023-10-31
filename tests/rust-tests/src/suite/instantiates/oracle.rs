@@ -24,7 +24,7 @@ impl OracleInstantiate {
     }
 
     /* Change functions */
-    pub fn change_auction_manager_addr(&mut self, auctions_manager_addr: Addr) -> &mut Self{
+    pub fn change_auction_manager_addr(&mut self, auctions_manager_addr: Addr) -> &mut Self {
         self.msg.auctions_manager_addr = auctions_manager_addr.to_string();
         self
     }

@@ -19,7 +19,7 @@ impl AccountInstantiate {
     }
 
     /* Change functions */
-    pub fn change_service_manager(&mut self, services_manager: &str) -> &mut Self{
+    pub fn change_service_manager(&mut self, services_manager: &str) -> &mut Self {
         self.msg.services_manager = services_manager.to_string();
         self
     }
