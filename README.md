@@ -7,7 +7,7 @@
 - price oracle = `438`
 - rebalancer = `440`
 - services manager = `439`
-- account = `435`
+- account = `442`
 
 ## Owner / Admin
 `neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68`
