@@ -1,13 +1,29 @@
-# Neutron Contracts
+# Neutron MAINNET Contracts
 
 ## Code ids
 
-- auctions manager = `1762`
-- auction = `1763`
-- price oracle = `1764`
-- rebalancer = `1765`
-- services manager = `1766`
-- account = `1767`
+- auctions manager = `437`
+- auction = `441`
+- price oracle = `438`
+- rebalancer = `440`
+- services manager = `439`
+- account = `435`
+
+## Owner / Admin
+`neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68`
+
+## Addresses
+
+- Services manager - `neutron1g4ylhl0x2k5gjmd7vhyqv2q7cwhd6gmpwspgktlqcq8s38c7f3gs90rv07`
+- Auctions manager - `neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84`
+- Rebalancer - `neutron1jreurhf7g43l0zdxu26fa8aahnjxyng8sjh5vvwjpn4lucwq8tsq7jxl5t`
+- Account - ``
+- Oracle - `neutron16zrrr6dxlqvcuht99g57k6dujvtdy5hq7pn66mqmmkvdj7pf3rwspasd4t`
+
+### Auctions
+
+- [uatom, untrn] - `neutron16f3v0xx6tt64lg9wzhxla34v35de3v7f3apa7s3usa2wyxc7a65q7ykfc6`
+- [untrn, uatom] - `neutron1jf5868tm9nmwm6u8pcu9ya8r7kjen9z52vsw68zlpsehsa2lturs9rsdlh`
 
 # Juno Contracts
 
@@ -55,14 +71,3 @@ junod keys add valence-owner --recover
 
 - (ujunox, vuusdcx) - ``
 - (vuusdcx, ujunox) - ``
-
-# FIGMA - flow
-
-1. init a services manager
-2. init a auctions manager
-3. init services (rebalancer)
-4. add service to manager
-5. init account
-6. init auctions
-7. init price oracle
-8. set initial prices for auctions

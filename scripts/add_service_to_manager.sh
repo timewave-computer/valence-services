@@ -16,17 +16,17 @@ if [[ "$CHAIN" == 'juno' ]]; then
   ADDR_SERVICES_MANAGER="juno1wh5gyyd3hhaeq6jgnawcecvgear7k8c94celuqqxcrz65sglemlql37ple"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
+  GAS_PRICES="0.015untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-  # ADDR_SERVICES_MANAGER=""
+  ADDR_SERVICES_MANAGER="neutron1g4ylhl0x2k5gjmd7vhyqv2q7cwhd6gmpwspgktlqcq8s38c7f3gs90rv07"
 else
   echo "Unknown chain"
 fi
 
-# EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
-EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
+EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
+# EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
 execute_msg=$(jq -n \
   --arg service_name "$SERVICE_NAME" \

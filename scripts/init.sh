@@ -26,23 +26,23 @@ if [[ "$CHAIN" == 'juno' ]]; then
   WHITELISTED_BASE_DENOMS='[\"ujunox\", \"factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx\"]'
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
+  GAS_PRICES="0.015untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
 
-  CODE_ID_ACCOUNT=1767
-  CODE_ID_SERVICES_MANAGER=1766
-  CODE_ID_REBALANCER=1765
-  CODE_ID_ORACLE=1764
-  CODE_ID_AUCTION=1763
-  CODE_ID_AUCTIONS_MANAGER=1762
+  CODE_ID_ACCOUNT=435
+  CODE_ID_SERVICES_MANAGER=439
+  CODE_ID_REBALANCER=440
+  CODE_ID_ORACLE=438
+  CODE_ID_AUCTION=436
+  CODE_ID_AUCTIONS_MANAGER=437
 
   # Contracts addresses for init below
-  # ADDR_SERVICES_MANAGER=""
-  # ADDR_AUCTIONS_MANAGER=""
+  ADDR_SERVICES_MANAGER="neutron1g4ylhl0x2k5gjmd7vhyqv2q7cwhd6gmpwspgktlqcq8s38c7f3gs90rv07"
+  ADDR_AUCTIONS_MANAGER="neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84"
 
   # General data per chain
-  WHITELISTED_DENOMS='[\"untrn\"]'
-  WHITELISTED_BASE_DENOMS='[\"untrn\"]'
+  WHITELISTED_DENOMS='[\"untrn\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
+  WHITELISTED_BASE_DENOMS='[\"untrn\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
 else
   echo "Unknown chain"
 fi
@@ -69,7 +69,8 @@ if [[ "$COMMAND" == 'account' ]]; then
 ################################################
 elif [[ "$COMMAND" == 'services-manager' ]]; then
   init_msg=$(jq -n \
-    '{}')
+    --argjson account_code_id $CODE_ID_ACCOUNT \
+    '{"whitelisted_code_ids": [$account_code_id]}')
 
   $BINARY tx wasm init $CODE_ID_SERVICES_MANAGER "$init_msg" --label "Valence services manager" \
     --admin $OWNER_ADDR --from $OWNER_ADDR $EXECUTE_FLAGS
@@ -81,7 +82,7 @@ elif [[ "$COMMAND" == 'auctions-manager' ]]; then
   init_msg=$(jq -n \
     --argjson auction_code_id $CODE_ID_AUCTION \
     '{ auction_code_id: $auction_code_id,
-       min_auction_amount: [["ujunox", "2000"], ["factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx", "1000"]]
+       min_auction_amount: [["untrn", "20000"], ["ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "10000"]]
       }')
 
   $BINARY tx wasm init $CODE_ID_AUCTIONS_MANAGER "$init_msg" --label "Valence auctions manager" \
@@ -104,7 +105,8 @@ elif [[ "$COMMAND" == 'rebalancer' ]]; then
       auctions_manager_addr: $auctions_manager_addr,
       cycle_start: "0",
       denom_whitelist: [$whitelist_denom],
-      base_denom_whitelist: [$whitelist_base_denom]
+      base_denom_whitelist: [$whitelist_base_denom],
+      cycle_period: 60,
       }')
 
   $BINARY tx wasm init $CODE_ID_REBALANCER "$init_msg" --label "Valence rebalancer" \
