@@ -1,11 +1,12 @@
-use cosmwasm_std::{testing::mock_env, Addr, Timestamp, Uint128};
+use cosmwasm_std::{testing::mock_env, to_binary, Addr, Timestamp, Uint128};
+use cw_multi_test::Executor;
 use valence_package::services::{
     rebalancer::{RebalancerUpdateData, SystemRebalanceStatus},
     ValenceServices,
 };
 
 use crate::suite::{
-    suite::{ATOM, NTRN, TRUSTEE},
+    suite::{Suite, ATOM, NTRN, TRUSTEE},
     suite_builder::SuiteBuilder,
 };
 
@@ -301,4 +302,63 @@ fn test_update_addrs() {
 
     assert_eq!(addrs.services, random_addr);
     assert_eq!(addrs.auctions, random_addr);
+}
+
+#[test]
+fn test_register_wrong_code_id() {
+    let mut suite = Suite::default();
+
+    // Try to register using a not allowed code id
+    let err: services_manager::error::ContractError = suite
+        .app
+        .execute_contract(
+            suite.rebalancer_addr.clone(),
+            suite.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
+                service_name: ValenceServices::Rebalancer,
+                data: Some(
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
+                        .unwrap(),
+                ),
+            },
+            &[],
+        )
+        .unwrap_err()
+        .downcast()
+        .unwrap();
+
+    assert_eq!(
+        err,
+        services_manager::error::ContractError::NotWhitelistedContract(3)
+    );
+
+    // Update code id whitelist
+    suite.app.execute_contract(
+        suite.admin.clone(),
+        suite.manager_addr.clone(),
+        &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::Admin(
+            valence_package::msgs::core_execute::ServicesManagerAdminMsg::UpdateCodeIdWhitelist {
+                to_add: vec![3],
+                to_remove: vec![],
+            },
+        ),
+        &[],
+    ).unwrap();
+
+    // try to register again using the same contract as above
+    suite
+        .app
+        .execute_contract(
+            suite.rebalancer_addr.clone(),
+            suite.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
+                service_name: ValenceServices::Rebalancer,
+                data: Some(
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
+                        .unwrap(),
+                ),
+            },
+            &[],
+        )
+        .unwrap();
 }

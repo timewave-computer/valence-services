@@ -9,15 +9,12 @@ impl From<ServicesManagerInstantiate> for services_manager::msg::InstantiateMsg 
     }
 }
 
-impl Default for ServicesManagerInstantiate {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 impl ServicesManagerInstantiate {
-    pub fn new() -> Self {
+    pub fn new(code_ids: Vec<u64>) -> Self {
         Self {
-            msg: services_manager::msg::InstantiateMsg {},
+            msg: services_manager::msg::InstantiateMsg {
+                whitelisted_code_ids: code_ids,
+            },
         }
     }
 }

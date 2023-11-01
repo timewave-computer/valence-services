@@ -12,7 +12,7 @@ use valence_package::states::ADMIN;
 use crate::error::ContractError;
 use crate::helpers::{get_service_addr, save_service};
 use crate::msg::{InstantiateMsg, MigrateMsg};
-use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR};
+use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR, WHITELISTED_CODE_IDS};
 
 const CONTRACT_NAME: &str = "crates.io:services-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,11 +22,13 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     ADMIN.save(deps.storage, &info.sender)?;
+
+    WHITELISTED_CODE_IDS.save(deps.storage, &msg.whitelisted_code_ids)?;
 
     Ok(Response::default().add_attribute("method", "instantiate"))
 }
@@ -43,6 +45,16 @@ pub fn execute(
             admin::handle_msg(deps, env, info, admin_msg)
         }
         ServicesManagerExecuteMsg::RegisterToService { service_name, data } => {
+            let sender_code_id = deps
+                .querier
+                .query_wasm_contract_info(info.sender.clone())?
+                .code_id;
+            let whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+
+            if !whitelist.contains(&sender_code_id) {
+                return Err(ContractError::NotWhitelistedContract(sender_code_id));
+            }
+
             let service_addr = get_service_addr(deps.as_ref(), service_name.to_string())?;
 
             let msg =
@@ -143,6 +155,25 @@ mod admin {
                 remove_service(deps, name.to_string(), addr)?;
 
                 Ok(Response::default().add_attribute("method", "remove_service"))
+            }
+            ServicesManagerAdminMsg::UpdateCodeIdWhitelist { to_add, to_remove } => {
+                let mut whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+
+                for code_id in to_add {
+                    if !whitelist.contains(&code_id) {
+                        whitelist.push(code_id);
+                    }
+                }
+
+                for code_id in to_remove {
+                    if let Some(index) = whitelist.iter().position(|x| *x == code_id) {
+                        whitelist.remove(index);
+                    }
+                }
+
+                WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
+
+                Ok(Response::default().add_attribute("method", "update_code_id_whitelist"))
             }
         }
     }

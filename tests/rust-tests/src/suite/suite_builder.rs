@@ -358,7 +358,7 @@ impl SuiteBuilder {
 
     pub fn init_manager(&mut self, app: &mut App) -> Addr {
         let services_manager_init_msg: services_manager::msg::InstantiateMsg =
-            ServicesManagerInstantiate::default().into();
+            ServicesManagerInstantiate::new(vec![self.account_code_id]).into();
 
         app.instantiate_contract(
             self.manager_code_id,
