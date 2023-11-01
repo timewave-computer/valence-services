@@ -5,23 +5,23 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use valence_package::helpers::{verify_services_manager, OptionalField};
-use valence_package::services::rebalancer::RebalancerExecuteMsg;
+use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanceStatus};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
 use crate::helpers::has_dup;
-use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
-    SystemRebalanceStatus, AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, DENOM_WHITELIST,
+    AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
     SYSTEM_REBALANCE_STATUS,
 };
 
-const CONTRACT_NAME: &str = "crates.io:covenant-clock";
+const CONTRACT_NAME: &str = "crates.io:rebalancer";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // TODO: Make cycle period configurable
-pub const CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
+pub const DEFAULT_CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
 /// The default limit of how many accounts we loop over in a single message
 /// If wasn't specified in the message
 pub const DEFAULT_SYSTEM_LIMIT: u64 = 50;
@@ -31,7 +31,7 @@ pub const REPLY_DEFAULT_REBALANCE: u64 = 0;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -39,6 +39,11 @@ pub fn instantiate(
 
     // Set the admin
     ADMIN.save(deps.storage, &info.sender)?;
+
+    // verify cycle_start is not too much in the future
+    if msg.cycle_start > env.block.time.plus_days(30) {
+        return Err(ContractError::CycleStartTooFarInFuture);
+    }
 
     // Save status as not started
     SYSTEM_REBALANCE_STATUS.save(
@@ -64,6 +69,12 @@ pub fn instantiate(
         &deps.api.addr_validate(&msg.auctions_manager_addr)?,
     )?;
 
+    // Save cycle period time given or the default (24 hours)
+    CYCLE_PERIOD.save(
+        deps.storage,
+        &msg.cycle_period.unwrap_or(DEFAULT_CYCLE_PERIOD),
+    )?;
+
     Ok(Response::default().add_attribute("method", "instantiate"))
 }
 
@@ -75,6 +86,7 @@ pub fn execute(
     msg: RebalancerExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
         RebalancerExecuteMsg::Register { register_for, data } => {
             verify_services_manager(deps.as_ref(), &info)?;
             let data = data.expect("We must have register data");
@@ -106,7 +118,7 @@ pub fn execute(
             };
 
             for target in data.targets.clone() {
-                total_bps += target.percentage;
+                total_bps += target.bps;
 
                 // Verify we only have a single min_Balance target
                 if target.min_balance.is_some() && has_min_balance {
@@ -165,7 +177,7 @@ pub fn execute(
                 let mut has_min_balance = false;
 
                 for target in data.targets.clone() {
-                    total_bps += target.percentage;
+                    total_bps += target.bps;
 
                     if target.min_balance.is_some() && has_min_balance {
                         return Err(ContractError::MultipleMinBalanceTargets);
@@ -299,6 +311,109 @@ pub fn execute(
     }
 }
 
+mod admin {
+    use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+    use valence_package::{
+        helpers::verify_admin,
+        services::rebalancer::{RebalancerAdminMsg, SystemRebalanceStatus},
+        states::SERVICES_MANAGER,
+    };
+
+    use crate::{
+        error::ContractError,
+        state::{
+            AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CYCLE_PERIOD, DENOM_WHITELIST,
+            SYSTEM_REBALANCE_STATUS,
+        },
+    };
+
+    pub fn handle_msg(
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        msg: RebalancerAdminMsg,
+    ) -> Result<Response, ContractError> {
+        // Verify that the sender is the admin
+        verify_admin(deps.as_ref(), &info)?;
+
+        match msg {
+            RebalancerAdminMsg::UpdateSystemStatus { status } => {
+                match status {
+                    SystemRebalanceStatus::Processing { .. } => {
+                        Err(ContractError::CantUpdateStatusToProcessing)
+                    }
+                    _ => Ok(()),
+                }?;
+
+                SYSTEM_REBALANCE_STATUS.save(deps.storage, &status)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateDenomWhitelist { to_add, to_remove } => {
+                let mut denoms = DENOM_WHITELIST.load(deps.storage)?;
+
+                // first remove denoms
+                for denom in to_remove {
+                    if let Some(index) = denoms.iter().position(|d| d == &denom) {
+                        denoms.remove(index);
+                    }
+                }
+
+                // add new denoms
+                for denom in to_add {
+                    if !denoms.contains(&denom) {
+                        denoms.push(denom);
+                    }
+                }
+
+                DENOM_WHITELIST.save(deps.storage, &denoms)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateBaseDenomWhitelist { to_add, to_remove } => {
+                let mut base_denoms = BASE_DENOM_WHITELIST.load(deps.storage)?;
+
+                // first remove denoms
+                for denom in to_remove {
+                    if let Some(index) = base_denoms.iter().position(|d| d == &denom) {
+                        base_denoms.remove(index);
+                    }
+                }
+
+                // add new denoms
+                for denom in to_add {
+                    if !base_denoms.contains(&denom) {
+                        base_denoms.push(denom);
+                    }
+                }
+
+                BASE_DENOM_WHITELIST.save(deps.storage, &base_denoms)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateServicesManager { addr } => {
+                let addr = deps.api.addr_validate(&addr)?;
+
+                SERVICES_MANAGER.save(deps.storage, &addr)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateAuctionsManager { addr } => {
+                let addr = deps.api.addr_validate(&addr)?;
+
+                AUCTIONS_MANAGER_ADDR.save(deps.storage, &addr)?;
+
+                Ok(Response::default())
+            }
+            RebalancerAdminMsg::UpdateCyclePeriod { period } => {
+                CYCLE_PERIOD.save(deps.storage, &period)?;
+
+                Ok(Response::default())
+            }
+        }
+    }
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -306,6 +421,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
         }
         QueryMsg::GetSystemStatus {} => to_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?),
+        QueryMsg::GetWhiteLists => {
+            let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
+            let base_denom_whitelist = BASE_DENOM_WHITELIST.load(deps.storage)?;
+
+            to_binary(&WhitelistsResponse {
+                denom_whitelist,
+                base_denom_whitelist,
+            })
+        }
+        QueryMsg::GetManagersAddrs => {
+            let services = SERVICES_MANAGER.load(deps.storage)?;
+            let auctions = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
+
+            to_binary(&ManagersAddrsResponse { services, auctions })
+        }
     }
 }
 

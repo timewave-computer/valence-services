@@ -2,15 +2,17 @@
 members = [
   "packages/*",
   "contracts/services/*",
-  "contracts/services-manager/",
+  "contracts/services_manager/",
+  "contracts/account/",
+  "contracts/auction/*",
   "tests/rust-tests",
 ]
 
 [workspace.package]
 edition    = "2021"
-license    = "BSD-3"
+license    = "BSL"
 version    = "0.1.0"
-repository = "https://github.com/timewave-computer/rebalancer"
+repository = "https://github.com/timewave-computer/valence-services"
 
 rust-version = "1.66"
 
@@ -27,39 +29,20 @@ rpath            = false
 
 [workspace.dependencies]
 # Contracts
-valence-account  = { git = "ssh://git@github.com/timewave-computer/valence-account.git", branch = "main", package = "valence-account" }
-rebalancer       = { path = "contracts/services/rebalancer" }
-services-manager = { path = "contracts/services-manager" }
+valence-account  = { path = "contracts/account", features = ["library"] }
+rebalancer       = { path = "contracts/services/rebalancer", features = ["library"] }
+services-manager = { path = "contracts/services_manager", features = ["library"] }
 
-# Auction related packages/contracts
-auction-package  = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction-package" }
-auctions-manager = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auctions-manager" }
-auction          = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "auction" }
-price-oracle     = { git = "ssh://git@github.com/timewave-computer/auction.git", branch = "main", package = "price-oracle" }
-
-# auction-package  = { path = "../auction/packages/auction-package" }
-# auctions-manager = { path = "../auction/contracts/auctions_manager" }
-# auction          = { path = "../auction/contracts/auction" }
-# price-oracle     = { path = "../auction/contracts/price_oracle" }
+# Auction related contracts
+auctions-manager = { path = "contracts/auction/auctions_manager", features = ["library"] }
+auction          = { path = "contracts/auction/auction", features = ["library"] }
+price-oracle     = { path = "contracts/auction/price_oracle", features = ["library"] }
 
 # packages
 valence-macros  = { path = "packages/valence-macros" }
 valence-package = { path = "packages/valence-package" }
+auction-package = { path = "packages/auction-package" }
 
-# the sha2 version here is the same as the one used by
-# cosmwasm-std. when bumping cosmwasm-std, this should also be
-# updated. to find cosmwasm_std's sha function:
-# ```cargo tree --package cosmwasm-std```
-sha2             = "0.10.6"
-neutron-sdk      = { git = "https://github.com/neutron-org/neutron-sdk", default-features = false }
-cosmos-sdk-proto = { version = "0.14.0", default-features = false }
-protobuf         = { version = "3.2.0", features = ["with-bytes"] }
-serde-json-wasm  = { version = "0.4.1" }
-base64           = "0.13.0"
-prost            = "0.11"
-astroport        = "2.8.0"
-prost-types      = "0.11"
-bech32           = "0.9.0"
 cosmwasm-schema  = "1.2.1"
 cosmwasm-std     = { version = "1.2.4", features = ["ibc3"] }
 cw-storage-plus  = "1.0.1"

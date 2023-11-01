@@ -3,7 +3,7 @@ use std::str::FromStr;
 use auction_package::{helpers::ChainHaltConfig, AuctionStrategy, Pair, PriceFreshnessStrategy};
 use cosmwasm_std::Decimal;
 
-use crate::suite::suite::{ATOM, NTRN, OSMO};
+use crate::suite::suite::{ATOM, DEFAULT_BLOCK_TIME, NTRN, OSMO};
 
 #[derive(Clone)]
 pub struct AuctionInstantiate {
@@ -87,23 +87,28 @@ impl AuctionInstantiate {
                 pair,
                 auction_strategy,
                 chain_halt_config: ChainHaltConfig {
-                    cap: 10_u128,
-                    block_avg: Decimal::from_str("3").unwrap(),
+                    cap: 14400_u128,
+                    block_avg: Decimal::from_str(&DEFAULT_BLOCK_TIME.to_string()).unwrap(),
                 },
                 price_freshness_strategy: PriceFreshnessStrategy {
-                    limit: Decimal::bps(50000),
-                    multipliers: vec![(Decimal::bps(50000), Decimal::one())],
+                    limit: Decimal::bps(30000),
+                    multipliers: vec![
+                        (Decimal::bps(20000), Decimal::bps(20000)),
+                        (Decimal::bps(10000), Decimal::bps(15000)),
+                    ],
                 },
             },
         }
     }
 
     /* Change functions */
-    pub fn change_pair(&mut self, pair: Pair) {
+    pub fn change_pair(&mut self, pair: Pair) -> &mut Self {
         self.msg.pair = pair;
+        self
     }
 
-    pub fn change_auction_strategy(&mut self, auction_strategy: AuctionStrategy) {
+    pub fn change_auction_strategy(&mut self, auction_strategy: AuctionStrategy) -> &mut Self {
         self.msg.auction_strategy = auction_strategy;
+        self
     }
 }

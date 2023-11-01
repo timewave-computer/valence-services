@@ -72,8 +72,8 @@ pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), Val
 }
 
 /// Get the timestomt of the start of the day (00:00 midnight)
-pub fn start_of_day(time: Timestamp) -> Timestamp {
-    let leftover = time.seconds() % (60 * 60 * 24); // How much leftover from the start of the day (mid night UTC)
+pub fn start_of_cycle(time: Timestamp, cycle: u64) -> Timestamp {
+    let leftover = time.seconds() % cycle; // How much leftover from the start of the day (mid night UTC)
     time.minus_seconds(leftover)
 }
 
@@ -81,15 +81,15 @@ pub fn start_of_day(time: Timestamp) -> Timestamp {
 mod test {
     use cosmwasm_std::testing::mock_env;
 
-    use super::start_of_day;
+    use super::start_of_cycle;
 
     #[test]
     fn test_start_of_day() {
         let time1 = mock_env().block.time;
         let time2 = mock_env().block.time.plus_seconds(5);
 
-        let start_of_1 = start_of_day(time1);
-        let start_of_2 = start_of_day(time2);
+        let start_of_1 = start_of_cycle(time1, 60 * 60 * 24);
+        let start_of_2 = start_of_cycle(time2, 60 * 60 * 24);
 
         assert_eq!(start_of_1, start_of_2)
     }

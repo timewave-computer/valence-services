@@ -1,12 +1,17 @@
 use auction_package::Pair;
 use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
-use rebalancer::{contract::CYCLE_PERIOD, state::SystemRebalanceStatus};
+use rebalancer::contract::DEFAULT_CYCLE_PERIOD;
 use valence_package::{
-    helpers::start_of_day,
-    services::{rebalancer::Target, ValenceServices},
+    error::ValenceError,
+    helpers::start_of_cycle,
+    services::{
+        rebalancer::{SystemRebalanceStatus, Target},
+        ValenceServices,
+    },
 };
 
 use crate::suite::{
+    instantiates::RebalancerInstantiate,
     suite::{ATOM, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS, DEFAULT_OSMO_PRICE_BPS, NTRN, OSMO},
     suite_builder::SuiteBuilder,
 };
@@ -32,7 +37,7 @@ fn test_rebalancer_system() {
     assert_eq!(
         status,
         SystemRebalanceStatus::Processing {
-            cycle_started: start_of_day(suite.app.block_info().time),
+            cycle_started: start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD),
             start_from: suite.get_account_addr(0),
             prices: vec![
                 (
@@ -75,7 +80,8 @@ fn test_rebalancer_system() {
     assert_eq!(
         status,
         SystemRebalanceStatus::Finished {
-            next_cycle: start_of_day(suite.app.block_info().time).plus_seconds(CYCLE_PERIOD)
+            next_cycle: start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD)
+                .plus_seconds(DEFAULT_CYCLE_PERIOD)
         }
     );
 
@@ -104,7 +110,15 @@ fn test_rebalancer_system() {
     assert_eq!(
         err,
         rebalancer::error::ContractError::CycleNotStartedYet(
-            start_of_day(suite.app.block_info().time.plus_seconds(CYCLE_PERIOD)).seconds()
+            start_of_cycle(
+                suite
+                    .app
+                    .block_info()
+                    .time
+                    .plus_seconds(DEFAULT_CYCLE_PERIOD),
+                DEFAULT_CYCLE_PERIOD
+            )
+            .seconds()
         )
     )
 }
@@ -151,7 +165,7 @@ fn test_register() {
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
     register_data.targets = vec![Target {
         denom: ATOM.to_string(),
-        percentage: 10000,
+        bps: 10000,
         min_balance: None,
     }];
 
@@ -163,12 +177,12 @@ fn test_register() {
     register_data.targets = vec![
         Target {
             denom: ATOM.to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
         Target {
             denom: "not_whitelisted_denom".to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
     ];
@@ -184,12 +198,12 @@ fn test_register() {
     register_data.targets = vec![
         Target {
             denom: ATOM.to_string(),
-            percentage: 6000,
+            bps: 6000,
             min_balance: None,
         },
         Target {
             denom: NTRN.to_string(),
-            percentage: 5000,
+            bps: 5000,
             min_balance: None,
         },
     ];
@@ -197,7 +211,7 @@ fn test_register() {
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
         err,
-        rebalancer::error::ContractError::InvalidTargetPercentage("1.1".to_string())
+        rebalancer::error::ContractError::InvalidTargetPercentage("11000".to_string())
     );
 }
 
@@ -306,4 +320,70 @@ fn test_rebalancer_cycle_next_day_while_processing() {
         .unwrap();
     assert_eq!(config1.last_rebalance, suite.app.block_info().time);
     assert_eq!(config2.last_rebalance, suite.app.block_info().time);
+}
+
+#[test]
+fn test_invalid_max_limit_range() {
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+
+    // Because we have a basic setup here, we need to register the service to the manager
+    suite
+        .add_service_to_manager(
+            suite.admin.clone(),
+            suite.manager_addr.clone(),
+            ValenceServices::Rebalancer,
+            suite.rebalancer_addr.to_string(),
+        )
+        .unwrap();
+
+    let mut init_msg = SuiteBuilder::get_default_rebalancer_register_data();
+
+    // Test below 1 (0)
+    init_msg.max_limit_bps = Some(0);
+
+    let err = suite.register_to_rebalancer_err(0, &init_msg);
+    assert!(err
+        .to_string()
+        .contains(&ValenceError::InvalidMaxLimitRange.to_string()));
+
+    // test above 10000
+    init_msg.max_limit_bps = Some(10001);
+
+    // Try to register when already registered
+    let err = suite.register_to_rebalancer_err(0, &init_msg);
+    assert!(err
+        .to_string()
+        .contains(&ValenceError::InvalidMaxLimitRange.to_string()));
+}
+
+#[test]
+fn test_custom_cycle_period() {
+    let hour = 60 * 60;
+    // the addresses are empty because they are populated in the build
+    let rebalancer_init = RebalancerInstantiate::default("", "")
+        .change_cycle_period(Some(hour))
+        .into();
+    let mut suite = SuiteBuilder::default()
+        .with_custom_rebalancer(rebalancer_init)
+        .build_default();
+
+    // Do 1 rebalance
+    suite.rebalance(None).unwrap();
+
+    // Try to do another one before our cycle is passed
+    suite.add_block();
+
+    let err = suite.rebalance_err(None);
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::CycleNotStartedYet(
+            start_of_cycle(suite.app.block_info().time, hour).seconds() + hour
+        )
+    );
+
+    // Pass the time to the next cycle
+    suite.update_block(hour / DEFAULT_BLOCK_TIME);
+
+    // try to do another rebalance
+    suite.rebalance(None).unwrap();
 }

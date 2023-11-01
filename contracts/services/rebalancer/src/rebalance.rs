@@ -7,18 +7,20 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Bound;
 use valence_package::{
-    helpers::start_of_day,
-    services::rebalancer::{ParsedPID, RebalancerConfig, TargetOverrideStrategy},
+    helpers::start_of_cycle,
+    services::rebalancer::{
+        ParsedPID, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
+    },
     signed_decimal::SignedDecimal,
 };
 
 use crate::{
-    contract::{CYCLE_PERIOD, DEFAULT_SYSTEM_LIMIT, REPLY_DEFAULT_REBALANCE},
+    contract::{DEFAULT_SYSTEM_LIMIT, REPLY_DEFAULT_REBALANCE},
     error::ContractError,
     helpers::{TargetHelper, TradesTuple},
     state::{
-        SystemRebalanceStatus, AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS,
-        DENOM_WHITELIST, SYSTEM_REBALANCE_STATUS,
+        AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
+        SYSTEM_REBALANCE_STATUS,
     },
 };
 
@@ -28,6 +30,8 @@ pub fn execute_system_rebalance(
     env: &Env,
     limit: Option<u64>,
 ) -> Result<Response, ContractError> {
+    let cycle_period = CYCLE_PERIOD.load(deps.storage)?;
+
     // start_from tells us if we should start form a specific addr or from the begining
     // cycle_start tells us when the cycle started to calculate for processing and finished status
     let (start_from, cycle_start, prices) = match SYSTEM_REBALANCE_STATUS.load(deps.storage)? {
@@ -35,7 +39,7 @@ pub fn execute_system_rebalance(
             if env.block.time < cycle_start {
                 Err(ContractError::CycleNotStartedYet(cycle_start.seconds()))
             } else {
-                Ok((None, start_of_day(env.block.time), None))
+                Ok((None, start_of_cycle(env.block.time, cycle_period), None))
             }
         }
         SystemRebalanceStatus::Processing {
@@ -43,8 +47,8 @@ pub fn execute_system_rebalance(
             start_from,
             prices,
         } => {
-            if env.block.time >= cycle_started.plus_seconds(CYCLE_PERIOD) {
-                Ok((None, start_of_day(env.block.time), None))
+            if env.block.time >= cycle_started.plus_seconds(cycle_period) {
+                Ok((None, start_of_cycle(env.block.time, cycle_period), None))
             } else {
                 Ok((Some(start_from), cycle_started, Some(prices)))
             }
@@ -106,6 +110,7 @@ pub fn execute_system_rebalance(
             config,
             &mut min_amount_limits,
             &prices,
+            cycle_period,
         );
         let Ok((config, msg)) = rebalance_res else {
           continue
@@ -123,7 +128,7 @@ pub fn execute_system_rebalance(
     // println!("{total_accounts:?} | {limit:?}");
     let status = if total_accounts < limit {
         SystemRebalanceStatus::Finished {
-            next_cycle: cycle_start.plus_seconds(CYCLE_PERIOD),
+            next_cycle: cycle_start.plus_seconds(cycle_period),
         }
     } else {
         SystemRebalanceStatus::Processing {
@@ -139,6 +144,7 @@ pub fn execute_system_rebalance(
 }
 
 /// Do a rebalance with PID calculation for a single account
+#[allow(clippy::too_many_arguments)]
 pub fn do_rebalance(
     deps: Deps,
     env: &Env,
@@ -147,6 +153,7 @@ pub fn do_rebalance(
     mut config: RebalancerConfig,
     min_amount_limits: &mut Vec<(String, Uint128)>,
     prices: &[(Pair, Decimal)],
+    cycle_period: u64,
 ) -> Result<(RebalancerConfig, SubMsg), ContractError> {
     // get a vec of inputs for our calculations
     let (total_value, mut target_helpers) = get_inputs(deps, account, &config, prices)?;
@@ -169,14 +176,14 @@ pub fn do_rebalance(
             env.block.time.seconds() - config.last_rebalance.seconds(),
             0,
         )?;
-        diff / Decimal::from_atomics(CYCLE_PERIOD, 0)?
+        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(10_u128.into()))
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
-    println!("to_sell: {to_sell:?} | to_buy: {to_buy:?}");
+
     // Generate the trades msgs, how much funds to send to what auction.
     let msgs = generate_trades_msgs(deps, to_sell, to_buy, auction_manager, &config, total_value);
 

@@ -8,6 +8,6 @@ use valence_macros::valence_services_manager_query_msgs;
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum ServicesManagerQueryMsg {
-    // #[returns(bool)]
-    // IsQueued { address: String },
+    #[returns(Addr)]
+    GetRebalancerConfig { account: String },
 }

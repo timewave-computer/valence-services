@@ -21,4 +21,7 @@ pub enum ContractError {
 
     #[error("This services doesn't exists: {0}")]
     ServiceDoesntExist(String),
+
+    #[error("Contract is not allowed to register to services: {0}")]
+    NotWhitelistedContract(u64),
 }

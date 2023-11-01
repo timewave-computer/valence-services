@@ -33,7 +33,8 @@ impl AuctionsManagerInstantiate {
     }
 
     /* Change functions */
-    pub fn change_auction_code_id(&mut self, auction_code_id: u64) {
+    pub fn change_auction_code_id(&mut self, auction_code_id: u64) -> &mut Self {
         self.msg.auction_code_id = auction_code_id;
+        self
     }
 }

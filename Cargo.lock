@@ -22,11 +22,12 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 [[package]]
 name = "auction"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -37,7 +38,6 @@ dependencies = [
 [[package]]
 name = "auction-package"
 version = "0.0.1"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -49,12 +49,13 @@ dependencies = [
 [[package]]
 name = "auctions-manager"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -714,11 +715,12 @@ dependencies = [
 [[package]]
 name = "price-oracle"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/auction.git?branch=main#dc3e1be8f4bb1d108c7b65f9dd98257a9377a10b"
 dependencies = [
+ "anyhow",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -796,8 +798,8 @@ dependencies = [
  "cw2",
  "serde",
  "thiserror",
- "valence-macros 0.0.1",
- "valence-package 0.0.1",
+ "valence-macros",
+ "valence-package",
 ]
 
 [[package]]
@@ -968,10 +970,11 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "rebalancer",
  "serde",
  "thiserror",
- "valence-macros 0.0.1",
- "valence-package 0.0.1",
+ "valence-macros",
+ "valence-package",
 ]
 
 [[package]]
@@ -1111,16 +1114,17 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 [[package]]
 name = "valence-account"
 version = "0.1.0"
-source = "git+ssh://git@github.com/timewave-computer/valence-account.git?branch=main#fb0ada0accc3f73561143ba701e83e53597fdfe2"
 dependencies = [
+ "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw2",
  "serde",
  "thiserror",
- "valence-macros 0.0.1 (git+ssh://git@github.com/timewave-computer/valence-services.git?branch=dev)",
- "valence-package 0.0.1 (git+ssh://git@github.com/timewave-computer/valence-services.git?branch=dev)",
+ "valence-macros",
+ "valence-package",
 ]
 
 [[package]]
@@ -1135,40 +1139,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "valence-macros"
-version = "0.0.1"
-source = "git+ssh://git@github.com/timewave-computer/valence-services.git?branch=dev#39073ca47748678632580f616db260e14f4c8b74"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "valence-package"
 version = "0.0.1"
 dependencies = [
+ "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
  "serde",
  "thiserror",
- "valence-macros 0.0.1",
-]
-
-[[package]]
-name = "valence-package"
-version = "0.0.1"
-source = "git+ssh://git@github.com/timewave-computer/valence-services.git?branch=dev#39073ca47748678632580f616db260e14f4c8b74"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "serde",
- "thiserror",
- "valence-macros 0.0.1 (git+ssh://git@github.com/timewave-computer/valence-services.git?branch=dev)",
+ "valence-macros",
 ]
 
 [[package]]
@@ -1183,6 +1163,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
+ "cw-storage-plus",
  "price-oracle",
  "rebalancer",
  "rgb",
@@ -1190,7 +1171,7 @@ dependencies = [
  "textplots",
  "thiserror",
  "valence-account",
- "valence-package 0.0.1",
+ "valence-package",
 ]
 
 [[package]]

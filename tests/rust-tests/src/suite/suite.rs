@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 
-use auction::msg::NewAuctionParams;
-use auction_package::{helpers::GetPriceResponse, Pair};
+use auction_package::Pair;
 use cosmwasm_schema::serde;
-use cosmwasm_std::{coin, to_binary, Addr, Coin, Decimal, Empty, StdError, Uint128};
+use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
-use rebalancer::{contract::CYCLE_PERIOD, state::SystemRebalanceStatus};
-use valence_package::{
-    services::{rebalancer::RebalancerConfig, ValenceServices},
-    signed_decimal::SignedDecimal,
+use rebalancer::{
+    contract::DEFAULT_CYCLE_PERIOD,
+    msg::{ManagersAddrsResponse, WhitelistsResponse},
+};
+use valence_package::services::{
+    rebalancer::{RebalancerConfig, SystemRebalanceStatus},
+    ValenceServices,
 };
 
 use super::suite_builder::SuiteBuilder;
@@ -45,7 +47,9 @@ pub(crate) struct Suite {
     pub manager_addr: Addr,
     pub rebalancer_addr: Addr,
     pub account_addrs: Vec<Addr>,
-    pub _auction_addrs: HashMap<(String, String), String>,
+    pub auction_addrs: HashMap<(String, String), Addr>,
+    /// Used mainly for auction tests, a default pair of (ATOM, NTRN)
+    pub pair: Pair,
 }
 
 impl Default for Suite {
@@ -65,7 +69,7 @@ impl Suite {
     }
 
     pub fn update_block_cycle(&mut self) -> &mut Self {
-        self.update_block(CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
+        self.update_block(DEFAULT_CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
     }
 
     pub fn add_block(&mut self) -> &mut Self {
@@ -177,6 +181,10 @@ impl Suite {
       )
     }
 
+    pub fn rebalance_err(&mut self, limit: Option<u64>) -> rebalancer::error::ContractError {
+        self.rebalance(limit).unwrap_err().downcast().unwrap()
+    }
+
     pub fn rebalance_with_update_block(
         &mut self,
         limit: Option<u64>,
@@ -186,197 +194,104 @@ impl Suite {
         self.rebalance(limit)
     }
 
-    pub fn start_auction(
+    pub fn update_rebalancer_system_status(
         &mut self,
-        pair: Pair,
-        start_block: Option<u64>,
-        end_block: u64,
+        sender: Addr,
+        status: SystemRebalanceStatus,
     ) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
-            self.admin.clone(),
-            self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
-                auctions_manager::msg::AdminMsgs::OpenAuction {
-                    pair,
-                    params: NewAuctionParams {
-                        start_block,
-                        end_block,
-                    },
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateSystemStatus {
+                    status,
                 },
             ),
             &[],
         )
     }
 
-    pub fn do_bid(&mut self, pair: Pair, amount: Coin) -> &mut Self {
-        let auction_addr = self
-            .app
-            .wrap()
-            .query_wasm_smart::<Addr>(
-                self.auctions_manager_addr.clone(),
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetPairAddr { pair },
-            )
-            .unwrap();
-
-        let res = self
-            .app
-            .execute_contract(
-                self.mm.clone(),
-                auction_addr,
-                &auction::msg::ExecuteMsg::Bid,
-                &[amount],
-            )
-            .unwrap();
-        println!("do_bid: {res:?}");
-
-        self
-    }
-
-    pub fn close_auction(&mut self, pair: Pair, limit: Option<u64>) -> &mut Self {
-        let auction_addr = self
-            .app
-            .wrap()
-            .query_wasm_smart::<Addr>(
-                self.auctions_manager_addr.clone(),
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetPairAddr { pair },
-            )
-            .unwrap();
-
-        let _auction = self
-            .app
-            .wrap()
-            .query_wasm_smart::<auction::state::ActiveAuction>(
-                auction_addr.clone(),
-                &auction::msg::QueryMsg::GetAuction,
-            )
-            .unwrap();
-
-        let res = self
-            .app
-            .execute_contract(
-                self.admin.clone(),
-                auction_addr,
-                &auction::msg::ExecuteMsg::FinishAuction {
-                    limit: limit.unwrap_or(5),
-                },
-                &[],
-            )
-            .unwrap();
-        println!("close_auction: {res:?}");
-
-        self
-    }
-
-    pub fn resolve_cycle(&mut self) -> &mut Self {
-        let pair1 = Pair::from((ATOM.to_string(), NTRN.to_string()));
-        let pair2 = Pair::from((NTRN.to_string(), ATOM.to_string()));
-
-        self.rebalance(None).unwrap();
-
-        self.update_price_from_auction(&pair1, None);
-        self.update_price_from_auction(&pair2, None);
-
-        let auction1_started = self
-            .start_auction(
-                pair1.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
-            )
-            .is_ok();
-
-        let auction2_started = self
-            .start_auction(
-                pair2.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
-            )
-            .is_ok();
-
-        self.update_block(HALF_DAY / DEFAULT_BLOCK_TIME);
-
-        if auction1_started {
-            self.do_bid(pair1.clone(), coin(100000_u128, pair1.clone().1));
-        }
-
-        if auction2_started {
-            self.do_bid(pair2.clone(), coin(100000_u128, pair2.clone().1));
-        }
-
-        self.update_block(HALF_DAY / DEFAULT_BLOCK_TIME);
-
-        if auction1_started {
-            self.close_auction(pair1, None);
-        }
-
-        if auction2_started {
-            self.close_auction(pair2, None);
-        }
-
-        self
-    }
-}
-
-// Auction specific functions
-impl Suite {
-    pub fn get_price(&self, pair: &Pair) -> Decimal {
-        self.app
-            .wrap()
-            .query_wasm_smart::<GetPriceResponse>(
-                self.auctions_manager_addr.clone(),
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair: pair.clone() },
-            )
+    pub fn update_rebalancer_system_status_err(
+        &mut self,
+        sender: Addr,
+        status: SystemRebalanceStatus,
+    ) -> rebalancer::error::ContractError {
+        self.update_rebalancer_system_status(sender, status)
+            .unwrap_err()
+            .downcast()
             .unwrap()
-            .price
     }
 
-    // price_change in percentage
-    pub fn change_price_perc(&mut self, pair: &Pair, price_change: SignedDecimal) {
-        let price = self.get_price(pair);
-        let new_price = if price_change.is_pos() {
-            price + price * price_change.0
-        } else {
-            price - price * price_change.0
-        };
-
-        self.change_price(pair, Some(new_price))
-    }
-
-    pub fn change_price(&mut self, pair: &Pair, price: Option<Decimal>) {
-        self.app
-            .execute_contract(
-                self.admin.clone(),
-                self.oracle_addr.clone(),
-                &price_oracle::msg::ExecuteMsg::UpdatePrice {
-                    pair: pair.clone(),
-                    price,
+    pub fn update_rebalancer_denom_whitelist(
+        &mut self,
+        sender: Addr,
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateDenomWhitelist {
+                    to_add,
+                    to_remove,
                 },
-                &[],
-            )
-            .unwrap();
-    }
-
-    pub fn update_price_from_auction(&mut self, pair: &Pair, price: Option<Decimal>) {
-        let _ = self.app.execute_contract(
-            self.admin.clone(),
-            self.oracle_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::UpdatePrice {
-                pair: pair.clone(),
-                price,
-            },
+            ),
             &[],
-        );
+        )
     }
 
-    pub fn get_min_limit(&mut self, denom: &str) -> Uint128 {
-        self.app
-            .wrap()
-            .query_wasm_smart(
-                self.auctions_manager_addr.clone(),
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetMinLimit {
-                    denom: denom.to_string(),
+    pub fn update_rebalancer_base_denom_whitelist(
+        &mut self,
+        sender: Addr,
+        to_add: Vec<String>,
+        to_remove: Vec<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+          sender,
+          self.rebalancer_addr.clone(),
+          &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+              valence_package::services::rebalancer::RebalancerAdminMsg::UpdateBaseDenomWhitelist {
+                  to_add,
+                  to_remove,
+              },
+          ),
+          &[]
+      )
+    }
+
+    pub fn update_rebalancer_services_manager_address(
+        &mut self,
+        sender: Addr,
+        addr: Addr,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateServicesManager {
+                    addr: addr.to_string(),
                 },
-            )
-            .unwrap()
+            ),
+            &[],
+        )
+    }
+
+    pub fn update_rebalancer_auctions_manager_address(
+        &mut self,
+        sender: Addr,
+        addr: Addr,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            sender,
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateAuctionsManager {
+                    addr: addr.to_string(),
+                },
+            ),
+            &[],
+        )
     }
 }
 
@@ -567,7 +482,7 @@ impl Suite {
 // Queries
 impl Suite {
     pub fn query_rebalancer_config(&self, account: Addr) -> Result<RebalancerConfig, StdError> {
-        self.app.wrap().query_wasm_smart::<RebalancerConfig>(
+        self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetConfig {
                 addr: account.to_string(),
@@ -579,14 +494,14 @@ impl Suite {
         &self,
         service: ValenceServices,
     ) -> Result<Addr, StdError> {
-        self.app.wrap().query_wasm_smart::<Addr>(
+        self.app.wrap().query_wasm_smart(
             self.manager_addr.clone(),
             &valence_package::msgs::core_query::ServicesManagerQueryMsg::GetServiceAddr { service },
         )
     }
 
     pub fn query_is_service_on_manager(&self, addr: &str) -> Result<bool, StdError> {
-        self.app.wrap().query_wasm_smart::<bool>(
+        self.app.wrap().query_wasm_smart(
             self.manager_addr.clone(),
             &valence_package::msgs::core_query::ServicesManagerQueryMsg::IsService {
                 addr: addr.to_string(),
@@ -595,9 +510,23 @@ impl Suite {
     }
 
     pub fn query_rebalancer_system_status(&self) -> Result<SystemRebalanceStatus, StdError> {
-        self.app.wrap().query_wasm_smart::<SystemRebalanceStatus>(
+        self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetSystemStatus {},
+        )
+    }
+
+    pub fn query_rebalancer_whitelists(&self) -> Result<WhitelistsResponse, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetWhiteLists,
+        )
+    }
+
+    pub fn query_rebalancer_managers(&self) -> Result<ManagersAddrsResponse, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetManagersAddrs,
         )
     }
 }

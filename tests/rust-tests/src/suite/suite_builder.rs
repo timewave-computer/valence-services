@@ -1,8 +1,10 @@
 use std::{borrow::BorrowMut, collections::HashMap};
 
 use auction_package::Pair;
-use cosmwasm_std::{coin, coins, Addr, Decimal, Uint128};
+use cosmwasm_schema::serde;
+use cosmwasm_std::{coin, coins, from_slice, Addr, Decimal, Uint128};
 use cw_multi_test::{App, AppBuilder, Executor};
+use cw_storage_plus::Item;
 use valence_package::services::{
     rebalancer::{Target, TargetOverrideStrategy, PID},
     ValenceServices,
@@ -41,6 +43,12 @@ pub(crate) struct SuiteBuilder {
     pub auction_code_id: u64,
     pub auctions_manager_code_id: u64,
     pub oracle_code_id: u64,
+
+    // for custom init of contracts
+    pub custom_rebalancer_init: Option<rebalancer::msg::InstantiateMsg>,
+
+    // Flags for adding stuff to builds for tests
+    pub add_oracle_addr: bool,
 }
 
 impl Default for SuiteBuilder {
@@ -63,6 +71,8 @@ impl Default for SuiteBuilder {
             auction_code_id: 100000,
             auctions_manager_code_id: 100000,
             oracle_code_id: 100000,
+            custom_rebalancer_init: None,
+            add_oracle_addr: true,
         }
     }
 }
@@ -77,13 +87,13 @@ impl SuiteBuilder {
             targets: vec![
                 Target {
                     denom: ATOM.to_string(),
-                    percentage: 7500,
+                    bps: 7500,
                     // min_balance: Some(7800_u128.into()),
                     min_balance: None,
                 },
                 Target {
                     denom: NTRN.to_string(),
-                    percentage: 2500,
+                    bps: 2500,
                     min_balance: None,
                 },
             ],
@@ -119,12 +129,22 @@ impl SuiteBuilder {
         self.rebalancer_register_datas = data;
         self
     }
+
+    pub fn with_custom_rebalancer(&mut self, data: rebalancer::msg::InstantiateMsg) -> &mut Self {
+        self.custom_rebalancer_init = Some(data);
+        self
+    }
+
+    pub fn without_oracle_addr(&mut self) -> &mut Self {
+        self.add_oracle_addr = false;
+        self
+    }
 }
 
 // Modular build process
 impl SuiteBuilder {
     /// Upload all the contracts we use in our testing
-    fn upload_contracts(&mut self, app: &mut App) {
+    pub fn upload_contracts(&mut self, app: &mut App) {
         self.account_code_id = app.store_code(account_contract());
         self.manager_code_id = app.store_code(services_manager_contract());
         self.rebalancer_code_id = app.store_code(rebalancer_contract());
@@ -133,49 +153,66 @@ impl SuiteBuilder {
         self.oracle_code_id = app.store_code(oracle_contract());
     }
 
-    fn init_auctions(&mut self, app: &mut App) -> (Addr, Addr, HashMap<(String, String), String>) {
-        // init Auctions manager contract
-        let auctions_manager_init_msg: auctions_manager::msg::InstantiateMsg =
-            AuctionsManagerInstantiate::default(self.auction_code_id).into();
+    pub fn init_auctions_manager(
+        &mut self,
+        app: &mut App,
+        init_msg: auctions_manager::msg::InstantiateMsg,
+    ) -> Addr {
+        app.instantiate_contract(
+            self.auctions_manager_code_id,
+            self.admin.clone(),
+            &init_msg,
+            &[],
+            "auctions_manager",
+            Some(self.admin.to_string()),
+        )
+        .unwrap()
+    }
 
-        let auctions_manager_addr = app
-            .instantiate_contract(
-                self.auctions_manager_code_id,
-                self.admin.clone(),
-                &auctions_manager_init_msg,
-                &[],
-                "auctions_manager",
-                Some(self.admin.to_string()),
-            )
-            .unwrap();
+    pub fn init_oracle(
+        &mut self,
+        app: &mut App,
+        init_msg: price_oracle::msg::InstantiateMsg,
+    ) -> Addr {
+        app.instantiate_contract(
+            self.oracle_code_id,
+            self.admin.clone(),
+            &init_msg,
+            &[],
+            "oracle",
+            Some(self.admin.to_string()),
+        )
+        .unwrap()
+    }
+
+    fn init_auctions(&mut self, app: &mut App) -> (Addr, Addr, HashMap<(String, String), Addr>) {
+        // init Auctions manager contract
+        let auctions_manager_addr = self.init_auctions_manager(
+            app,
+            AuctionsManagerInstantiate::new(self.auction_code_id).into(),
+        );
 
         // init price_oracle contract
-        let price_oracle_init_msg: price_oracle::msg::InstantiateMsg =
-            OracleInstantiate::default(auctions_manager_addr.clone()).into();
+        let price_oracle_addr = self.init_oracle(
+            app,
+            OracleInstantiate::default(auctions_manager_addr.clone()).into(),
+        );
 
-        let price_oracle_addr = app
-            .instantiate_contract(
-                self.oracle_code_id,
+        // If we don't want to add it to the manager
+        if self.add_oracle_addr {
+            // Update the oracle addr on the manager
+            app.execute_contract(
                 self.admin.clone(),
-                &price_oracle_init_msg,
+                auctions_manager_addr.clone(),
+                &auctions_manager::msg::ExecuteMsg::Admin(
+                    auctions_manager::msg::AdminMsgs::UpdateOracle {
+                        oracle_addr: price_oracle_addr.to_string(),
+                    },
+                ),
                 &[],
-                "price_oracle",
-                Some(self.admin.to_string()),
             )
             .unwrap();
-
-        // Update the oracle addr on the manager
-        app.execute_contract(
-            self.admin.clone(),
-            auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
-                auctions_manager::msg::AdminMsgs::UpdateOracle {
-                    oracle_addr: price_oracle_addr.to_string(),
-                },
-            ),
-            &[],
-        )
-        .unwrap();
+        }
 
         // init auction for each pair
         // atom-ntrn
@@ -289,7 +326,7 @@ impl SuiteBuilder {
                 Decimal::bps(DEFAULT_NTRN_PRICE_BPS) / Decimal::bps(DEFAULT_OSMO_PRICE_BPS),
             ),
         ];
-        let mut auctions = HashMap::<(String, String), String>::new();
+        let mut auctions = HashMap::<(String, String), Addr>::new();
 
         for (pair, price) in pairs {
             // update price
@@ -313,15 +350,15 @@ impl SuiteBuilder {
                     },
                 )
                 .unwrap();
-            auctions.insert(pair.into(), auction_addr.to_string());
+            auctions.insert(pair.into(), auction_addr);
         }
 
         (auctions_manager_addr, price_oracle_addr, auctions)
     }
 
-    fn init_manager(&mut self, app: &mut App) -> Addr {
+    pub fn init_manager(&mut self, app: &mut App) -> Addr {
         let services_manager_init_msg: services_manager::msg::InstantiateMsg =
-            ServicesManagerInstantiate::default().into();
+            ServicesManagerInstantiate::new(vec![self.account_code_id]).into();
 
         app.instantiate_contract(
             self.manager_code_id,
@@ -334,15 +371,24 @@ impl SuiteBuilder {
         .unwrap()
     }
 
-    fn init_rebalancer(
+    pub fn init_rebalancer(
         &mut self,
         app: &mut App,
         auctions_manager_addr: Addr,
         manager_addr: Addr,
     ) -> Addr {
         let rebalancer_instantiate_msg: rebalancer::msg::InstantiateMsg =
-            RebalancerInstantiate::default(manager_addr.as_str(), auctions_manager_addr.as_str())
-                .into();
+            if let Some(mut custom_rebalancer_init) = self.custom_rebalancer_init.clone() {
+                custom_rebalancer_init.auctions_manager_addr = auctions_manager_addr.to_string();
+                custom_rebalancer_init.services_manager_addr = manager_addr.to_string();
+                custom_rebalancer_init
+            } else {
+                RebalancerInstantiate::default(
+                    manager_addr.as_str(),
+                    auctions_manager_addr.as_str(),
+                )
+                .into()
+            };
 
         app.instantiate_contract(
             self.rebalancer_code_id,
@@ -355,7 +401,7 @@ impl SuiteBuilder {
         .unwrap()
     }
 
-    fn init_accounts(&mut self, app: &mut App, manager_addr: Addr) -> Vec<Addr> {
+    pub fn init_accounts(&mut self, app: &mut App, manager_addr: Addr) -> Vec<Addr> {
         let account_init_msg: valence_account::msg::InstantiateMsg =
             AccountInstantiate::new(manager_addr.as_str()).into();
         let mut accounts: Vec<Addr> = vec![];
@@ -382,7 +428,7 @@ impl SuiteBuilder {
 
 // Build functions
 impl SuiteBuilder {
-    fn set_app(&mut self) -> App {
+    pub fn set_app(&mut self) -> App {
         let balances = vec![
             coin(1000000000_u128, ATOM.to_string()),
             coin(1000000000_u128, NTRN.to_string()),
@@ -416,7 +462,7 @@ impl SuiteBuilder {
         self.upload_contracts(app.borrow_mut());
 
         // Init auction
-        let (auctions_manager_addr, oracle_addr, _auction_addrs) =
+        let (auctions_manager_addr, oracle_addr, auction_addrs) =
             self.init_auctions(app.borrow_mut());
 
         // Init services manager
@@ -443,7 +489,8 @@ impl SuiteBuilder {
             manager_addr,
             rebalancer_addr,
             account_addrs,
-            _auction_addrs,
+            auction_addrs,
+            pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
         }
     }
 
@@ -485,5 +532,21 @@ impl SuiteBuilder {
         }
 
         suite
+    }
+}
+
+// Queries
+impl SuiteBuilder {
+    pub fn query_wasm_raw_item<T: for<'de> serde::de::Deserialize<'de> + serde::ser::Serialize>(
+        app: &App,
+        contract_addr: Addr,
+        item: Item<T>,
+    ) -> T {
+        let res: Vec<u8> = app
+            .wrap()
+            .query_wasm_raw(contract_addr, item.as_slice())
+            .unwrap()
+            .unwrap();
+        from_slice::<T>(&res).unwrap()
     }
 }

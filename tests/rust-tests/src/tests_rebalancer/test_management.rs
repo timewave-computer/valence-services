@@ -1,7 +1,14 @@
-use cosmwasm_std::Uint128;
-use valence_package::services::{rebalancer::RebalancerUpdateData, ValenceServices};
+use cosmwasm_std::{testing::mock_env, to_binary, Addr, Timestamp, Uint128};
+use cw_multi_test::Executor;
+use valence_package::services::{
+    rebalancer::{RebalancerUpdateData, SystemRebalanceStatus},
+    ValenceServices,
+};
 
-use crate::suite::{suite::TRUSTEE, suite_builder::SuiteBuilder};
+use crate::suite::{
+    suite::{Suite, ATOM, NTRN, TRUSTEE},
+    suite_builder::SuiteBuilder,
+};
 
 #[test]
 fn test_remove_trustee() {
@@ -148,8 +155,8 @@ fn test_invalid_targets_perc_on_update() {
     let mut data = SuiteBuilder::get_default_rebalancer_register_data();
 
     // set min_balance to both targets
-    data.targets[0].percentage = 5000;
-    data.targets[1].percentage = 6000;
+    data.targets[0].bps = 5000;
+    data.targets[1].bps = 6000;
 
     let mut suite = SuiteBuilder::default().build_default();
 
@@ -175,4 +182,183 @@ fn test_invalid_targets_perc_on_update() {
         err,
         rebalancer::error::ContractError::InvalidTargetPercentage(1.1.to_string(),)
     )
+}
+
+#[test]
+fn test_not_admin_admin() {
+    let mut suite = SuiteBuilder::default().build_default();
+
+    suite.update_rebalancer_system_status_err(
+        Addr::unchecked("not_admin"),
+        SystemRebalanceStatus::NotStarted {
+            cycle_start: Timestamp::from_nanos(0),
+        },
+    );
+}
+
+#[test]
+fn test_update_status() {
+    let mut suite = SuiteBuilder::default().build_default();
+
+    let status = suite.query_rebalancer_system_status().unwrap();
+    assert_eq!(
+        status,
+        SystemRebalanceStatus::NotStarted {
+            cycle_start: mock_env().block.time
+        }
+    );
+
+    suite
+        .update_rebalancer_system_status(
+            suite.admin.clone(),
+            SystemRebalanceStatus::Finished {
+                next_cycle: Timestamp::from_nanos(0),
+            },
+        )
+        .unwrap();
+
+    let status = suite.query_rebalancer_system_status().unwrap();
+    assert_eq!(
+        status,
+        SystemRebalanceStatus::Finished {
+            next_cycle: Timestamp::from_nanos(0)
+        }
+    );
+
+    // try update status to processing (Should error)
+    let err = suite.update_rebalancer_system_status_err(
+        suite.admin.clone(),
+        SystemRebalanceStatus::Processing {
+            cycle_started: Timestamp::from_nanos(0),
+            start_from: Addr::unchecked("random"),
+            prices: vec![],
+        },
+    );
+
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::CantUpdateStatusToProcessing
+    );
+}
+
+#[test]
+fn test_update_whitelist() {
+    let mut suite = SuiteBuilder::default().build_default();
+
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
+
+    // lets make sure the whitelist is what we expect for the tests
+    assert!(whitelist.denom_whitelist.contains(&ATOM.to_string()));
+    assert!(whitelist.denom_whitelist.len() == 3);
+    assert!(whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
+    assert!(whitelist.base_denom_whitelist.len() == 2);
+
+    // remove atom, add random
+    let to_add: Vec<String> = vec!["random".to_string()];
+    let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
+
+    suite
+        .update_rebalancer_denom_whitelist(suite.admin.clone(), to_add, to_remove)
+        .unwrap();
+
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
+    assert!(!whitelist.denom_whitelist.contains(&ATOM.to_string()));
+    assert!(!whitelist.denom_whitelist.contains(&NTRN.to_string()));
+    assert!(whitelist.denom_whitelist.len() == 2);
+
+    // remove atom, add random
+    let to_add: Vec<String> = vec!["random".to_string()];
+    let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
+
+    suite
+        .update_rebalancer_base_denom_whitelist(suite.admin.clone(), to_add, to_remove)
+        .unwrap();
+
+    let whitelist = suite.query_rebalancer_whitelists().unwrap();
+    assert!(!whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
+    assert!(!whitelist.base_denom_whitelist.contains(&NTRN.to_string()));
+    assert!(whitelist.base_denom_whitelist.len() == 1);
+}
+
+#[test]
+fn test_update_addrs() {
+    let mut suite = SuiteBuilder::default().build_default();
+
+    // make sure addresses are correct first
+    let addrs = suite.query_rebalancer_managers().unwrap();
+
+    assert_eq!(addrs.services, suite.manager_addr);
+    assert_eq!(addrs.auctions, suite.auctions_manager_addr);
+
+    let random_addr = Addr::unchecked("random");
+    suite
+        .update_rebalancer_services_manager_address(suite.admin.clone(), random_addr.clone())
+        .unwrap();
+    suite
+        .update_rebalancer_auctions_manager_address(suite.admin.clone(), random_addr.clone())
+        .unwrap();
+
+    let addrs = suite.query_rebalancer_managers().unwrap();
+
+    assert_eq!(addrs.services, random_addr);
+    assert_eq!(addrs.auctions, random_addr);
+}
+
+#[test]
+fn test_register_wrong_code_id() {
+    let mut suite = Suite::default();
+
+    // Try to register using a not allowed code id
+    let err: services_manager::error::ContractError = suite
+        .app
+        .execute_contract(
+            suite.rebalancer_addr.clone(),
+            suite.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
+                service_name: ValenceServices::Rebalancer,
+                data: Some(
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
+                        .unwrap(),
+                ),
+            },
+            &[],
+        )
+        .unwrap_err()
+        .downcast()
+        .unwrap();
+
+    assert_eq!(
+        err,
+        services_manager::error::ContractError::NotWhitelistedContract(3)
+    );
+
+    // Update code id whitelist
+    suite.app.execute_contract(
+        suite.admin.clone(),
+        suite.manager_addr.clone(),
+        &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::Admin(
+            valence_package::msgs::core_execute::ServicesManagerAdminMsg::UpdateCodeIdWhitelist {
+                to_add: vec![3],
+                to_remove: vec![],
+            },
+        ),
+        &[],
+    ).unwrap();
+
+    // try to register again using the same contract as above
+    suite
+        .app
+        .execute_contract(
+            suite.rebalancer_addr.clone(),
+            suite.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
+                service_name: ValenceServices::Rebalancer,
+                data: Some(
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
+                        .unwrap(),
+                ),
+            },
+            &[],
+        )
+        .unwrap();
 }

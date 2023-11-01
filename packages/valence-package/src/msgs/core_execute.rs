@@ -31,4 +31,8 @@ pub enum ServicesManagerAdminMsg {
     UpdateService { name: ValenceServices, addr: String },
     /// Delete service from the services manager
     RemoveService { name: ValenceServices },
+    UpdateCodeIdWhitelist {
+        to_add: Vec<u64>,
+        to_remove: Vec<u64>,
+    },
 }

@@ -40,10 +40,10 @@ fn test_basic_p_controller() {
     for _ in 0..5 {
         let mut balance = suite.get_balance(0, ATOM);
         let ntrn_balance = suite.get_balance(0, NTRN);
-        let price = suite.get_price(&Pair::from((ATOM.to_string(), NTRN.to_string())));
+        let price = suite.get_price(Pair::from((ATOM.to_string(), NTRN.to_string())));
         let total_value = Decimal::from_atomics(balance.amount, 0).unwrap()
             + (Decimal::from_atomics(ntrn_balance.amount, 0).unwrap() / price);
-        let target = Decimal::bps(config.targets[0].percentage) * total_value;
+        let target = Decimal::bps(config.targets[0].bps) * total_value;
 
         // Calcuate expected values
         let diff = calc_diff(balance.amount, target, p_perc, atom_limit);
