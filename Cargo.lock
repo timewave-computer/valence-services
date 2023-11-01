@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "auction-package"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1129,7 +1129,7 @@ dependencies = [
 
 [[package]]
 name = "valence-macros"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1140,7 +1140,7 @@ dependencies = [
 
 [[package]]
 name = "valence-package"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "auction-package",
  "cosmwasm-schema",
