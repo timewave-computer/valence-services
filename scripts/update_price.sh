@@ -18,17 +18,17 @@ if [[ "$CHAIN" == 'juno' ]]; then
   ORACLE_ADDR="juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
+  GAS_PRICES="0.015untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-# ORACLE_ADDR=""
+  ORACLE_ADDR="neutron16zrrr6dxlqvcuht99g57k6dujvtdy5hq7pn66mqmmkvdj7pf3rwspasd4t"
 else
   echo "Unknown chain"
 fi
 
-# EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -y"
-EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
+EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -y"
+# EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
 if [ -z "$ORACLE_ADDR" ]; then echo "[ERROR] Oracle address is missing for $CHAIN" && exit 1; fi
 

@@ -41,8 +41,8 @@ elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   ADDR_AUCTIONS_MANAGER="neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84"
 
   # General data per chain
-  WHITELISTED_DENOMS='[\"untrn\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
-  WHITELISTED_BASE_DENOMS='[\"untrn\", \"ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9\"]'
+  WHITELISTED_DENOMS='["untrn", "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"]'
+  WHITELISTED_BASE_DENOMS='["untrn", "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"]'
 else
   echo "Unknown chain"
 fi
@@ -99,13 +99,13 @@ elif [[ "$COMMAND" == 'rebalancer' ]]; then
   init_msg=$(jq -n \
     --arg services_manager_addr "$ADDR_SERVICES_MANAGER" \
     --arg auctions_manager_addr "$ADDR_AUCTIONS_MANAGER" \
-    --arg whitelist_denom "$WHITELISTED_DENOMS" \
-    --arg whitelist_base_denom "$WHITELISTED_BASE_DENOMS" \
+    --argjson whitelist_denom "$WHITELISTED_DENOMS" \
+    --argjson whitelist_base_denom "$WHITELISTED_BASE_DENOMS" \
     '{services_manager_addr: $services_manager_addr,
       auctions_manager_addr: $auctions_manager_addr,
       cycle_start: "0",
-      denom_whitelist: [$whitelist_denom],
-      base_denom_whitelist: [$whitelist_base_denom],
+      denom_whitelist: $whitelist_denom,
+      base_denom_whitelist: $whitelist_base_denom,
       cycle_period: 60,
       }')
 

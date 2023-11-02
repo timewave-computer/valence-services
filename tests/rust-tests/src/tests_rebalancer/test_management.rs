@@ -33,7 +33,7 @@ fn test_remove_trustee() {
                 base_denom: None,
                 targets: vec![],
                 pid: None,
-                max_limit: None,
+                max_limit_bps: None,
                 target_override_strategy: None,
             },
         )
@@ -68,7 +68,7 @@ fn test_not_whitelisted_base_denom() {
                 base_denom: Some(not_whitelisted_base_denom.clone()),
                 targets: vec![],
                 pid: None,
-                max_limit: None,
+                max_limit_bps: None,
                 target_override_strategy: None,
             },
         )
@@ -102,7 +102,7 @@ fn test_multiple_min_balance_on_update() {
                 base_denom: None,
                 targets: data.targets,
                 pid: None,
-                max_limit: None,
+                max_limit_bps: None,
                 target_override_strategy: None,
             },
         )
@@ -136,7 +136,7 @@ fn test_not_whitelisted_denom_on_update() {
                 base_denom: None,
                 targets: data.targets,
                 pid: None,
-                max_limit: None,
+                max_limit_bps: None,
                 target_override_strategy: None,
             },
         )
@@ -170,7 +170,7 @@ fn test_invalid_targets_perc_on_update() {
                 base_denom: None,
                 targets: data.targets,
                 pid: None,
-                max_limit: None,
+                max_limit_bps: None,
                 target_override_strategy: None,
             },
         )

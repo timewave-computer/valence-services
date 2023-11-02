@@ -61,7 +61,7 @@ pub struct RebalancerUpdateData {
     pub base_denom: Option<String>,
     pub targets: Vec<Target>,
     pub pid: Option<PID>,
-    pub max_limit: Option<u64>, // BPS
+    pub max_limit_bps: Option<u64>, // BPS
     pub target_override_strategy: Option<TargetOverrideStrategy>,
 }
 

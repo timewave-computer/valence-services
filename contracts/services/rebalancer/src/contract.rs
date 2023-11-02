@@ -204,7 +204,7 @@ pub fn execute(
                 config.pid = pid.into_parsed()?;
             }
 
-            if let Some(max_limit) = data.max_limit {
+            if let Some(max_limit) = data.max_limit_bps {
                 config.max_limit = Decimal::bps(max_limit);
             }
 
