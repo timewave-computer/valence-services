@@ -3,7 +3,8 @@ use auction_package::{
     Price,
 };
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
+    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, Event, MessageInfo, Response,
+    Uint128,
 };
 use cw_storage_plus::Bound;
 use cw_utils::must_pay;
@@ -97,10 +98,12 @@ pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractE
 
     let bank_msg = BankMsg::Send {
         to_address: sender.to_string(),
-        amount: vec![send_funds],
+        amount: vec![send_funds.clone()],
     };
 
-    Ok(Response::default().add_message(bank_msg))
+    Ok(Response::default()
+        .add_message(bank_msg)
+        .add_event(Event::new("withdraw-funds").add_attribute("amount", send_funds.to_string())))
 }
 
 pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, ContractError> {
@@ -330,7 +333,11 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
     active_auction.status = status;
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    Ok(Response::default().add_messages(bank_msgs))
+    Ok(Response::default().add_messages(bank_msgs).add_event(
+        Event::new("close-auction")
+            .add_attribute("limit", limit.to_string())
+            .add_attribute("total_resolved", total_resolved.to_string()),
+    ))
 }
 
 pub fn clean_auction(deps: DepsMut) -> Result<Response, ContractError> {

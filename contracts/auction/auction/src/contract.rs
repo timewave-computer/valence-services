@@ -118,6 +118,7 @@ pub fn execute(
 
 mod admin {
     use auction_package::helpers::GetPriceResponse;
+    use cosmwasm_std::Event;
 
     use crate::msg::AdminMsgs;
 
@@ -233,7 +234,14 @@ mod admin {
         AUCTION_IDS.save(deps.storage, &auction_ids)?;
         ACTIVE_AUCTION.save(deps.storage, &new_active_auction)?;
 
-        Ok(Response::default())
+        Ok(Response::default().add_event(
+            Event::new("new-auction")
+                .add_attribute("start_block", new_active_auction.start_block.to_string())
+                .add_attribute("end_block", new_active_auction.end_block.to_string())
+                .add_attribute("start_price", new_active_auction.start_price.to_string())
+                .add_attribute("end_price", new_active_auction.end_price.to_string())
+                .add_attribute("total_funds", new_active_auction.total_amount.to_string()),
+        ))
     }
 
     /// Helper functions to get the starting and ending prices

@@ -317,8 +317,7 @@ fn test_register_wrong_code_id() {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
                 data: Some(
-                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
-                        .unwrap(),
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
                 ),
             },
             &[],
@@ -354,8 +353,7 @@ fn test_register_wrong_code_id() {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
                 data: Some(
-                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data().clone())
-                        .unwrap(),
+                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
                 ),
             },
             &[],

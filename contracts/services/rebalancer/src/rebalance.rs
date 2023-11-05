@@ -2,8 +2,8 @@ use std::{borrow::BorrowMut, str::FromStr};
 
 use auction_package::{helpers::GetPriceResponse, states::MIN_AUCTION_AMOUNT, Pair};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Order, Response, StdError,
-    SubMsg, Uint128, WasmMsg,
+    coin, to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Event, Order, Response,
+    StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw_storage_plus::Bound;
 use valence_package::{
@@ -86,6 +86,7 @@ pub fn execute_system_rebalance(
         .collect::<Vec<Result<(Addr, RebalancerConfig), StdError>>>();
 
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
+    let mut events: Vec<Event> = vec![];
 
     for res in configs {
         total_accounts += 1;
@@ -112,9 +113,12 @@ pub fn execute_system_rebalance(
             &prices,
             cycle_period,
         );
-        let Ok((config, msg)) = rebalance_res else {
+        let Ok((config, msg, event)) = rebalance_res else {
           continue
         };
+
+        // Add event to all events
+        events.push(event);
 
         // Rebalacing does edit some config fields that are needed for future rebalancing
         // so we save the config here
@@ -140,7 +144,14 @@ pub fn execute_system_rebalance(
 
     SYSTEM_REBALANCE_STATUS.save(deps.storage, &status)?;
 
-    Ok(Response::default().add_submessages(msgs))
+    Ok(Response::default()
+        .add_submessages(msgs)
+        .add_events(events)
+        .add_event(
+            Event::new("rebalance_cycle")
+                .add_attribute("limit", limit.to_string())
+                .add_attribute("cycled_over", total_accounts.to_string()),
+        ))
 }
 
 /// Do a rebalance with PID calculation for a single account
@@ -154,13 +165,18 @@ pub fn do_rebalance(
     min_amount_limits: &mut Vec<(String, Uint128)>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<(RebalancerConfig, SubMsg), ContractError> {
+) -> Result<(RebalancerConfig, SubMsg, Event), ContractError> {
+    // Create new event to show important data about the rebalance
+    let mut event = Event::new("rebalance-account").add_attribute("account", account.to_string());
+
     // get a vec of inputs for our calculations
     let (total_value, mut target_helpers) = get_inputs(deps, account, &config, prices)?;
 
     if total_value.is_zero() {
         return Err(ContractError::AccountBalanceIsZero);
     }
+
+    event = event.add_attribute("total_account_value", total_value.to_string());
 
     // Verify the targets, if we have a min_balance we need to do some extra steps
     // to make sure min_balance is accounted for in our calculations
@@ -185,7 +201,15 @@ pub fn do_rebalance(
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
 
     // Generate the trades msgs, how much funds to send to what auction.
-    let msgs = generate_trades_msgs(deps, to_sell, to_buy, auction_manager, &config, total_value);
+    let (msgs, event) = generate_trades_msgs(
+        deps,
+        to_sell,
+        to_buy,
+        auction_manager,
+        &config,
+        total_value,
+        event,
+    );
 
     // Construct the msg we need to execute on the account
     // Notice the atomic false, it means each trade msg (sending funds to specific pair auction)
@@ -209,7 +233,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    Ok((config, msg))
+    Ok((config, msg, event))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token
@@ -503,7 +527,8 @@ fn generate_trades_msgs(
     auction_manager: &Addr,
     config: &RebalancerConfig,
     total_value: Decimal,
-) -> Vec<CosmosMsg> {
+    mut event: Event,
+) -> (Vec<CosmosMsg>, Event) {
     let mut msgs: Vec<CosmosMsg> = vec![];
 
     // Get max tokens to sell as a value and not amount
@@ -618,7 +643,7 @@ fn generate_trades_msgs(
             if token_sell.value_to_trade >= token_buy.value_to_trade {
                 token_sell.value_to_trade -= token_buy.value_to_trade;
 
-                let coin = coin(
+                let token = coin(
                     (token_buy.value_to_trade * token_sell.price)
                         .to_uint_ceil()
                         .u128(),
@@ -627,14 +652,18 @@ fn generate_trades_msgs(
 
                 token_buy.value_to_trade = Decimal::zero();
 
-                let Ok(msg) = construct_msg(deps, auction_manager, pair, coin) else {
+                event = event
+                    .clone()
+                    .add_attribute("trade", format!("Coin: {token} | Pair: {pair:?}"));
+
+                let Ok(msg) = construct_msg(deps, auction_manager, pair, token) else {
                     return
                 };
                 msgs.push(msg);
             } else {
                 token_buy.value_to_trade -= token_sell.value_to_trade;
 
-                let coin = coin(
+                let token = coin(
                     (token_sell.value_to_trade * token_sell.price)
                         .to_uint_ceil()
                         .u128(),
@@ -643,7 +672,11 @@ fn generate_trades_msgs(
 
                 token_sell.value_to_trade = Decimal::zero();
 
-                let Ok(msg) = construct_msg(deps, auction_manager, pair, coin) else {
+                event = event
+                    .clone()
+                    .add_attribute("trade", format!("Coin: {token} | Pair: {pair:?}"));
+
+                let Ok(msg) = construct_msg(deps, auction_manager, pair, token) else {
                   return
                 };
 
@@ -652,5 +685,5 @@ fn generate_trades_msgs(
         });
     });
 
-    msgs
+    (msgs, event)
 }
