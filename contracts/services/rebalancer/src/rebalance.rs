@@ -358,8 +358,6 @@ fn do_pid(
 
     let signed_dt: SignedDecimal = dt.into();
 
-    println!("total_value: {total_value}");
-
     targets.iter_mut().for_each(|target| {
         let signed_input: SignedDecimal = target.balance_value.into();
 

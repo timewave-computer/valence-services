@@ -94,7 +94,9 @@ pub enum TargetOverrideStrategy {
 
 Example: A user has set the following rebalancing targets for tokens with denominations A, B, and C:
 
-Target A - 25%, no min_balance Target B - 25%, no min_balance Target C - 50%, must maintain min_balance of 100 tokens.
+Target A - 25%, no min_balance
+Target B - 25%, no min_balance
+Target C - 50%, must maintain min_balance of 100 tokens.
 
 Now suppose at one particular rebalancing interval, 100 tokens of the C denomination make up 60% of the total portfolio valuation. This a problem because the user has also required the Rebalancer to maintain 50% cumulatively in token A and B, with 25% of the total portfolio value in denomination A and another 25% in denomination B. Given that it can only maintain a total of 40% of the total value in A and B, what strategy should the Rebalancer pursue to reassign weights in A and B?
 
