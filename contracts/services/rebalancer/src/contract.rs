@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_binary, Binary, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use valence_package::helpers::{verify_services_manager, OptionalField};
@@ -441,15 +441,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    // Tick messages are dispatched with reply ID 0 and reply on
-    // error. If an error occurs, we ignore it but stop the parent
-    // message from failing, so the state change which moved the tick
-    // receiver to the end of the message queue gets committed. This
-    // prevents an erroring tick receiver from locking the clock.
     match msg.id {
-        REPLY_DEFAULT_REBALANCE => Ok(Response::default()
-            .add_attribute("method", "reply_on_error")
-            .add_attribute("error", msg.result.unwrap_err())),
+        REPLY_DEFAULT_REBALANCE => Ok(Response::default().add_event(
+            Event::new("fail-rebalance").add_attribute("error", msg.result.unwrap_err()),
+        )),
         _ => Err(ContractError::UnexpectedReplyId(msg.id)),
     }
 }

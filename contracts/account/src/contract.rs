@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply, Response,
+    BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Event, IbcMsg, MessageInfo, Reply, Response,
     StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -16,6 +16,7 @@ const CONTRACT_NAME: &str = "crates.io:valence-account";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const EXECUTE_BY_SERVICE_REPLY_ID: u64 = 0;
+const SEND_FUNDS_BY_SERVICE_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -111,7 +112,7 @@ pub fn execute(
                     if atomic {
                         SubMsg::new(msg)
                     } else {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
+                        SubMsg::reply_on_error(msg, SEND_FUNDS_BY_SERVICE_REPLY_ID)
                     }
                 })
                 .collect();
@@ -204,12 +205,15 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
     // Example case for this is the rebalancer service,
     // the rebalancer send trade messages to be executed by the account,
     // trade1 message doesn't rely on trade2 message, so they can be non-atomic.
-    if msg.id != EXECUTE_BY_SERVICE_REPLY_ID {
-        Err(ContractError::UnexpectedReplyId(msg.id))
-    } else {
-        Ok(Response::default()
-            .add_attribute("method", "reply_on_error")
-            .add_attribute("error", msg.result.unwrap_err()))
+    match msg.id {
+        EXECUTE_BY_SERVICE_REPLY_ID => Ok(Response::default().add_event(
+            Event::new("fail-execute-by-service").add_attribute("error", msg.result.unwrap_err()),
+        )),
+        SEND_FUNDS_BY_SERVICE_REPLY_ID => Ok(Response::default().add_event(
+            Event::new("fail-send-funds-by-service")
+                .add_attribute("error", msg.result.unwrap_err()),
+        )),
+        _ => Err(ContractError::UnexpectedReplyId(msg.id)),
     }
 }
 
