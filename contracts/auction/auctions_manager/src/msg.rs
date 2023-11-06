@@ -18,7 +18,9 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    NoStateChange,
+}
 
 #[cw_serde]
 pub enum AdminMsgs {
@@ -53,5 +55,14 @@ pub enum AdminMsgs {
     UpdatePriceFreshnessStrategy {
         pair: Pair,
         strategy: PriceFreshnessStrategy,
+    },
+    UpdateActiveAuction {
+        pair: Pair,
+        params: auction::state::ActiveAuction,
+    },
+    MigrateAuction {
+        pair: Pair,
+        code_id: u64,
+        msg: auction::msg::MigrateMsg,
     },
 }

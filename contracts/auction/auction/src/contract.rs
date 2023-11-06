@@ -179,6 +179,10 @@ mod admin {
                 )?;
                 Ok(Response::default())
             }
+            AdminMsgs::UpdateActiveAuction(active_auction) => {
+                ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
+                Ok(Response::default())
+            }
         }
     }
 
@@ -344,8 +348,12 @@ pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, Contrac
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange => Ok(Response::default()),
+    }
 }
 
 #[cfg(test)]

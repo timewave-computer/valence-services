@@ -221,6 +221,30 @@ mod admin {
 
                 Ok(Response::default().add_message(msg))
             }
+            AdminMsgs::MigrateAuction { pair, code_id, msg } => {
+                let pair_addr = PAIRS.load(deps.storage, pair)?;
+
+                let migrate_msg = WasmMsg::Migrate {
+                    contract_addr: pair_addr.to_string(),
+                    msg: to_binary(&msg)?,
+                    new_code_id: code_id,
+                };
+
+                Ok(Response::default().add_message(migrate_msg))
+            }
+            AdminMsgs::UpdateActiveAuction { pair, params } => {
+                let pair_addr = PAIRS.load(deps.storage, pair)?;
+
+                let msg = WasmMsg::Execute {
+                    contract_addr: pair_addr.to_string(),
+                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                        auction::msg::AdminMsgs::UpdateActiveAuction(params),
+                    ))?,
+                    funds: vec![],
+                };
+
+                Ok(Response::default().add_message(msg))
+            }
         }
     }
 }
@@ -273,6 +297,10 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange => Ok(Response::default()),
+    }
 }

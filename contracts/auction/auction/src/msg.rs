@@ -60,6 +60,8 @@ pub enum AdminMsgs {
     UpdateChainHaltConfig(ChainHaltConfig),
     /// Update the price freshness strategy
     UpdatePriceFreshnessStrategy(PriceFreshnessStrategy),
+    /// update active auction values
+    UpdateActiveAuction(ActiveAuction),
 }
 
 #[cw_serde]
@@ -87,7 +89,9 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    NoStateChange,
+}
 
 #[cw_serde]
 pub struct GetFundsAmountResponse {

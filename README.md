@@ -2,8 +2,8 @@
 
 ## Code ids
 
-- auctions manager = `437`
-- auction = `441`
+- auctions manager = `448`
+- auction = `449`
 - price oracle = `438`
 - rebalancer = `440`
 - services manager = `439`
