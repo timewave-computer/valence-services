@@ -824,3 +824,39 @@ fn test_bid_over() {
     // check we paid the funds
     assert!(init_mm_balance_1.amount > mm_balance_1.amount);
 }
+
+#[test]
+fn test_open_auction_no_bids() {
+    let mut suite = Suite::default();
+    let funds = coins(100_u128, suite.pair.0.clone());
+
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &funds,
+    );
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+    suite.update_block_cycle();
+    suite.close_auction(suite.pair.clone(), None).unwrap();
+
+    // Auction funds again
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &funds,
+    );
+
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+
+    let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
+    assert_eq!(active_auction.available_amount, funds[0].amount);
+    assert_eq!(active_auction.total_amount, funds[0].amount);
+}
