@@ -249,6 +249,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
             if active_auction.resolved_amount.is_zero() {
                 // We didn't sell anything, so refund
                 send_funds.push(coin(amount.u128(), &config.pair.0));
+                total_sent_sold_token += amount;
             } else {
                 // We sold something, calculate only what we sold
                 let perc_of_total = Decimal::from_atomics(amount, 0)?
