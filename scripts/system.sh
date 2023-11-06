@@ -40,8 +40,8 @@ declare -a pairs=(
 
 if [[ "$COMMAND" == 'update-prices' ]]; then
 
-  declare -A price1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [price]="0.5")
-  declare -A price2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn" [price]="2.0")
+  declare -A price1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [price]="0.034139")
+  declare -A price2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn" [price]="29.40913")
 
   declare -a prices=(
     price1
@@ -151,6 +151,14 @@ elif [[ "$COMMAND" == 'close-auctions' ]]; then
   done
 
   $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
+
+elif [[ "$COMMAND" == 'do-bid' ]]; then
+  AMOUNT=$1
+  shift
+  AUCTION_ADDR=$1
+  shift
+
+  $BINARY tx wasm execute $AUCTION_ADDR '"bid"' --amount $AMOUNT --from $OWNER_ADDR $EXECUTE_FLAGS
 else
   echo "Unknown command"
 fi
