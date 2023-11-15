@@ -109,3 +109,13 @@ fn test_config() {
         }
     )
 }
+
+#[test]
+fn test_update_price_0() {
+    let mut suite = SuiteBuilder::default().build_basic();
+
+    let price: Decimal = Decimal::zero();
+    let err = suite.update_price_err(suite.pair.clone(), Some(price));
+
+    assert_eq!(err, price_oracle::error::ContractError::PriceIsZero)
+}

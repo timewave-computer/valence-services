@@ -53,7 +53,13 @@ pub fn execute(
 
             let (price, time) = match price {
                 // We have a price, so set that as the price of the pair
-                Some(price) => Ok::<(Decimal, Timestamp), ContractError>((price, env.block.time)),
+                Some(price) => {
+                    if price.is_zero() {
+                        return Err(ContractError::PriceIsZero);
+                    }
+
+                    Ok::<(Decimal, Timestamp), ContractError>((price, env.block.time))
+                }
                 // We don't have a price, so we are trying to look for the price in the auction
                 None => {
                     let auction_addr = PAIRS

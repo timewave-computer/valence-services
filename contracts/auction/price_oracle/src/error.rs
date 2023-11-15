@@ -24,4 +24,7 @@ pub enum ContractError {
 
     #[error("No auction happened in the last 3 days")]
     NoAuctionInLast3Days,
+
+    #[error("Set price cannot be zero")]
+    PriceIsZero,
 }
