@@ -72,4 +72,7 @@ pub enum ContractError {
 
     #[error("System status can't be updated to processing")]
     CantUpdateStatusToProcessing,
+
+    #[error("Price of the pair is zero: {0} / {1}")]
+    PairPriceIsZero(String, String),
 }

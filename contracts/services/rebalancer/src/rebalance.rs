@@ -268,10 +268,14 @@ pub fn get_prices(
 
             let pair = Pair::from((base_denom.clone(), denom.clone()));
 
-            let price = deps.querier.query_wasm_smart::<GetPriceResponse>(
+            let price: GetPriceResponse = deps.querier.query_wasm_smart::<GetPriceResponse>(
                 auctions_manager_addr,
                 &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair: pair.clone() },
             )?;
+
+            if price.price.is_zero() {
+                return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+            }
 
             prices.push((pair, price.price));
         }
