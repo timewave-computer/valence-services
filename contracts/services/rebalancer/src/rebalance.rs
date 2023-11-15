@@ -288,12 +288,9 @@ fn get_inputs(
     config: &RebalancerConfig,
     prices: &[(Pair, Decimal)],
 ) -> Result<(Decimal, Vec<TargetHelper>), ContractError> {
-    // Get the current balances of the account
-    let all_balances = deps.querier.query_all_balances(account)?;
-
-    // get inputs per target (denom amount * price),
-    // and current total input of the account (vec![denom * price].sum())
-    Ok(config.targets.iter().fold(
+    // get inputs per target (balance amount / price),
+    // and current total input of the account (vec![denom / price].sum())
+    config.targets.iter().try_fold(
         (Decimal::zero(), vec![]),
         |(mut total_value, mut targets_helpers), target| {
             // Get the price of the denom, compared to the base denom,
@@ -309,36 +306,24 @@ fn get_inputs(
                     .1
             };
 
-            // Find the target denom in the balance of the account
-            // if it doesn't exists, set the input as 0, else set the input as the balance / price
-            if let Some(coin) = all_balances.iter().find(|b| b.denom == target.denom) {
-                // TODO: Unwrap should be safe here in theory
-                let balance_value = Decimal::from_atomics(coin.amount, 0).unwrap() / price;
+            // Get current balance of the target, and calculate the value
+            // safe if balance is 0, 0 / price = 0
+            let current_balance = deps.querier.query_balance(account, target.denom.clone())?;
+            let balance_value = Decimal::from_atomics(current_balance.amount, 0)? / price;
 
-                total_value += balance_value;
-                targets_helpers.push(TargetHelper {
-                    target: target.clone(),
-                    balance_amount: coin.amount,
-                    price,
-                    balance_value,
-                    value_to_trade: Decimal::zero(),
-                    auction_min_amount: Decimal::zero(),
-                });
+            total_value += balance_value;
+            targets_helpers.push(TargetHelper {
+                target: target.clone(),
+                balance_amount: current_balance.amount,
+                price,
+                balance_value,
+                value_to_trade: Decimal::zero(),
+                auction_min_amount: Decimal::zero(),
+            });
 
-                (total_value, targets_helpers)
-            } else {
-                targets_helpers.push(TargetHelper {
-                    target: target.clone(),
-                    balance_amount: Uint128::zero(),
-                    price,
-                    balance_value: Decimal::zero(),
-                    value_to_trade: Decimal::zero(),
-                    auction_min_amount: Decimal::zero(),
-                });
-                (total_value, targets_helpers)
-            }
+            Ok((total_value, targets_helpers))
         },
-    ))
+    )
 }
 
 /// Do the PID calculation for the targets
