@@ -9,6 +9,8 @@ pub mod states;
 
 pub use pair::Pair;
 
+pub const CLOSEST_TO_ONE_POSSIBLE: u64 = 9999;
+
 #[cw_serde]
 pub struct AuctionStrategy {
     pub start_price_perc: u64, // BPS
