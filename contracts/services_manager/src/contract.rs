@@ -3,7 +3,7 @@ use std::collections::HashSet;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -14,7 +14,7 @@ use valence_package::states::ADMIN;
 
 use crate::error::ContractError;
 use crate::helpers::{get_service_addr, save_service};
-use crate::msg::{InstantiateMsg, MigrateMsg};
+use crate::msg::InstantiateMsg;
 use crate::state::{ACCOUNT_WHITELISTED_CODE_IDS, ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
 const CONTRACT_NAME: &str = "crates.io:services-manager";
@@ -221,14 +221,4 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
             to_binary(&config)
         }
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    unimplemented!()
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }

@@ -16,8 +16,7 @@ pub fn services_manager_contract() -> Box<dyn Contract<Empty>> {
         services_manager::contract::execute,
         services_manager::contract::instantiate,
         services_manager::contract::query,
-    )
-    .with_reply(services_manager::contract::reply);
+    );
     Box::new(contract)
 }
 

@@ -10,7 +10,7 @@ use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanc
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
+use crate::msg::{InstantiateMsg, ManagersAddrsResponse, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
     AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
@@ -459,9 +459,4 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
             .add_attribute("error", msg.result.unwrap_err())),
         _ => Err(ContractError::UnexpectedReplyId(msg.id)),
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }
