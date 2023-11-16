@@ -109,11 +109,17 @@ pub fn execute(
 
             // check target denoms are whitelisted
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
-            let mut total_bps = 0;
+            let mut total_bps: u64 = 0;
             let mut has_min_balance = false;
 
             for target in data.targets.clone() {
-                total_bps += target.bps;
+                if !(1..=9999).contains(&target.bps) {
+                    return Err(ValenceError::InvalidMaxLimitRange.into());
+                }
+
+                total_bps = total_bps
+                    .checked_add(target.bps)
+                    .ok_or(ContractError::BpsOverflow)?;
 
                 // Verify we only have a single min_Balance target
                 if target.min_balance.is_some() && has_min_balance {
