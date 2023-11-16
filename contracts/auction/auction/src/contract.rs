@@ -6,17 +6,14 @@ use auction_package::states::{ADMIN, TWAP_PRICES};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Uint128,
+    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::execute;
 use crate::helpers::calc_price;
-use crate::msg::{
-    ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, MigrateMsg, NewAuctionParams, QueryMsg,
-};
+use crate::msg::{ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, NewAuctionParams, QueryMsg};
 use crate::state::{
     ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_FUNDS,
     AUCTION_FUNDS_SUM, AUCTION_IDS, AUCTION_STRATEGY,
@@ -330,21 +327,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&auction_strategy)
         }
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    // Tick messages are dispatched with reply ID 0 and reply on
-    // error. If an error occurs, we ignore it but stop the parent
-    // message from failing, so the state change which moved the tick
-    // receiver to the end of the message queue gets committed. This
-    // prevents an erroring tick receiver from locking the clock.
-    unimplemented!()
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }
 
 #[cfg(test)]
