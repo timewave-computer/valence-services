@@ -6,6 +6,7 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use valence_package::msgs::core_execute::ServicesManagerExecuteMsg;
 use valence_package::msgs::core_query::ServicesManagerQueryMsg;
 use valence_package::services::rebalancer::RebalancerConfig;
@@ -193,9 +194,18 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
             to_binary(&addr)
         }
         ServicesManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
-        ServicesManagerQueryMsg::GetAllServices => {
+        ServicesManagerQueryMsg::GetAllServices { start_from, limit } => {
+            let start_from = start_from.map(Bound::exclusive);
+            let limit = limit.unwrap_or(50) as usize;
+
             let services = SERVICES_TO_ADDR
-                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .range(
+                    deps.storage,
+                    start_from,
+                    None,
+                    cosmwasm_std::Order::Ascending,
+                )
+                .take(limit)
                 .map(|item| item.map(|(name, addr)| (name, addr)))
                 .collect::<StdResult<Vec<(String, Addr)>>>()?;
 

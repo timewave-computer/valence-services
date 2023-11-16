@@ -171,7 +171,10 @@ pub fn valence_services_manager_query_msgs(
         GetAdmin,
         /// Get list of all services and their addresses
         #[returns(Vec<(String, Addr)>)]
-        GetAllServices,
+        GetAllServices {
+          start_from: Option<String>,
+          limit: Option<u64>
+        },
       }
     };
 
