@@ -9,7 +9,7 @@ use cw_storage_plus::Bound;
 use cw_utils::must_pay;
 
 use crate::{
-    contract::TWAP_PRICE_LIMIT,
+    contract::TWAP_PRICE_MAX_LEN,
     error::ContractError,
     helpers::{calc_buy_amount, calc_price, is_chain_halted},
     state::{
@@ -316,7 +316,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
             let mut prices = TWAP_PRICES.load(deps.storage)?;
 
             // if we have the needed amount of prices already, remove the last one first
-            if prices.len() >= TWAP_PRICE_LIMIT as usize {
+            if prices.len() >= TWAP_PRICE_MAX_LEN as usize {
                 prices.pop_back();
             }
 

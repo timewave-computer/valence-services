@@ -60,7 +60,7 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::WithdrawFunds { pair } => {
-          nonpayable(&info)?;
+            nonpayable(&info)?;
             pair.verify()?;
             let pair_addr = PAIRS.load(deps.storage, pair)?;
 

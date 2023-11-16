@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
     Bid,
     /// Finish the current auction and send funds to the funds provider
     /// Send pair.1 according to the weight of the funds provider from the total amount
-    /// If we have unsold pair.0, send to funds provider accoring to provided weight
+    /// If we have unsold pair.0, send to funds provider according to provided weight
     FinishAuction { limit: u64 },
     /// Message to clean finished auction unneeded storage
     CleanAfterAuction,

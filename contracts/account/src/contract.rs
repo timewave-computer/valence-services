@@ -96,7 +96,7 @@ pub fn execute(
                 },
             )?)
         }
-        // Messages to be exected by the service, with sending funds.
+        // Messages to be executed by the service, with sending funds.
         AccountBaseExecuteMsg::SendFundsByService { msgs, atomic } => {
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
             sender_is_a_service(deps, &info, services_manager_addr.to_string())?;
@@ -105,35 +105,17 @@ pub fn execute(
             // By default msgs are atomic, if 1 fails all fails
             // but services can explicitly set atomic to false
             // to allow the msgs to fail without failing the rest of the messages
-            let msgs: Vec<SubMsg> = msgs
-                .into_iter()
-                .map(|msg| {
-                    if atomic {
-                        SubMsg::new(msg)
-                    } else {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
-                    }
-                })
-                .collect();
+            let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             Ok(Response::default().add_submessages(msgs))
         }
-        // Messages to be exected by the service, without sending funds.
+        // Messages to be executed by the service, without sending funds.
         AccountBaseExecuteMsg::ExecuteByService { msgs, atomic } => {
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
             sender_is_a_service(deps, &info, services_manager_addr.to_string())?;
             verify_cosmos_msg(&msgs)?;
 
-            let msgs: Vec<SubMsg> = msgs
-                .into_iter()
-                .map(|msg| {
-                    if atomic {
-                        SubMsg::new(msg)
-                    } else {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
-                    }
-                })
-                .collect();
+            let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             Ok(Response::default().add_submessages(msgs))
         }
@@ -143,6 +125,18 @@ pub fn execute(
             Ok(Response::default().add_messages(msgs))
         }
     }
+}
+
+fn msgs_into_sub_msgs(msgs: Vec<CosmosMsg>, atomic: bool) -> Vec<SubMsg> {
+    msgs.into_iter()
+        .map(|msg| {
+            if atomic {
+                SubMsg::new(msg)
+            } else {
+                SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
+            }
+        })
+        .collect()
 }
 
 /// List and verify all messages the can be sent by an account which includes

@@ -22,7 +22,7 @@ pub(crate) fn save_service(
     Ok(())
 }
 
-/// Remvoe service from storrages
+/// Remove service from storages
 pub(crate) fn remove_service(
     deps: DepsMut,
     service: String,
