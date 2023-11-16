@@ -75,21 +75,27 @@ pub fn execute_system_rebalance(
     let mut last_addr = start_from.clone();
 
     let start_from = start_from.map(Bound::exclusive);
-    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT);
+    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT) as usize;
 
-    let mut total_accounts: u64 = 0;
     let mut msgs: Vec<SubMsg> = vec![];
 
-    let configs = CONFIGS
+    let mut configs = CONFIGS
         .range(deps.storage, start_from, None, Order::Ascending)
-        .take(limit as usize)
+        .take(limit + 1)
         .collect::<Vec<Result<(Addr, RebalancerConfig), StdError>>>();
+
+    // Get the length of configs to check if we finished looping over all accounts
+    let configs_len = configs.len();
+
+    // If we took more then our limit (limit +1) than we have more to loop
+    // remove last element and loop only over the limit amount
+    if configs_len > limit {
+        configs.remove(configs_len - 1)?;
+    }
 
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
 
     for res in configs {
-        total_accounts += 1;
-
         let Ok((account, config)) = res else {
                   continue;
                 };
@@ -126,7 +132,7 @@ pub fn execute_system_rebalance(
     // We checked if we finished looping over all accounts or not
     // and set the status based on that
     // println!("{total_accounts:?} | {limit:?}");
-    let status = if total_accounts < limit {
+    let status = if configs_len <= limit {
         SystemRebalanceStatus::Finished {
             next_cycle: cycle_start.plus_seconds(cycle_period),
         }
