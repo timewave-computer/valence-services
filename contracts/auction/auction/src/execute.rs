@@ -308,14 +308,17 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                 .checked_div(Decimal::from_atomics(sold_amount, 0)?)?;
 
             let mut prices = TWAP_PRICES.load(deps.storage)?;
+
+            // if we have the needed amount of prices already, remove the last one first
+            if prices.len() >= TWAP_PRICE_LIMIT as usize {
+                prices.pop_back();
+            }
+
             prices.push_front(Price {
                 price: avg_price,
                 time: env.block.time,
             });
 
-            if prices.len() > TWAP_PRICE_LIMIT as usize {
-                prices.pop_back();
-            }
             TWAP_PRICES.save(deps.storage, &prices)?;
         }
 
