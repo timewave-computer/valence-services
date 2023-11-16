@@ -78,4 +78,7 @@ pub enum ContractError {
 
     #[error("Limit cannot be zero")]
     LimitIsZero,
+
+    #[error("Data is not provided to the rebalancer")]
+    MustProvideRebalancerData,
 }
