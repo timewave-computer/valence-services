@@ -84,7 +84,10 @@ The price is taken from an oracle.
 ## Price freshness
 
 The oracles provide us with the price of the pair as well as the time it received this price.
-If the price is older than 4 days we consider it stale and we don't start the auction.
+If the price is older than 3 days and 6 hours we consider it stale and we don't start the auction.
+
+In practice, prices will be calculated once per day (when auction is finished), so days means cycle, but freshness calculation happens in timestamp.
+We give some spare time of freshness to reflect any possible factors like starting the auction little later in the day.
 
 The price range of the auction is directly influenced by the price freshness, the older the price, the bigger the range.
 
