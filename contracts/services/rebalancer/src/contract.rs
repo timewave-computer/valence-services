@@ -9,7 +9,6 @@ use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanc
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::helpers::has_dup;
 use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
@@ -111,11 +110,6 @@ pub fn execute(
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
             let mut total_bps = 0;
             let mut has_min_balance = false;
-
-            // Make sure denom is unique
-            if has_dup(&data.targets) {
-                return Err(ContractError::TargetsMustBeUnique);
-            };
 
             for target in data.targets.clone() {
                 total_bps += target.bps;

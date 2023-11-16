@@ -1,4 +1,7 @@
-use std::{borrow::BorrowMut, collections::HashMap};
+use std::{
+    borrow::BorrowMut,
+    collections::{HashMap, HashSet},
+};
 
 use auction_package::Pair;
 use cosmwasm_schema::serde;
@@ -79,24 +82,42 @@ impl Default for SuiteBuilder {
 
 // get defaults
 impl SuiteBuilder {
+    pub fn get_default_targets() -> Vec<Target> {
+        vec![
+            Target {
+                denom: ATOM.to_string(),
+                bps: 7500,
+                // min_balance: Some(7800_u128.into()),
+                min_balance: None,
+            },
+            Target {
+                denom: NTRN.to_string(),
+                bps: 2500,
+                min_balance: None,
+            },
+        ]
+    }
+
     pub fn get_default_rebalancer_register_data(
     ) -> valence_package::services::rebalancer::RebalancerData {
+        let mut targets = HashSet::with_capacity(2);
+
+        targets.insert(Target {
+            denom: ATOM.to_string(),
+            bps: 7500,
+            // min_balance: Some(7800_u128.into()),
+            min_balance: None,
+        });
+        targets.insert(Target {
+            denom: NTRN.to_string(),
+            bps: 2500,
+            min_balance: None,
+        });
+
         valence_package::services::rebalancer::RebalancerData {
             trustee: None,
             base_denom: ATOM.to_string(),
-            targets: vec![
-                Target {
-                    denom: ATOM.to_string(),
-                    bps: 7500,
-                    // min_balance: Some(7800_u128.into()),
-                    min_balance: None,
-                },
-                Target {
-                    denom: NTRN.to_string(),
-                    bps: 2500,
-                    min_balance: None,
-                },
-            ],
+            targets,
             pid: PID {
                 p: DEFAULT_P.to_string(),
                 i: DEFAULT_I.to_string(),

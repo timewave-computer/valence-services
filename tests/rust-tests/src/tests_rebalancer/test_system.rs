@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use auction_package::Pair;
-use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp};
 use rebalancer::contract::DEFAULT_CYCLE_PERIOD;
 use valence_package::{
     error::ValenceError,
@@ -163,29 +165,32 @@ fn test_register() {
 
     // Try to register with only 1 target
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![Target {
+    let mut targets = HashSet::with_capacity(1);
+    targets.insert(Target {
         denom: ATOM.to_string(),
         bps: 10000,
         min_balance: None,
-    }];
+    });
+    register_data.targets = targets.clone();
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(err, rebalancer::error::ContractError::TwoTargetsMinimum);
 
     // Try to register with not whitelisted denom
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![
-        Target {
-            denom: ATOM.to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-        Target {
-            denom: "not_whitelisted_denom".to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-    ];
+    targets.clear();
+    targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+    targets.insert(Target {
+        denom: "not_whitelisted_denom".to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+
+    register_data.targets = targets.clone();
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
@@ -195,18 +200,18 @@ fn test_register() {
 
     // Try to register with wrong total percentage (must equal 10000)
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![
-        Target {
-            denom: ATOM.to_string(),
-            bps: 6000,
-            min_balance: None,
-        },
-        Target {
-            denom: NTRN.to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-    ];
+    targets.clear();
+    targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 6000,
+        min_balance: None,
+    });
+    targets.insert(Target {
+        denom: NTRN.to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+    register_data.targets = targets;
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
@@ -229,10 +234,28 @@ fn test_dup_targets() {
         .unwrap();
 
     let mut register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets.push(register_data.targets[0].clone());
+    register_data.targets.insert(
+        register_data
+            .targets
+            .iter()
+            .find(|t| t.denom == ATOM)
+            .unwrap()
+            .clone(),
+    );
+    assert!(register_data.targets.len() == 2);
 
-    let err = suite.register_to_rebalancer_err(0, &register_data);
-    assert_eq!(err, rebalancer::error::ContractError::TargetsMustBeUnique);
+    // We try to insert different struct, with the the same denom
+    let mut new_target = register_data
+        .targets
+        .iter()
+        .find(|t| t.denom == ATOM)
+        .unwrap()
+        .clone();
+    new_target.bps = 1;
+
+    register_data.targets.insert(new_target);
+
+    assert!(register_data.targets.len() == 2);
 }
 
 #[test]
@@ -249,11 +272,13 @@ fn test_set_2_min_balance() {
         .unwrap();
 
     let mut register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets.push(register_data.targets[0].clone());
 
     // set both to have min_balance
-    register_data.targets[0].min_balance = Some(Uint128::new(100));
-    register_data.targets[1].min_balance = Some(Uint128::new(100));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(100_u128.into());
+    targets[1].min_balance = Some(100_u128.into());
+
+    register_data.targets = HashSet::from_iter(targets.iter().cloned());
 
     let err = suite.register_to_rebalancer_err(0, &register_data);
     assert_eq!(

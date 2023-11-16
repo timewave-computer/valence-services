@@ -536,7 +536,23 @@ impl Suite {
     pub fn assert_rebalancer_config(&self, account_position: u64, config: RebalancerConfig) {
         let account_addr = self.get_account_addr(account_position);
         let query_config = self.query_rebalancer_config(account_addr).unwrap();
-        assert_eq!(query_config, config)
+
+        // Assert targets are correct
+        for target in config.targets.iter() {
+            assert!(query_config.targets.contains(target));
+        }
+
+        assert_eq!(query_config.is_paused, config.is_paused);
+        assert_eq!(query_config.trustee, config.trustee);
+        assert_eq!(query_config.base_denom, config.base_denom);
+        assert_eq!(query_config.pid, config.pid);
+        assert_eq!(query_config.max_limit, config.max_limit);
+        assert_eq!(query_config.last_rebalance, config.last_rebalance);
+        assert_eq!(query_config.has_min_balance, config.has_min_balance);
+        assert_eq!(
+            query_config.target_override_strategy,
+            config.target_override_strategy
+        );
     }
 
     pub fn assert_rebalancer_is_paused(&self, account_position: u64, is_paused: Option<Addr>) {

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use cosmwasm_std::{Addr, Decimal, Timestamp};
 use valence_package::{
@@ -100,15 +100,15 @@ fn test_register() {
             base_denom: ATOM.to_string(),
             targets: vec![
                 ParsedTarget {
-                    denom: ATOM.to_string(),
-                    percentage: Decimal::bps(7500),
+                    denom: NTRN.to_string(),
+                    percentage: Decimal::bps(2500),
                     min_balance: None,
                     last_input: None,
                     last_i: SignedDecimal::zero(),
                 },
                 ParsedTarget {
-                    denom: NTRN.to_string(),
-                    percentage: Decimal::bps(2500),
+                    denom: ATOM.to_string(),
+                    percentage: Decimal::bps(7500),
                     min_balance: None,
                     last_input: None,
                     last_i: SignedDecimal::zero(),
@@ -147,15 +147,15 @@ fn test_register() {
             base_denom: ATOM.to_string(),
             targets: vec![
                 ParsedTarget {
-                    denom: ATOM.to_string(),
-                    percentage: Decimal::bps(7500),
+                    denom: NTRN.to_string(),
+                    percentage: Decimal::bps(2500),
                     min_balance: None,
                     last_input: None,
                     last_i: SignedDecimal::zero(),
                 },
                 ParsedTarget {
-                    denom: NTRN.to_string(),
-                    percentage: Decimal::bps(2500),
+                    denom: ATOM.to_string(),
+                    percentage: Decimal::bps(7500),
                     min_balance: None,
                     last_input: None,
                     last_i: SignedDecimal::zero(),
@@ -345,6 +345,19 @@ fn test_resume() {
 fn test_update() {
     let mut suite = SuiteBuilder::default().build_default();
 
+    let mut targets = HashSet::with_capacity(2);
+
+    targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+    targets.insert(Target {
+        denom: NTRN.to_string(),
+        bps: 5000,
+        min_balance: Some(15_u128.into()),
+    });
+
     suite
         .update_config(
             suite.owner.clone(),
@@ -355,18 +368,7 @@ fn test_update() {
                     "random_addr".to_string(),
                 )),
                 base_denom: Some(NTRN.to_string()),
-                targets: vec![
-                    Target {
-                        denom: ATOM.to_string(),
-                        bps: 5000,
-                        min_balance: None,
-                    },
-                    Target {
-                        denom: NTRN.to_string(),
-                        bps: 5000,
-                        min_balance: Some(15_u128.into()),
-                    },
-                ],
+                targets,
                 pid: Some(PID {
                     p: "1".to_string(),
                     i: "0.5".to_string(),

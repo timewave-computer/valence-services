@@ -52,9 +52,6 @@ pub enum ContractError {
     #[error("A minimum of 2 targets are required")]
     TwoTargetsMinimum,
 
-    #[error("Target list must contain only a single instance of a denom")]
-    TargetsMustBeUnique,
-
     #[error("Target with a min_balance wasn't found")]
     NoMinBalanceTargetFound,
 

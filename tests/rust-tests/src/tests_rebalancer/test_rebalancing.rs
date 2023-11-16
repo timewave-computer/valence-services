@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use auction_package::Pair;
 use cosmwasm_std::{Decimal, Uint128};
@@ -43,7 +43,8 @@ fn test_basic_p_controller() {
         let price = suite.get_price(Pair::from((ATOM.to_string(), NTRN.to_string())));
         let total_value = Decimal::from_atomics(balance.amount, 0).unwrap()
             + (Decimal::from_atomics(ntrn_balance.amount, 0).unwrap() / price);
-        let target = Decimal::bps(config.targets[0].bps) * total_value;
+        let target = Decimal::bps(config.targets.iter().find(|t| t.denom == ATOM).unwrap().bps)
+            * total_value;
 
         // Calcuate expected values
         let diff = calc_diff(balance.amount, target, p_perc, atom_limit);
@@ -80,10 +81,13 @@ fn test_min_balance_more_than_balance() {
         d: "0".to_string(),
     };
     // Set config to have min_balance for ATOM
-    config.targets[0].min_balance = Some(Uint128::new(2000));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(2000_u128.into());
+
+    config.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default()
-        .with_rebalancer_data(vec![config.clone()])
+        .with_rebalancer_data(vec![config])
         .build_default();
 
     // Rebalancer should do nothing, because our init balance is 1000 atom
