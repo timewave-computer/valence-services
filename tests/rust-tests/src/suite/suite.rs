@@ -172,7 +172,7 @@ impl Suite {
 
     pub fn rebalance(&mut self, limit: Option<u64>) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
-        self.admin.clone(),
+        Addr::unchecked("random_addr"),
         self.rebalancer_addr.clone(),
     &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty,Empty>::SystemRebalance {
           limit,
