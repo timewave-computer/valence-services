@@ -75,4 +75,7 @@ pub enum ContractError {
 
     #[error("Target BPS overflowed")]
     BpsOverflow,
+
+    #[error("Limit cannot be zero")]
+    LimitIsZero,
 }
