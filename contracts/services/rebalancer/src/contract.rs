@@ -89,7 +89,7 @@ pub fn execute(
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
         RebalancerExecuteMsg::Register { register_for, data } => {
             verify_services_manager(deps.as_ref(), &info)?;
-            let data = data.expect("We must have register data");
+            let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
             let registree = deps.api.addr_validate(&register_for)?;
 
             if CONFIGS.has(deps.storage, registree.clone()) {

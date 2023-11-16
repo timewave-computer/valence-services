@@ -137,7 +137,6 @@ pub fn execute_system_rebalance(
 
     // We checked if we finished looping over all accounts or not
     // and set the status based on that
-    // println!("{total_accounts:?} | {limit:?}");
     let status = if configs_len <= limit {
         SystemRebalanceStatus::Finished {
             next_cycle: cycle_start.plus_seconds(cycle_period),
@@ -359,8 +358,6 @@ fn do_pid(
 
     let signed_dt: SignedDecimal = dt.into();
 
-    println!("total_value: {total_value}");
-
     targets.iter_mut().for_each(|target| {
         let signed_input: SignedDecimal = target.balance_value.into();
 
@@ -409,6 +406,8 @@ pub fn verify_targets(
         .ok_or(ContractError::NoMinBalanceTargetFound)?
         .clone();
 
+    // Safe to unwrap here, because we only enter the function is there is a min_balance target
+    // and we error out if we don't find the target above.
     let min_balance = Decimal::from_atomics(target.target.min_balance.unwrap(), 0)?;
     let min_balance_target = min_balance * target.price;
     let real_target = total_value * target.target.percentage;
@@ -418,14 +417,12 @@ pub fn verify_targets(
         // the target is below min_balance, so we set the min_balance as the new target
 
         // Verify that min_balance is not higher then our total value, if it is, then we sell everything to fulfill it.
-        // println!("{min_balance_input:?} | {total_value:?}");
         let (new_target_perc, mut leftover_perc) = if min_balance_target >= total_value {
             (Decimal::one(), Decimal::zero())
         } else {
             let perc = min_balance_target / total_value;
             (perc, Decimal::one() - perc)
         };
-        // println!("{new_target_perc:?} | {leftover_perc:?}");
 
         let old_leftover_perc = Decimal::one() - target.target.percentage;
         let mut new_total_perc = new_target_perc;
@@ -595,6 +592,8 @@ fn generate_trades_msgs(
                     // If our sell results in less then min_balance, we sell the difference to hit min_balance
                     let diff = token_sell.balance_amount - min_balance;
 
+                    // Unwrap should be safe here because diff should be a small number
+                    // and directly related to users balance
                     token_sell.value_to_trade =
                         token_sell.price / Decimal::from_atomics(diff, 0).unwrap();
                 }
