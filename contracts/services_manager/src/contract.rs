@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -12,7 +14,7 @@ use valence_package::states::ADMIN;
 use crate::error::ContractError;
 use crate::helpers::{get_service_addr, save_service};
 use crate::msg::{InstantiateMsg, MigrateMsg};
-use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR, WHITELISTED_CODE_IDS};
+use crate::state::{ACCOUNT_WHITELISTED_CODE_IDS, ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
 const CONTRACT_NAME: &str = "crates.io:services-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -28,7 +30,10 @@ pub fn instantiate(
 
     ADMIN.save(deps.storage, &info.sender)?;
 
-    WHITELISTED_CODE_IDS.save(deps.storage, &msg.whitelisted_code_ids)?;
+    ACCOUNT_WHITELISTED_CODE_IDS.save(
+        deps.storage,
+        &HashSet::from_iter(msg.whitelisted_code_ids.iter().cloned()),
+    )?;
 
     Ok(Response::default().add_attribute("method", "instantiate"))
 }
@@ -49,7 +54,7 @@ pub fn execute(
                 .querier
                 .query_wasm_contract_info(info.sender.clone())?
                 .code_id;
-            let whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+            let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
 
             if !whitelist.contains(&sender_code_id) {
                 return Err(ContractError::NotWhitelistedContract(sender_code_id));
@@ -157,21 +162,17 @@ mod admin {
                 Ok(Response::default().add_attribute("method", "remove_service"))
             }
             ServicesManagerAdminMsg::UpdateCodeIdWhitelist { to_add, to_remove } => {
-                let mut whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+                let mut whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
 
-                for code_id in to_add {
-                    if !whitelist.contains(&code_id) {
-                        whitelist.push(code_id);
-                    }
-                }
+                whitelist.extend(to_add);
 
                 for code_id in to_remove {
-                    if let Some(index) = whitelist.iter().position(|x| *x == code_id) {
-                        whitelist.remove(index);
+                    if !whitelist.remove(&code_id) {
+                        return Err(ContractError::CodeIdNotInWhitelist(code_id));
                     }
                 }
 
-                WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
+                ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
                 Ok(Response::default().add_attribute("method", "update_code_id_whitelist"))
             }

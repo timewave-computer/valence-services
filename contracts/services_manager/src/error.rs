@@ -24,4 +24,7 @@ pub enum ContractError {
 
     #[error("Contract is not allowed to register to services: {0}")]
     NotWhitelistedContract(u64),
+
+    #[error("Code id doesn't exist in the whitelist and can't be removed: {0}")]
+    CodeIdNotInWhitelist(u64),
 }
