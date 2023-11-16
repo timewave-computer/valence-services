@@ -150,7 +150,9 @@ pub fn execute(
 
             if let Some(trustee) = data.trustee {
                 config.trustee = match trustee {
-                    OptionalField::Set(trustee) => Some(trustee),
+                    OptionalField::Set(trustee) => {
+                        Some(deps.api.addr_validate(&trustee)?.to_string())
+                    }
                     OptionalField::Clear => None,
                 };
             }
