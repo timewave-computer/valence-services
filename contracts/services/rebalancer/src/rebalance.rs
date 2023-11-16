@@ -34,7 +34,11 @@ pub fn execute_system_rebalance(
     limit: Option<u64>,
 ) -> Result<Response, ContractError> {
     let cycle_period = CYCLE_PERIOD.load(deps.storage)?;
+    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT) as usize;
 
+    if limit == 0 {
+        return Err(ContractError::LimitIsZero);
+    }
     // start_from tells us if we should start form a specific addr or from the begining
     // cycle_start tells us when the cycle started to calculate for processing and finished status
     let (start_from, cycle_start, prices) = match SYSTEM_REBALANCE_STATUS.load(deps.storage)? {
@@ -78,7 +82,6 @@ pub fn execute_system_rebalance(
     let mut last_addr = start_from.clone();
 
     let start_from = start_from.map(Bound::exclusive);
-    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT) as usize;
 
     let mut msgs: Vec<SubMsg> = vec![];
 
