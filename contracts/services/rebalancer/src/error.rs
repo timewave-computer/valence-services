@@ -72,4 +72,7 @@ pub enum ContractError {
 
     #[error("Price of the pair is zero: {0} / {1}")]
     PairPriceIsZero(String, String),
+
+    #[error("Target BPS overflowed")]
+    BpsOverflow,
 }
