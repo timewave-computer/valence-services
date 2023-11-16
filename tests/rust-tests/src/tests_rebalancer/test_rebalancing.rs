@@ -49,7 +49,7 @@ fn test_basic_p_controller() {
         // Calcuate expected values
         let diff = calc_diff(balance.amount, target, p_perc, atom_limit);
 
-        println!("diff: {diff}, balance: {balance} | target: {target}: limit: {atom_limit}",);
+        // println!("diff: {diff}, balance: {balance} | target: {target}: limit: {atom_limit}",);
         let expected_balance = balance.amount - diff;
 
         // do rebalance
