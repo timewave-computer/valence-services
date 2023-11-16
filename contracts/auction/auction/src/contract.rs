@@ -22,7 +22,7 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:auction";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const TWAP_PRICE_LIMIT: u64 = 10;
+pub const TWAP_PRICE_MAX_LEN: u64 = 10;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
