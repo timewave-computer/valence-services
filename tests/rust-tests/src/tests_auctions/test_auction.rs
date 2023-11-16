@@ -860,3 +860,27 @@ fn test_open_auction_no_bids() {
     assert_eq!(active_auction.available_amount, funds[0].amount);
     assert_eq!(active_auction.total_amount, funds[0].amount);
 }
+
+#[test]
+fn test_open_auction_bid_after_end_block_passed() {
+    let mut suite = Suite::default();
+    let funds = coins(100_u128, suite.pair.0.clone());
+
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &funds,
+    );
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+    suite.update_block_cycle();
+    suite.add_block();
+
+    // Auction is finished, but we don't close it yet, to test if we can bid on it.
+    let err = suite.do_bid_err(suite.pair.clone(), coin(1000_u128, suite.pair.1.clone()));
+
+    assert_eq!(err, auction::error::ContractError::AuctionFinished)
+}

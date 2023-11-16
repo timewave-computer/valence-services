@@ -118,6 +118,11 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
         return Err(ContractError::AuctionNotStarted(active_auction.start_block));
     }
 
+    // The end block is smaller then the current height so auction is finished
+    if active_auction.end_block < env.block.height {
+        return Err(ContractError::AuctionFinished);
+    }
+
     let config = AUCTION_CONFIG.load(deps.storage)?;
 
     if config.is_paused {
