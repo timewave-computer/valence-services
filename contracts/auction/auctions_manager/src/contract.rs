@@ -7,7 +7,7 @@ use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_utils::parse_reply_instantiate_data;
+use cw_utils::{nonpayable, parse_reply_instantiate_data};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -60,6 +60,7 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::WithdrawFunds { pair } => {
+          nonpayable(&info)?;
             pair.verify()?;
             let pair_addr = PAIRS.load(deps.storage, pair)?;
 
@@ -68,19 +69,20 @@ pub fn execute(
                 msg: to_binary(&auction::msg::ExecuteMsg::WithdrawFundsManager {
                     sender: info.sender,
                 })?,
-                funds: info.funds,
+                funds: vec![],
             };
 
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::FinishAuction { pair, limit } => {
+            nonpayable(&info)?;
             pair.verify()?;
             let pair_addr = PAIRS.load(deps.storage, pair)?;
 
             let msg = WasmMsg::Execute {
                 contract_addr: pair_addr.to_string(),
                 msg: to_binary(&auction::msg::ExecuteMsg::FinishAuction { limit })?,
-                funds: info.funds,
+                funds: vec![],
             };
 
             Ok(Response::default().add_message(msg))
