@@ -186,6 +186,13 @@ mod admin {
         env: &Env,
         new_auction_params: NewAuctionParams,
     ) -> Result<Response, ContractError> {
+        let start_block = new_auction_params.start_block.unwrap_or(env.block.height);
+        let end_block = new_auction_params.end_block;
+
+        if end_block <= start_block {
+            return Err(ContractError::InvalidAuctionEndBlock);
+        }
+
         let config = AUCTION_CONFIG.load(deps.storage)?;
 
         if config.is_paused {
@@ -215,8 +222,8 @@ mod admin {
 
         let new_active_auction = ActiveAuction {
             status: ActiveAuctionStatus::Started,
-            start_block: new_auction_params.start_block.unwrap_or(env.block.height),
-            end_block: new_auction_params.end_block,
+            start_block,
+            end_block,
             start_price,
             end_price,
             available_amount: total_funds,
