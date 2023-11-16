@@ -1,8 +1,9 @@
-use std::str::FromStr;
-
 use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
+use std::borrow::Borrow;
+use std::hash::Hash;
+use std::{collections::HashSet, hash::Hasher, str::FromStr};
 use valence_macros::valence_service_execute_msgs;
 
 use crate::{error::ValenceError, helpers::OptionalField, signed_decimal::SignedDecimal};
@@ -46,7 +47,7 @@ pub struct RebalancerData {
     /// Base denom we will be calculating everything based on
     pub base_denom: String,
     /// List of targets to rebalance for this account
-    pub targets: Vec<Target>,
+    pub targets: HashSet<Target>,
     /// PID parameters the account want to calculate the rebalance with
     pub pid: PID,
     /// The max limit in percentage the rebalancer is allowed to sell in cycle
@@ -59,7 +60,7 @@ pub struct RebalancerData {
 pub struct RebalancerUpdateData {
     pub trustee: Option<OptionalField<String>>,
     pub base_denom: Option<String>,
-    pub targets: Vec<Target>,
+    pub targets: HashSet<Target>,
     pub pid: Option<PID>,
     pub max_limit: Option<u64>, // BPS
     pub target_override_strategy: Option<TargetOverrideStrategy>,
@@ -137,7 +138,17 @@ pub enum SystemRebalanceStatus {
 }
 
 /// The target struct that holds all info about a single denom target
-#[cw_serde]
+#[derive(
+    ::cosmwasm_schema::serde::Serialize,
+    ::cosmwasm_schema::serde::Deserialize,
+    ::std::clone::Clone,
+    ::std::fmt::Debug,
+    ::cosmwasm_schema::schemars::JsonSchema,
+)]
+#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
+#[serde(deny_unknown_fields, crate = "::cosmwasm_schema::serde")]
+#[schemars(crate = "::cosmwasm_schema::schemars")]
+#[derive(Eq)]
 pub struct Target {
     /// The name of the denom
     pub denom: String,
@@ -146,6 +157,24 @@ pub struct Target {
     /// The minimum balance the account should hold for this denom.
     /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
+}
+
+impl PartialEq for Target {
+    fn eq(&self, other: &Target) -> bool {
+        self.denom == other.denom
+    }
+}
+
+impl Hash for Target {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.denom.hash(state);
+    }
+}
+
+impl Borrow<String> for Target {
+    fn borrow(&self) -> &String {
+        &self.denom
+    }
 }
 
 /// A parsed target struct that contains all info about a single denom target
@@ -165,11 +194,11 @@ pub struct ParsedTarget {
 }
 
 impl From<Target> for ParsedTarget {
-    fn from(val: Target) -> Self {
+    fn from(value: Target) -> Self {
         ParsedTarget {
-            denom: val.denom,
-            percentage: Decimal::bps(val.bps),
-            min_balance: val.min_balance,
+            denom: value.denom,
+            percentage: Decimal::bps(value.bps),
+            min_balance: value.min_balance,
             last_input: None,
             last_i: SignedDecimal::zero(),
         }

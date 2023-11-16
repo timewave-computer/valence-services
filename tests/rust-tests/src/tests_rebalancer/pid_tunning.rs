@@ -25,8 +25,11 @@ fn get_traget(suite: &Suite, config: RebalancerData, price: Decimal) -> (Decimal
     let ntrn_balance = Decimal::from_atomics(suite.get_balance(0, NTRN).amount, 0).unwrap();
 
     let total_value = atom_balance + (ntrn_balance / price);
-    let atom_target = total_value * Decimal::bps(config.targets[0].bps);
-    let ntrn_target = total_value * Decimal::bps(config.targets[1].bps) * price;
+    let atom_target =
+        total_value * Decimal::bps(config.targets.iter().find(|t| t.denom == ATOM).unwrap().bps);
+    let ntrn_target = total_value
+        * Decimal::bps(config.targets.iter().find(|t| t.denom == NTRN).unwrap().bps)
+        * price;
     (atom_target, ntrn_target)
 }
 

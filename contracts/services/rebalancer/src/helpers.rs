@@ -24,13 +24,3 @@ pub struct TargetHelper {
     /// The minimum value we can send to the auction
     pub auction_min_amount: Decimal,
 }
-
-/// Function to check if we have duplicate targets
-pub fn has_dup<T: PartialEq>(slice: &[T]) -> bool {
-    for i in 1..slice.len() {
-        if slice[i..].contains(&slice[i - 1]) {
-            return true;
-        }
-    }
-    false
-}

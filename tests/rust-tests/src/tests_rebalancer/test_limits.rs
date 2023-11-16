@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::{coin, BankMsg, Decimal, Uint128};
 use cw_multi_test::Executor;
 use valence_package::services::rebalancer::PID;
@@ -16,10 +18,13 @@ fn test_min_balance_more_than_balance_with_coins() {
         d: "0".to_string(),
     };
     // Set config to have min_balance for ATOM
-    config.targets[0].min_balance = Some(Uint128::new(2000));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(2000_u128.into());
+
+    config.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default()
-        .with_rebalancer_data(vec![config.clone()])
+        .with_rebalancer_data(vec![config])
         .build_default();
 
     // Send some ntrn to the account
@@ -57,10 +62,13 @@ fn test_min_balance() {
         d: "0".to_string(),
     };
     // Set config to have min_balance for ATOM
-    config.targets[0].min_balance = Some(Uint128::new(950));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(950_u128.into());
+
+    config.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default()
-        .with_rebalancer_data(vec![config.clone()])
+        .with_rebalancer_data(vec![config])
         .build_default();
 
     for _ in 0..10 {

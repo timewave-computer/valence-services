@@ -1,4 +1,6 @@
-use cosmwasm_std::{testing::mock_env, to_binary, Addr, Timestamp, Uint128};
+use std::collections::HashSet;
+
+use cosmwasm_std::{testing::mock_env, to_binary, Addr, Timestamp};
 use cw_multi_test::Executor;
 use valence_package::services::{
     rebalancer::{RebalancerUpdateData, SystemRebalanceStatus},
@@ -31,7 +33,7 @@ fn test_remove_trustee() {
             RebalancerUpdateData {
                 trustee: Some(valence_package::helpers::OptionalField::Clear),
                 base_denom: None,
-                targets: vec![],
+                targets: HashSet::new(),
                 pid: None,
                 max_limit: None,
                 target_override_strategy: None,
@@ -66,7 +68,7 @@ fn test_not_whitelisted_base_denom() {
             RebalancerUpdateData {
                 trustee: None,
                 base_denom: Some(not_whitelisted_base_denom.clone()),
-                targets: vec![],
+                targets: HashSet::new(),
                 pid: None,
                 max_limit: None,
                 target_override_strategy: None,
@@ -87,8 +89,11 @@ fn test_multiple_min_balance_on_update() {
     let mut data = SuiteBuilder::get_default_rebalancer_register_data();
 
     // set min_balance to both targets
-    data.targets[0].min_balance = Some(Uint128::new(100));
-    data.targets[1].min_balance = Some(Uint128::new(100));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(100_u128.into());
+    targets[1].min_balance = Some(100_u128.into());
+
+    data.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default().build_default();
 
@@ -122,7 +127,10 @@ fn test_not_whitelisted_denom_on_update() {
     let mut data = SuiteBuilder::get_default_rebalancer_register_data();
 
     // set min_balance to both targets
-    data.targets[0].denom = not_whitelisted_denom.to_string();
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].denom = not_whitelisted_denom.to_string();
+
+    data.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default().build_default();
 
@@ -155,8 +163,11 @@ fn test_invalid_targets_perc_on_update() {
     let mut data = SuiteBuilder::get_default_rebalancer_register_data();
 
     // set min_balance to both targets
-    data.targets[0].bps = 5000;
-    data.targets[1].bps = 6000;
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].bps = 5000;
+    targets[1].bps = 6000;
+
+    data.targets = HashSet::from_iter(targets.iter().cloned());
 
     let mut suite = SuiteBuilder::default().build_default();
 
