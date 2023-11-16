@@ -4,6 +4,7 @@ use cosmwasm_std::{
     to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
+use valence_package::error::ValenceError;
 use valence_package::helpers::{verify_services_manager, OptionalField};
 use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanceStatus};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
@@ -201,6 +202,10 @@ pub fn execute(
             }
 
             if let Some(max_limit) = data.max_limit {
+                if !(1..=10000).contains(&max_limit) {
+                    return Err(ValenceError::InvalidMaxLimitRange.into());
+                }
+
                 config.max_limit = Decimal::bps(max_limit);
             }
 
