@@ -12,6 +12,7 @@ use valence_package::{
         ParsedPID, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
     },
     signed_decimal::SignedDecimal,
+    CLOSEST_TO_ONE_POSSIBLE,
 };
 
 use crate::{
@@ -23,6 +24,8 @@ use crate::{
         SYSTEM_REBALANCE_STATUS,
     },
 };
+
+const MAX_PID_DT_VALUE: u128 = 10;
 
 /// Main function for rebalancing using the system
 pub fn execute_system_rebalance(
@@ -182,7 +185,7 @@ pub fn do_rebalance(
             env.block.time.seconds() - config.last_rebalance.seconds(),
             0,
         )?;
-        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(10_u128.into()))
+        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(MAX_PID_DT_VALUE.into()))
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
@@ -461,7 +464,9 @@ pub fn verify_targets(
             .collect();
 
         // If the new percentage is smaller then 0.9999 or higher then 1, we have something wrong in calculation
-        if new_total_perc > Decimal::one() || new_total_perc < Decimal::from_str("0.9999")? {
+        if new_total_perc > Decimal::one()
+            || new_total_perc < Decimal::from_str(CLOSEST_TO_ONE_POSSIBLE)?
+        {
             return Err(ContractError::InvalidTargetPercentage(
                 new_total_perc.to_string(),
             ));

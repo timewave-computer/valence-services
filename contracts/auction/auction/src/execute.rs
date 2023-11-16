@@ -1,6 +1,6 @@
 use auction_package::{
     states::{ADMIN, MIN_AUCTION_AMOUNT, TWAP_PRICES},
-    Price,
+    Price, CLOSEST_TO_ONE_POSSIBLE,
 };
 use cosmwasm_std::{
     coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
@@ -260,12 +260,13 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                     Decimal::from_atomics(active_auction.resolved_amount, 0)? * perc_of_total;
 
                 // TODO: Verify this is correct
-                let to_send_amount =
-                    if to_send_amount - to_send_amount.floor() >= Decimal::bps(9999) {
-                        to_send_amount.to_uint_ceil()
-                    } else {
-                        to_send_amount.to_uint_floor()
-                    };
+                let to_send_amount = if to_send_amount - to_send_amount.floor()
+                    >= Decimal::bps(CLOSEST_TO_ONE_POSSIBLE)
+                {
+                    to_send_amount.to_uint_ceil()
+                } else {
+                    to_send_amount.to_uint_floor()
+                };
 
                 total_sent_bought_token += to_send_amount;
                 send_funds.push(coin(to_send_amount.u128(), &config.pair.1));
