@@ -378,12 +378,16 @@ fn do_pid(
 
         let output = p + i - d;
 
-        target.value_to_trade = output.0;
+        target.value_to_trade = output.value();
 
         target.target.last_input = Some(target.balance_value);
         target.target.last_i = i;
 
-        match output.1 {
+        if output.is_zero() {
+            return;
+        }
+
+        match output.sign() {
             // output is negative, we need to sell
             false => to_sell.push(target.clone()),
             // output is positive, we need to buy

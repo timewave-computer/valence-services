@@ -204,22 +204,22 @@ fn terminal_play() {
         if x % 100 == 0 && x % 200 != 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.05").unwrap(), true),
+                SignedDecimal::new(Decimal::from_str("0.05").unwrap(), true),
             );
         } else if x % 20 == 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.10").unwrap(), false),
+                SignedDecimal::new(Decimal::from_str("0.10").unwrap(), false),
             );
         } else if x % 5 == 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.02").unwrap(), false),
+                SignedDecimal::new(Decimal::from_str("0.02").unwrap(), false),
             );
         } else {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.01").unwrap(), true),
+                SignedDecimal::new(Decimal::from_str("0.01").unwrap(), true),
             );
         }
 
