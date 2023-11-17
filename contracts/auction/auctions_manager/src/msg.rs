@@ -2,6 +2,7 @@ use auction::msg::NewAuctionParams;
 use auction_package::{helpers::ChainHaltConfig, AuctionStrategy, Pair, PriceFreshnessStrategy};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
+use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -14,6 +15,7 @@ pub enum ExecuteMsg {
     AuctionFunds { pair: Pair },
     WithdrawFunds { pair: Pair },
     FinishAuction { pair: Pair, limit: u64 },
+    ApproveAdminChange,
     Admin(AdminMsgs),
 }
 
@@ -54,4 +56,9 @@ pub enum AdminMsgs {
         pair: Pair,
         strategy: PriceFreshnessStrategy,
     },
+    StartAdminChange {
+        addr: String,
+        expiration: Expiration,
+    },
+    CancelAdminChange,
 }

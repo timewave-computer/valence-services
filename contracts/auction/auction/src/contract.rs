@@ -326,6 +326,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let auction_strategy = AUCTION_STRATEGY.load(deps.storage)?;
             to_binary(&auction_strategy)
         }
+        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

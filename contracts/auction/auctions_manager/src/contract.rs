@@ -1,4 +1,4 @@
-use auction_package::helpers::GetPriceResponse;
+use auction_package::helpers::{approve_admin_change, GetPriceResponse};
 use auction_package::msgs::AuctionsManagerQueryMsg;
 use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, ORACLE_ADDR, PAIRS};
 #[cfg(not(feature = "library"))]
@@ -88,11 +88,12 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
+        ExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
 mod admin {
-    use auction_package::helpers::verify_admin;
+    use auction_package::helpers::{cancel_admin_change, start_admin_change, verify_admin};
     use cosmwasm_std::{to_binary, SubMsg, WasmMsg};
 
     use crate::msg::AdminMsgs;
@@ -223,6 +224,10 @@ mod admin {
 
                 Ok(Response::default().add_message(msg))
             }
+            AdminMsgs::StartAdminChange { addr, expiration } => {
+                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+            }
+            AdminMsgs::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
         }
     }
 }
@@ -252,6 +257,7 @@ pub fn query(deps: Deps, _env: Env, msg: AuctionsManagerQueryMsg) -> StdResult<B
         AuctionsManagerQueryMsg::GetMinLimit { denom } => {
             to_binary(&MIN_AUCTION_AMOUNT.load(deps.storage, denom)?)
         }
+        AuctionsManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

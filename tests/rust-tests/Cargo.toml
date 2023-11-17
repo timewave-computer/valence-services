@@ -9,6 +9,7 @@ license     = { workspace = true }
 [dev-dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std    = { workspace = true }
+cw-utils        = { workspace = true }
 cw-multi-test   = { workspace = true }
 cw-storage-plus = { workspace = true }
 

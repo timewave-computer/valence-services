@@ -1,11 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply, Response,
-    StdResult, SubMsg, WasmMsg,
+    to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply,
+    Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use valence_package::helpers::{forward_to_services_manager, sender_is_a_service, verify_admin};
+use valence_package::helpers::{
+    approve_admin_change, cancel_admin_change, forward_to_services_manager, sender_is_a_service,
+    start_admin_change, verify_admin,
+};
 use valence_package::msgs::core_execute::{AccountBaseExecuteMsg, ServicesManagerExecuteMsg};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
@@ -124,6 +127,11 @@ pub fn execute(
             verify_admin(deps.as_ref(), &info)?;
             Ok(Response::default().add_messages(msgs))
         }
+        AccountBaseExecuteMsg::StartAdminChange { addr, expiration } => {
+            Ok(start_admin_change(deps, &info, &addr, expiration)?)
+        }
+        AccountBaseExecuteMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+        AccountBaseExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
@@ -183,8 +191,10 @@ fn verify_cosmos_msg(msgs: &[CosmosMsg]) -> Result<(), ContractError> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    Ok(Binary::from(vec![]))
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

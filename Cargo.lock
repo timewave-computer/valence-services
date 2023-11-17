@@ -42,6 +42,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
+ "cw-utils",
  "serde",
  "thiserror",
 ]
@@ -1146,6 +1147,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
+ "cw-utils",
  "serde",
  "thiserror",
  "valence-macros",
@@ -1164,6 +1166,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-multi-test",
  "cw-storage-plus",
+ "cw-utils",
  "price-oracle",
  "rebalancer",
  "rgb",

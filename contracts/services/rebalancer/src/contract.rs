@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use valence_package::error::ValenceError;
-use valence_package::helpers::{verify_services_manager, OptionalField};
+use valence_package::helpers::{approve_admin_change, verify_services_manager, OptionalField};
 use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanceStatus};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
@@ -87,6 +87,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
+        RebalancerExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
         RebalancerExecuteMsg::Register { register_for, data } => {
             verify_services_manager(deps.as_ref(), &info)?;
             let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
@@ -321,7 +322,7 @@ pub fn execute(
 mod admin {
     use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
     use valence_package::{
-        helpers::verify_admin,
+        helpers::{cancel_admin_change, start_admin_change, verify_admin},
         services::rebalancer::{RebalancerAdminMsg, SystemRebalanceStatus},
         states::SERVICES_MANAGER,
     };
@@ -417,6 +418,10 @@ mod admin {
 
                 Ok(Response::default())
             }
+            RebalancerAdminMsg::StartAdminChange { addr, expiration } => {
+                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+            }
+            RebalancerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
         }
     }
 }
@@ -443,6 +448,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
             to_binary(&ManagersAddrsResponse { services, auctions })
         }
+        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

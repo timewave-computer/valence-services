@@ -25,6 +25,8 @@ pub enum QueryMsg {
     GetWhiteLists,
     #[returns(ManagersAddrsResponse)]
     GetManagersAddrs,
+    #[returns(Addr)]
+    GetAdmin,
 }
 
 #[cw_serde]
