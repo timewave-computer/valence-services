@@ -298,9 +298,9 @@ impl Suite {
     pub fn change_price_perc(&mut self, pair: Pair, price_change: SignedDecimal) {
         let price = self.get_price(pair.clone());
         let new_price = if price_change.is_pos() {
-            price + price * price_change.0
+            price + price * price_change.value()
         } else {
-            price - price * price_change.0
+            price - price * price_change.value()
         };
 
         self.update_price(pair, Some(new_price)).unwrap();
