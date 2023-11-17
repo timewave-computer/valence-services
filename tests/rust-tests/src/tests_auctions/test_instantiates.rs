@@ -51,7 +51,6 @@ fn test_instantiate_oracle() {
     assert_eq!(
         config,
         price_oracle::state::Config {
-            admin: builder.admin.clone(),
             auction_manager_addr: manager_addr,
         }
     )

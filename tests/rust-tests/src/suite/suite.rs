@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use auction_package::Pair;
-use cosmwasm_schema::serde;
+use cosmwasm_schema::{cw_serde, serde, QueryResponses};
 use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
@@ -528,6 +528,17 @@ impl Suite {
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetManagersAddrs,
         )
+    }
+
+    pub fn query_admin(&self, contract: &Addr) -> Result<Addr, StdError> {
+        #[cw_serde]
+        #[derive(QueryResponses)]
+        enum Query {
+            #[returns(Addr)]
+            GetAdmin,
+        }
+
+        self.app.wrap().query_wasm_smart(contract, &Query::GetAdmin)
     }
 }
 

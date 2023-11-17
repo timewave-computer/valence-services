@@ -1,4 +1,7 @@
-use auction_package::states::{PAIRS, PRICES, TWAP_PRICES};
+use auction_package::helpers::{
+    approve_admin_change, cancel_admin_change, start_admin_change, verify_admin,
+};
+use auction_package::states::{ADMIN, PAIRS, PRICES, TWAP_PRICES};
 use auction_package::Price;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -23,11 +26,12 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    ADMIN.save(deps.storage, &info.sender)?;
+
     // Set config
     CONFIG.save(
         deps.storage,
         &Config {
-            admin: info.sender,
             auction_manager_addr: deps.api.addr_validate(&msg.auctions_manager_addr)?,
         },
     )?;
@@ -47,9 +51,7 @@ pub fn execute(
             pair.verify()?;
 
             let config = CONFIG.load(deps.storage)?;
-            if config.admin != info.sender {
-                return Err(ContractError::NotAdmin);
-            }
+            verify_admin(deps.as_ref(), &info)?;
 
             let (price, time) = match price {
                 // We have a price, so set that as the price of the pair
@@ -95,6 +97,11 @@ pub fn execute(
 
             Ok(Response::default().add_attribute("price", price.to_string()))
         }
+        ExecuteMsg::StartAdminChange { addr, expiration } => {
+            Ok(start_admin_change(deps, &info, &addr, expiration)?)
+        }
+        ExecuteMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+        ExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
@@ -110,5 +117,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             let config = CONFIG.load(deps.storage)?;
             Ok(to_binary(&config)?)
         }
+        QueryMsg::GetAdmin => Ok(to_binary(&ADMIN.load(deps.storage)?)?),
     }
 }

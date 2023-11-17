@@ -6,6 +6,5 @@ pub const CONFIG: Item<Config> = Item::new("config");
 
 #[cw_serde]
 pub struct Config {
-    pub admin: Addr,
     pub auction_manager_addr: Addr,
 }

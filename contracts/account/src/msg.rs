@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -9,10 +10,8 @@ pub struct InstantiateMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // /// Returns true if `address` is in the queue, and false
-    // /// otherwise.
-    // #[returns(RebalancerConfig)]
-    // getConfig { address: String },
+    #[returns(Addr)]
+    GetAdmin,
 }
 
 #[cw_serde]

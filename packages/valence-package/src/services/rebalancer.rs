@@ -1,6 +1,7 @@
 use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
+use cw_utils::Expiration;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::{collections::HashSet, hash::Hasher, str::FromStr};
@@ -14,6 +15,7 @@ use crate::{error::ValenceError, helpers::OptionalField, signed_decimal::SignedD
 pub enum RebalancerExecuteMsg<A = RebalancerData, B = RebalancerUpdateData> {
     Admin(RebalancerAdminMsg),
     SystemRebalance { limit: Option<u64> },
+    ApproveAdminChange,
 }
 
 #[cw_serde]
@@ -38,6 +40,11 @@ pub enum RebalancerAdminMsg {
     UpdateCyclePeriod {
         period: u64,
     },
+    StartAdminChange {
+        addr: String,
+        expiration: Expiration,
+    },
+    CancelAdminChange,
 }
 
 #[cw_serde]

@@ -7,6 +7,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
+use valence_package::helpers::approve_admin_change;
 use valence_package::msgs::core_execute::ServicesManagerExecuteMsg;
 use valence_package::msgs::core_query::ServicesManagerQueryMsg;
 use valence_package::services::rebalancer::RebalancerConfig;
@@ -49,6 +50,9 @@ pub fn execute(
     match msg {
         ServicesManagerExecuteMsg::Admin(admin_msg) => {
             admin::handle_msg(deps, env, info, admin_msg)
+        }
+        ServicesManagerExecuteMsg::ApproveAdminChange => {
+            Ok(approve_admin_change(deps, &env, &info)?)
         }
         ServicesManagerExecuteMsg::RegisterToService { service_name, data } => {
             let sender_code_id = deps
@@ -114,7 +118,10 @@ pub fn execute(
 }
 
 mod admin {
-    use valence_package::{helpers::verify_admin, msgs::core_execute::ServicesManagerAdminMsg};
+    use valence_package::{
+        helpers::{cancel_admin_change, start_admin_change, verify_admin},
+        msgs::core_execute::ServicesManagerAdminMsg,
+    };
 
     use crate::helpers::remove_service;
 
@@ -177,6 +184,10 @@ mod admin {
 
                 Ok(Response::default().add_attribute("method", "update_code_id_whitelist"))
             }
+            ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
+                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+            }
+            ServicesManagerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
         }
     }
 }

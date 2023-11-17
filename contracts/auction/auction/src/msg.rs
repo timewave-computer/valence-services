@@ -84,6 +84,9 @@ pub enum QueryMsg {
     /// Get the strategy of the auction
     #[returns(AuctionStrategy)]
     GetStrategy,
+
+    #[returns(Addr)]
+    GetAdmin,
 }
 
 #[cw_serde]
