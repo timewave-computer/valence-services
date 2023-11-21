@@ -19,17 +19,17 @@ pub struct AuctionStrategy {
 }
 
 impl AuctionStrategy {
-  pub fn verify(&self) -> Result<(), AuctionError> {
-    if self.start_price_perc == 0 {
-      return Err(AuctionError::InvalidAuctionStrategyStartPrice);
-    }
+    pub fn verify(&self) -> Result<(), AuctionError> {
+        if self.start_price_perc == 0 {
+            return Err(AuctionError::InvalidAuctionStrategyStartPrice);
+        }
 
-    if self.end_price_perc == 0 || self.end_price_perc >= 10000 {
-      return Err(AuctionError::InvalidAuctionStrategyEndPrice);
-    }
+        if self.end_price_perc == 0 || self.end_price_perc >= 10000 {
+            return Err(AuctionError::InvalidAuctionStrategyEndPrice);
+        }
 
-    Ok(())
-  }
+        Ok(())
+    }
 }
 
 /// Gives us the strategy we should use for when the data is not fresh.

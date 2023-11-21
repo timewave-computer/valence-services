@@ -156,25 +156,6 @@ pub fn execute(
             let account = deps.api.addr_validate(&update_for)?;
             let mut config = CONFIGS.load(deps.storage, account.clone())?;
 
-            if let Some(trustee) = data.trustee {
-                config.trustee = match trustee {
-                    OptionalField::Set(trustee) => {
-                        Some(deps.api.addr_validate(&trustee)?.to_string())
-                    }
-                    OptionalField::Clear => None,
-                };
-            }
-
-            if let Some(base_denom) = data.base_denom {
-                if !BASE_DENOM_WHITELIST
-                    .load(deps.storage)?
-                    .contains(&base_denom)
-                {
-                    return Err(ContractError::BaseDenomNotWhitelisted(base_denom));
-                }
-                config.base_denom = base_denom;
-            }
-
             if !data.targets.is_empty() {
                 let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
                 let mut total_bps = 0;
@@ -202,6 +183,34 @@ pub fn execute(
 
                 config.has_min_balance = has_min_balance;
                 config.targets = data.targets.into_iter().map(|t| t.into()).collect();
+            } else {
+                // We verify the targets he currently has is still whitelisted
+                let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
+
+                for target in &config.targets {
+                    if !denom_whitelist.contains(&target.denom) {
+                        return Err(ContractError::DenomNotWhitelisted(target.denom.to_string()));
+                    }
+                }
+            }
+
+            if let Some(trustee) = data.trustee {
+                config.trustee = match trustee {
+                    OptionalField::Set(trustee) => {
+                        Some(deps.api.addr_validate(&trustee)?.to_string())
+                    }
+                    OptionalField::Clear => None,
+                };
+            }
+
+            if let Some(base_denom) = data.base_denom {
+                if !BASE_DENOM_WHITELIST
+                    .load(deps.storage)?
+                    .contains(&base_denom)
+                {
+                    return Err(ContractError::BaseDenomNotWhitelisted(base_denom));
+                }
+                config.base_denom = base_denom;
             }
 
             if let Some(pid) = data.pid {

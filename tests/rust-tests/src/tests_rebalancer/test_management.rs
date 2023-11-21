@@ -371,3 +371,35 @@ fn test_register_wrong_code_id() {
         )
         .unwrap();
 }
+
+#[test]
+fn test_update_config_not_whitelsited_denom() {
+    let mut suite = Suite::default();
+
+    suite
+        .update_rebalancer_denom_whitelist(suite.admin.clone(), vec![], vec![NTRN.to_string()])
+        .unwrap();
+
+    let err: rebalancer::error::ContractError = suite
+        .update_config(
+            suite.owner.clone(),
+            0,
+            ValenceServices::Rebalancer,
+            RebalancerUpdateData {
+                trustee: Some(valence_package::helpers::OptionalField::Clear),
+                base_denom: None,
+                targets: HashSet::new(),
+                pid: None,
+                max_limit: None,
+                target_override_strategy: None,
+            },
+        )
+        .unwrap_err()
+        .downcast()
+        .unwrap();
+
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::DenomNotWhitelisted(NTRN.to_string())
+    )
+}
