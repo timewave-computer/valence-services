@@ -57,6 +57,7 @@ pub fn instantiate(
     )?;
 
     // Set the strategy for this auction
+    msg.auction_strategy.verify()?;
     AUCTION_STRATEGY.save(deps.storage, &msg.auction_strategy)?;
 
     // Set auction ids as starter
