@@ -23,4 +23,10 @@ pub enum AuctionError {
 
     #[error("Change admin is expired")]
     AdminChangeExpired,
+
+    #[error("Auction strategy start price must be greater than 0")]
+    InvalidAuctionStrategyStartPrice,
+
+    #[error("Auction strategy end price must be greater than 0 and lower than 10000")]
+    InvalidAuctionStrategyEndPrice,
 }
