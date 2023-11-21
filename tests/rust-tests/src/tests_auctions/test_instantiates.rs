@@ -135,7 +135,7 @@ fn test_auction_strategy() {
     let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
     init_msg.auction_strategy.start_price_perc = 0;
 
-    let err = suite.init_auction_err(init_msg.clone(), None);
+    let err = suite.init_auction_err(init_msg, None);
 
     assert!(err.root_cause().to_string().contains(
         &auction_package::error::AuctionError::InvalidAuctionStrategyStartPrice.to_string()
@@ -145,7 +145,7 @@ fn test_auction_strategy() {
     let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
     init_msg.auction_strategy.end_price_perc = 0;
 
-    let err = suite.init_auction_err(init_msg.clone(), None);
+    let err = suite.init_auction_err(init_msg, None);
 
     assert!(err.root_cause().to_string().contains(
         &auction_package::error::AuctionError::InvalidAuctionStrategyEndPrice.to_string()
@@ -155,7 +155,7 @@ fn test_auction_strategy() {
     let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
     init_msg.auction_strategy.end_price_perc = 10001;
 
-    let err = suite.init_auction_err(init_msg.clone(), None);
+    let err = suite.init_auction_err(init_msg, None);
 
     assert!(err.root_cause().to_string().contains(
         &auction_package::error::AuctionError::InvalidAuctionStrategyEndPrice.to_string()
