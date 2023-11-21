@@ -53,6 +53,11 @@ pub fn execute(
             let config = CONFIG.load(deps.storage)?;
             verify_admin(deps.as_ref(), &info)?;
 
+            let auction_addr = PAIRS
+                .query(&deps.querier, config.auction_manager_addr, pair.clone())?
+                .ok_or(ContractError::PairAuctionNotFound)?;
+            let twap_prices = TWAP_PRICES.query(&deps.querier, auction_addr)?;
+
             let (price, time) = match price {
                 // We have a price, so set that as the price of the pair
                 Some(price) => {
@@ -60,15 +65,17 @@ pub fn execute(
                         return Err(ContractError::PriceIsZero);
                     }
 
-                    Ok::<(Decimal, Timestamp), ContractError>((price, env.block.time))
+                    if twap_prices.len() < 4
+                        || twap_prices[0].time.seconds()
+                            < env.block.time.seconds() - (60 * 60 * 24 * 2)
+                    {
+                        Ok::<(Decimal, Timestamp), ContractError>((price, env.block.time))
+                    } else {
+                        return Err(ContractError::NoTermsForManualUpdate);
+                    }
                 }
                 // We don't have a price, so we are trying to look for the price in the auction
                 None => {
-                    let auction_addr = PAIRS
-                        .query(&deps.querier, config.auction_manager_addr, pair.clone())?
-                        .ok_or(ContractError::PairAuctionNotFound)?;
-                    let twap_prices = TWAP_PRICES.query(&deps.querier, auction_addr)?;
-
                     if twap_prices.len() < 3 {
                         return Err(ContractError::NotEnoughTwaps);
                     }

@@ -24,4 +24,7 @@ pub enum ContractError {
 
     #[error("Set price cannot be zero")]
     PriceIsZero,
+
+    #[error("Can't manually update price")]
+    NoTermsForManualUpdate,
 }

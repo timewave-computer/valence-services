@@ -625,7 +625,7 @@ fn test_saving_10_twap_prices() {
     // Do 11 auctions
     for i in 0..11 {
         suite.finalize_auction(&funds);
-        if i < 4 {
+        if i < 3 {
             suite
                 .update_price(suite.pair.clone(), Some(Decimal::one()))
                 .unwrap();
