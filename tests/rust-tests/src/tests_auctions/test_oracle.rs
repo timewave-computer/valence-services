@@ -244,3 +244,44 @@ fn test_update_admin_fails() {
         )
         .unwrap_err();
 }
+
+#[test]
+fn test_manual_price_update() {
+    let mut suite = Suite::default();
+    let funds = coins(10_u128, suite.pair.0.clone());
+
+    // no auctions yet, so should be able to update
+    suite
+        .update_price(suite.pair.clone(), Some(Decimal::one()))
+        .unwrap();
+
+    // 4 auctions passed we should not be able to update price now.
+    suite.finalize_auction(&funds);
+    suite.finalize_auction(&funds);
+    suite.finalize_auction(&funds);
+    suite.finalize_auction(&funds);
+
+    let err = suite.update_price_err(suite.pair.clone(), Some(Decimal::one()));
+    assert_eq!(
+        err,
+        price_oracle::error::ContractError::NoTermsForManualUpdate
+    );
+
+    // 3 days passed without auction, we should be able to update price now.
+    suite.update_block_cycle();
+    suite.update_block_cycle();
+    suite.update_block_cycle();
+
+    suite
+        .update_price(suite.pair.clone(), Some(Decimal::one()))
+        .unwrap();
+
+    // an auction happened, we should not be able to update price now.
+    suite.finalize_auction(&funds);
+
+    let err = suite.update_price_err(suite.pair.clone(), Some(Decimal::one()));
+    assert_eq!(
+        err,
+        price_oracle::error::ContractError::NoTermsForManualUpdate
+    );
+}
