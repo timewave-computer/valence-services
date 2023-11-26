@@ -1,4 +1,4 @@
-use cosmwasm_std::{DecimalRangeExceeded, StdError};
+use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use thiserror::Error;
 use valence_package::error::ValenceError;
 
@@ -9,6 +9,12 @@ pub enum ContractError {
 
     #[error(transparent)]
     ValenceError(#[from] ValenceError),
+
+    #[error(transparent)]
+    OverflowError(#[from] OverflowError),
+
+    #[error(transparent)]
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
@@ -81,4 +87,9 @@ pub enum ContractError {
 
     #[error("Data is not provided to the rebalancer")]
     MustProvideRebalancerData,
+
+    #[error(
+        "Account balance doesn't meet the minimum balance requirement: Current: {0}, Minimum: {1}"
+    )]
+    InvalidAccountMinValue(String, String),
 }

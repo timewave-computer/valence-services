@@ -511,6 +511,7 @@ impl SuiteBuilder {
             rebalancer_addr,
             account_addrs,
             auction_addrs,
+            account_code_id: self.account_code_id,
             pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
         }
     }

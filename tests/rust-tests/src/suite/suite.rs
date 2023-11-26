@@ -9,11 +9,11 @@ use rebalancer::{
     msg::{ManagersAddrsResponse, WhitelistsResponse},
 };
 use valence_package::services::{
-    rebalancer::{RebalancerConfig, SystemRebalanceStatus},
+    rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus},
     ValenceServices,
 };
 
-use super::suite_builder::SuiteBuilder;
+use super::{instantiates::AccountInstantiate, suite_builder::SuiteBuilder};
 
 pub const ATOM: &str = "uatom";
 pub const NTRN: &str = "untrn";
@@ -50,6 +50,9 @@ pub(crate) struct Suite {
     pub auction_addrs: HashMap<(String, String), Addr>,
     /// Used mainly for auction tests, a default pair of (ATOM, NTRN)
     pub pair: Pair,
+
+    // code ids for future use
+    pub account_code_id: u64,
 }
 
 impl Default for Suite {
@@ -116,6 +119,28 @@ impl Suite {
                 .unwrap();
         });
         self
+    }
+
+    pub fn create_temp_account(&mut self, balance: &[Coin]) -> (u64, Addr) {
+        let account_init: valence_account::msg::InstantiateMsg =
+            AccountInstantiate::new(self.manager_addr.as_str()).into();
+
+        let account_addr = self
+            .app
+            .instantiate_contract(
+                self.account_code_id,
+                self.owner.clone(),
+                &account_init,
+                balance,
+                "account_temp".to_string(),
+                Some(self.owner.to_string()),
+            )
+            .unwrap();
+
+        let position = self.account_addrs.len() as u64;
+        self.account_addrs.push(account_addr.clone());
+
+        (position, account_addr)
     }
 }
 
@@ -244,7 +269,7 @@ impl Suite {
     pub fn update_rebalancer_base_denom_whitelist(
         &mut self,
         sender: Addr,
-        to_add: Vec<String>,
+        to_add: Vec<BaseDenom>,
         to_remove: Vec<String>,
     ) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
@@ -458,6 +483,17 @@ impl Suite {
             },
             &[],
         )
+    }
+
+    pub fn resume_service_err(
+        &mut self,
+        account_position: u64,
+        service_name: ValenceServices,
+    ) -> rebalancer::error::ContractError {
+        self.resume_service(account_position, service_name)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
     }
 
     pub fn resume_service_with_sender(

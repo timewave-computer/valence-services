@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{testing::mock_env, to_binary, Addr, Timestamp};
+use cosmwasm_std::{coins, testing::mock_env, to_binary, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
 use valence_package::services::{
-    rebalancer::{RebalancerUpdateData, SystemRebalanceStatus},
+    rebalancer::{BaseDenom, RebalancerUpdateData, SystemRebalanceStatus},
     ValenceServices,
 };
 
@@ -261,7 +261,10 @@ fn test_update_whitelist() {
     // lets make sure the whitelist is what we expect for the tests
     assert!(whitelist.denom_whitelist.contains(&ATOM.to_string()));
     assert!(whitelist.denom_whitelist.len() == 3);
-    assert!(whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
+    assert!(whitelist
+        .base_denom_whitelist
+        .iter()
+        .any(|bd| bd.denom == *ATOM));
     assert!(whitelist.base_denom_whitelist.len() == 2);
 
     // remove atom, add random
@@ -278,7 +281,10 @@ fn test_update_whitelist() {
     assert!(whitelist.denom_whitelist.len() == 2);
 
     // remove atom, add random
-    let to_add: Vec<String> = vec!["random".to_string()];
+    let to_add: Vec<BaseDenom> = vec![BaseDenom {
+        denom: "random".to_string(),
+        min_balance_limit: Uint128::one(),
+    }];
     let to_remove = vec![ATOM.to_string(), NTRN.to_string()];
 
     suite
@@ -286,9 +292,19 @@ fn test_update_whitelist() {
         .unwrap();
 
     let whitelist = suite.query_rebalancer_whitelists().unwrap();
-    assert!(!whitelist.base_denom_whitelist.contains(&ATOM.to_string()));
-    assert!(!whitelist.base_denom_whitelist.contains(&NTRN.to_string()));
+    assert!(!whitelist
+        .base_denom_whitelist
+        .iter()
+        .any(|bd| bd.denom == *ATOM));
+    assert!(!whitelist
+        .base_denom_whitelist
+        .iter()
+        .any(|bd| bd.denom == *NTRN));
     assert!(whitelist.base_denom_whitelist.len() == 1);
+    assert!(whitelist
+        .base_denom_whitelist
+        .iter()
+        .any(|bd| bd.denom == *"random"));
 }
 
 #[test]
@@ -355,6 +371,16 @@ fn test_register_wrong_code_id() {
         &[],
     ).unwrap();
 
+    // Send tokens to rebalancer to have minimum balance
+    suite
+        .app
+        .send_tokens(
+            suite.admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &coins(100, ATOM.to_string()),
+        )
+        .unwrap();
+
     // try to register again using the same contract as above
     suite
         .app
@@ -402,4 +428,124 @@ fn test_update_config_not_whitelsited_denom() {
         err,
         rebalancer::error::ContractError::DenomNotWhitelisted(NTRN.to_string())
     )
+}
+
+#[test]
+fn test_account_balance_limit() {
+    let mut suite = Suite::default();
+    let (account_position_1, _) = suite.create_temp_account(&[]);
+    let (account_position_2, account_addr_2) =
+        suite.create_temp_account(&coins(1000, ATOM.to_string()));
+    let (account_position_3, account_addr_3) =
+        suite.create_temp_account(&coins(1000, NTRN.to_string()));
+    let register_data = SuiteBuilder::get_default_rebalancer_register_data();
+
+    // Register 2 and 3 as normal because they have enough balance
+    suite
+        .register_to_rebalancer(account_position_2, &register_data)
+        .unwrap();
+    suite
+        .register_to_rebalancer(account_position_3, &register_data)
+        .unwrap();
+
+    // Registering should fail, as the temp account doesn't have any tokens
+    let err = suite.register_to_rebalancer_err(account_position_1, &register_data);
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::InvalidAccountMinValue(
+            Uint128::zero().to_string(),
+            Uint128::from(100_u128).to_string()
+        )
+    );
+
+    // Remove funds from account 2 to 0 (mimic balance is 0)
+    suite
+        .app
+        .send_tokens(
+            account_addr_2.clone(),
+            suite.admin.clone(),
+            &coins(1000, ATOM.to_string()),
+        )
+        .unwrap();
+
+    // Remove funds from account 3 to 50 (mimic balance is above 0 and below minimum)
+    suite
+        .app
+        .send_tokens(
+            account_addr_3.clone(),
+            suite.admin.clone(),
+            &coins(950, NTRN.to_string()),
+        )
+        .unwrap();
+
+    // make sure account 2 and 3 are not paused
+    let config_2 = suite
+        .query_rebalancer_config(account_addr_2.clone())
+        .unwrap();
+    assert!(config_2.is_paused.is_none());
+
+    let config_3 = suite
+        .query_rebalancer_config(account_addr_3.clone())
+        .unwrap();
+    assert!(config_3.is_paused.is_none());
+
+    // do a rebalance with an account with no balance
+    suite.rebalance_with_update_block(None).unwrap();
+
+    // Account 2 and 3 should be paused now.
+    let config_2 = suite
+        .query_rebalancer_config(account_addr_2.clone())
+        .unwrap();
+    assert!(config_2.is_paused.is_some());
+
+    let config_3 = suite
+        .query_rebalancer_config(account_addr_3.clone())
+        .unwrap();
+    assert!(config_3.is_paused.is_some());
+
+    // Try to resuem without enough balance
+    let err = suite.resume_service_err(account_position_2, ValenceServices::Rebalancer);
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::InvalidAccountMinValue(
+            Uint128::zero().to_string(),
+            Uint128::from(100_u128).to_string()
+        )
+    );
+
+    let err = suite.resume_service_err(account_position_3, ValenceServices::Rebalancer);
+    assert_eq!(
+        err,
+        rebalancer::error::ContractError::InvalidAccountMinValue(
+            Uint128::from(33_u128).to_string(),
+            Uint128::from(100_u128).to_string()
+        )
+    );
+
+    // Send enough tokens to resume successfully
+    suite
+        .app
+        .send_tokens(
+            suite.admin.clone(),
+            account_addr_2,
+            &coins(100, ATOM.to_string()),
+        )
+        .unwrap();
+
+    suite
+        .app
+        .send_tokens(
+            suite.admin.clone(),
+            account_addr_3,
+            &coins(300, NTRN.to_string()),
+        )
+        .unwrap();
+
+    // Resume should work now
+    suite
+        .resume_service(account_position_2, ValenceServices::Rebalancer)
+        .unwrap();
+    suite
+        .resume_service(account_position_3, ValenceServices::Rebalancer)
+        .unwrap();
 }
