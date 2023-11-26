@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, str::FromStr};
+use std::{borrow::BorrowMut, collections::HashMap, str::FromStr};
 
 use auction_package::{helpers::GetPriceResponse, states::MIN_AUCTION_AMOUNT, Pair};
 use cosmwasm_std::{
@@ -80,10 +80,7 @@ pub fn execute_system_rebalance(
     // if exists we do have an address we should continue from
     // if its None, then we start the loop from the begining.
     let mut last_addr = start_from.clone();
-
     let start_from = start_from.map(Bound::exclusive);
-
-    let mut msgs: Vec<SubMsg> = vec![];
 
     let mut configs = CONFIGS
         .range(deps.storage, start_from, None, Order::Ascending)
@@ -99,7 +96,15 @@ pub fn execute_system_rebalance(
         configs.remove(configs_len - 1)?;
     }
 
+    // get base denoms as hashMap
+    let base_denoms_min_values = BASE_DENOM_WHITELIST
+        .load(deps.storage)?
+        .iter()
+        .map(|bd| (bd.denom.clone(), bd.min_balance_limit))
+        .collect::<HashMap<String, Uint128>>();
+
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
+    let mut msgs: Vec<SubMsg> = vec![];
 
     for res in configs {
         let Ok((account, config)) = res else {
@@ -121,6 +126,7 @@ pub fn execute_system_rebalance(
             &auction_manager,
             config,
             &mut min_amount_limits,
+            &base_denoms_min_values,
             &prices,
             cycle_period,
         );
@@ -132,7 +138,9 @@ pub fn execute_system_rebalance(
         // so we save the config here
         CONFIGS.save(deps.branch().storage, account, &config)?;
 
-        msgs.push(msg)
+        if let Some(msg) = msg {
+            msgs.push(msg);
+        }
     }
 
     // We checked if we finished looping over all accounts or not
@@ -154,6 +162,22 @@ pub fn execute_system_rebalance(
     Ok(Response::default().add_submessages(msgs))
 }
 
+/// Make sure the balance of the account is not zero and is above our minimum value
+fn verify_account_balance(total_value: Uint128, min_value: Uint128) -> Result<(), ContractError> {
+    if total_value.is_zero() {
+        return Err(ContractError::AccountBalanceIsZero);
+    }
+
+    if total_value < min_value {
+        return Err(ContractError::InvalidAccountMinValue(
+            total_value.to_string(),
+            min_value.to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Do a rebalance with PID calculation for a single account
 #[allow(clippy::too_many_arguments)]
 pub fn do_rebalance(
@@ -163,15 +187,23 @@ pub fn do_rebalance(
     auction_manager: &Addr,
     mut config: RebalancerConfig,
     min_amount_limits: &mut Vec<(String, Uint128)>,
+    min_values: &HashMap<String, Uint128>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<(RebalancerConfig, SubMsg), ContractError> {
+) -> Result<(RebalancerConfig, Option<SubMsg>), ContractError> {
     // get a vec of inputs for our calculations
     let (total_value, mut target_helpers) = get_inputs(deps, account, &config, prices)?;
 
-    if total_value.is_zero() {
-        return Err(ContractError::AccountBalanceIsZero);
-    }
+    // Get required minim
+    let min_value = *min_values
+        .get(config.base_denom.as_str())
+        .unwrap_or(&Uint128::zero());
+
+    if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
+        // We pause the account if the account balance doesn't meet the minimum requirements
+        config.is_paused = Some(account.clone());
+        return Ok((config, None));
+    };
 
     // Verify the targets, if we have a min_balance we need to do some extra steps
     // to make sure min_balance is accounted for in our calculations
@@ -220,7 +252,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    Ok((config, msg))
+    Ok((config, Some(msg)))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token
@@ -273,22 +305,27 @@ pub fn get_prices(
 
     for base_denom in base_denoms {
         for denom in &denoms {
-            if &base_denom == denom {
+            if &base_denom.denom == denom {
                 continue;
             }
 
-            let pair = Pair::from((base_denom.clone(), denom.clone()));
+            let pair = Pair::from((base_denom.denom.clone(), denom.clone()));
 
-            let price: GetPriceResponse = deps.querier.query_wasm_smart::<GetPriceResponse>(
-                auctions_manager_addr,
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair: pair.clone() },
-            )?;
+            let price = deps
+                .querier
+                .query_wasm_smart::<GetPriceResponse>(
+                    auctions_manager_addr,
+                    &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                        pair: pair.clone(),
+                    },
+                )?
+                .price;
 
-            if price.price.is_zero() {
+            if price.is_zero() {
                 return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
             }
 
-            prices.push((pair, price.price));
+            prices.push((pair, price));
         }
     }
 

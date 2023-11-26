@@ -1,7 +1,10 @@
+use auction_package::helpers::GetPriceResponse;
+use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    Uint128,
 };
 use cw2::set_contract_version;
 use valence_package::error::ValenceError;
@@ -92,16 +95,25 @@ pub fn execute(
             verify_services_manager(deps.as_ref(), &info)?;
             let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
             let registree = deps.api.addr_validate(&register_for)?;
+            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
 
             if CONFIGS.has(deps.storage, registree.clone()) {
                 return Err(ContractError::AccountAlreadyRegistered);
             }
 
-            // check base denom is whitelisted
-            let base_denom_whitelist = BASE_DENOM_WHITELIST.load(deps.storage)?;
-            if !base_denom_whitelist.contains(&data.base_denom) {
-                return Err(ContractError::BaseDenomNotWhitelisted(data.base_denom));
-            }
+            // Find base denom in our whitelist
+            let base_denom_whitelist = BASE_DENOM_WHITELIST
+                .load(deps.storage)?
+                .into_iter()
+                .find(|bd| bd.denom == data.base_denom);
+
+            // If not found error out, because base denom is not whitelisted
+            let base_denom = match base_denom_whitelist {
+                Some(bd) => Ok(bd),
+                None => Err(ContractError::BaseDenomNotWhitelisted(
+                    data.base_denom.clone(),
+                )),
+            }?;
 
             // Verify we have at least 2 targets
             if data.targets.len() < 2 {
@@ -112,6 +124,8 @@ pub fn execute(
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
             let mut total_bps: u64 = 0;
             let mut has_min_balance = false;
+            let mut min_value_is_met = false;
+            let mut total_value = Uint128::zero();
 
             for target in data.targets.clone() {
                 if !(1..=9999).contains(&target.bps) {
@@ -122,7 +136,7 @@ pub fn execute(
                     .checked_add(target.bps)
                     .ok_or(ContractError::BpsOverflow)?;
 
-                // Verify we only have a single min_Balance target
+                // Verify we only have a single min_balance target
                 if target.min_balance.is_some() && has_min_balance {
                     return Err(ContractError::MultipleMinBalanceTargets);
                 } else if target.min_balance.is_some() {
@@ -133,10 +147,53 @@ pub fn execute(
                 if !denom_whitelist.contains(&target.denom) {
                     return Err(ContractError::DenomNotWhitelisted(target.denom));
                 }
+
+                // Calculate value of the target and make sure we have the minimum value required
+                let curr_balance = deps.querier.query_balance(&registree, &target.denom)?;
+
+                if !min_value_is_met {
+                    let value = if target.denom == base_denom.denom {
+                        curr_balance.amount
+                    } else {
+                        let pair = Pair::from((base_denom.denom.clone(), target.denom.clone()));
+                        let price = deps
+                            .querier
+                            .query_wasm_smart::<GetPriceResponse>(
+                                auctions_manager_addr.clone(),
+                                &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                                    pair: pair.clone(),
+                                },
+                            )?
+                            .price;
+
+                        if price.is_zero() {
+                            return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+                        }
+
+                        Decimal::from_atomics(curr_balance.amount, 0)?
+                            .checked_div(price)?
+                            .to_uint_floor()
+                    };
+
+                    total_value = total_value.checked_add(value)?;
+
+                    if total_value >= base_denom.min_balance_limit {
+                        min_value_is_met = true;
+                    }
+                }
             }
+
             if total_bps != 10000 {
                 return Err(ContractError::InvalidTargetPercentage(
                     total_bps.to_string(),
+                ));
+            }
+
+            // Error if minimum account value is not met
+            if !min_value_is_met {
+                return Err(ContractError::InvalidAccountMinValue(
+                    total_value.to_string(),
+                    base_denom.min_balance_limit.to_string(),
                 ));
             }
 
@@ -206,7 +263,8 @@ pub fn execute(
             if let Some(base_denom) = data.base_denom {
                 if !BASE_DENOM_WHITELIST
                     .load(deps.storage)?
-                    .contains(&base_denom)
+                    .iter()
+                    .any(|bd| bd.denom == base_denom)
                 {
                     return Err(ContractError::BaseDenomNotWhitelisted(base_denom));
                 }
@@ -290,6 +348,63 @@ pub fn execute(
             let sender = deps.api.addr_validate(&sender)?;
 
             let mut config = CONFIGS.load(deps.storage, account.clone())?;
+            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
+
+            // verify minimum balance is met
+            let base_denom = BASE_DENOM_WHITELIST
+                .load(deps.storage)?
+                .iter()
+                .find(|bd| bd.denom == config.base_denom)
+                .expect("Base denom not found in whitelist")
+                .clone();
+
+            let mut total_value = Uint128::zero();
+            let mut min_value_met = false;
+
+            for target in &config.targets {
+                let target_balance = deps.querier.query_balance(&account, &target.denom)?;
+
+                let value = if target.denom == base_denom.denom {
+                    target_balance.amount
+                } else {
+                    let pair = Pair::from((base_denom.denom.clone(), target.denom.clone()));
+                    let price = deps
+                        .querier
+                        .query_wasm_smart::<GetPriceResponse>(
+                            auctions_manager_addr.clone(),
+                            &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                                pair: pair.clone(),
+                            },
+                        )?
+                        .price;
+
+                    if price.is_zero() {
+                        return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+                    }
+
+                    Decimal::from_atomics(target_balance.amount, 0)?
+                        .checked_div(price)?
+                        .to_uint_floor()
+                };
+
+                total_value = total_value.checked_add(value)?;
+
+                if total_value >= base_denom.min_balance_limit {
+                    min_value_met = true;
+                }
+
+                if min_value_met {
+                    break;
+                }
+            }
+
+            if !min_value_met {
+                return Err(ContractError::InvalidAccountMinValue(
+                    total_value.to_string(),
+                    base_denom.min_balance_limit.to_string(),
+                ));
+            }
+
             let trustee = config
                 .trustee
                 .clone()
@@ -392,14 +507,16 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = base_denoms.iter().position(|d| d == &denom) {
+                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom) {
                         base_denoms.remove(index);
                     }
                 }
 
                 // add new denoms
                 for denom in to_add {
-                    if !base_denoms.contains(&denom) {
+                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom.denom) {
+                        base_denoms[index] = denom;
+                    } else {
                         base_denoms.push(denom);
                     }
                 }

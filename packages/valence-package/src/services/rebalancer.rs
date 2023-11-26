@@ -28,7 +28,7 @@ pub enum RebalancerAdminMsg {
         to_remove: Vec<String>,
     },
     UpdateBaseDenomWhitelist {
-        to_add: Vec<String>,
+        to_add: Vec<BaseDenom>,
         to_remove: Vec<String>,
     },
     UpdateServicesManager {
@@ -246,6 +246,12 @@ impl ParsedPID {
 
         Ok(self)
     }
+}
+
+#[cw_serde]
+pub struct BaseDenom {
+    pub denom: String,
+    pub min_balance_limit: Uint128,
 }
 
 #[cfg(test)]
