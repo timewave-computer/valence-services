@@ -1,0 +1,588 @@
+{
+  "contract_name": "services-manager",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "whitelisted_code_ids"
+    ],
+    "properties": {
+      "whitelisted_code_ids": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "description": "This is services manager execute msgs, implements messages to be called by accounts on the services (valence_service_execute)",
+    "oneOf": [
+      {
+        "description": "Register sender to a service.",
+        "type": "object",
+        "required": [
+          "register_to_service"
+        ],
+        "properties": {
+          "register_to_service": {
+            "type": "object",
+            "required": [
+              "service_name"
+            ],
+            "properties": {
+              "data": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "service_name": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Deregister sender from a service.",
+        "type": "object",
+        "required": [
+          "deregister_from_service"
+        ],
+        "properties": {
+          "deregister_from_service": {
+            "type": "object",
+            "required": [
+              "service_name"
+            ],
+            "properties": {
+              "service_name": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Update the config of a service for the sender",
+        "type": "object",
+        "required": [
+          "update_service"
+        ],
+        "properties": {
+          "update_service": {
+            "type": "object",
+            "required": [
+              "data",
+              "service_name"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/definitions/Binary"
+              },
+              "service_name": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Pause service for the pause_for address Only callable by the account or the trustee",
+        "type": "object",
+        "required": [
+          "pause_service"
+        ],
+        "properties": {
+          "pause_service": {
+            "type": "object",
+            "required": [
+              "pause_for",
+              "service_name"
+            ],
+            "properties": {
+              "pause_for": {
+                "type": "string"
+              },
+              "service_name": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Resume service for the pause_for address Only callable by the account or the trustee",
+        "type": "object",
+        "required": [
+          "resume_service"
+        ],
+        "properties": {
+          "resume_service": {
+            "type": "object",
+            "required": [
+              "resume_for",
+              "service_name"
+            ],
+            "properties": {
+              "resume_for": {
+                "type": "string"
+              },
+              "service_name": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Message to aprprove the admin change if you are the new admin",
+        "type": "string",
+        "enum": [
+          "approve_admin_change"
+        ]
+      },
+      {
+        "description": "Add admin messages",
+        "type": "object",
+        "required": [
+          "admin"
+        ],
+        "properties": {
+          "admin": {
+            "$ref": "#/definitions/ServicesManagerAdminMsg"
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Binary": {
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "string"
+      },
+      "Expiration": {
+        "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+        "oneOf": [
+          {
+            "description": "AtHeight will expire when `env.block.height` >= height",
+            "type": "object",
+            "required": [
+              "at_height"
+            ],
+            "properties": {
+              "at_height": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "AtTime will expire when `env.block.time` >= time",
+            "type": "object",
+            "required": [
+              "at_time"
+            ],
+            "properties": {
+              "at_time": {
+                "$ref": "#/definitions/Timestamp"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Never will never expire. Used to express the empty variant",
+            "type": "object",
+            "required": [
+              "never"
+            ],
+            "properties": {
+              "never": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ServicesManagerAdminMsg": {
+        "description": "Admin messages for services manager",
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "cancel_admin_change"
+            ]
+          },
+          {
+            "description": "Add a service to the services manager",
+            "type": "object",
+            "required": [
+              "add_service"
+            ],
+            "properties": {
+              "add_service": {
+                "type": "object",
+                "required": [
+                  "addr",
+                  "name"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "$ref": "#/definitions/ValenceServices"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Update a service address",
+            "type": "object",
+            "required": [
+              "update_service"
+            ],
+            "properties": {
+              "update_service": {
+                "type": "object",
+                "required": [
+                  "addr",
+                  "name"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "$ref": "#/definitions/ValenceServices"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Delete service from the services manager",
+            "type": "object",
+            "required": [
+              "remove_service"
+            ],
+            "properties": {
+              "remove_service": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "$ref": "#/definitions/ValenceServices"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "update_code_id_whitelist"
+            ],
+            "properties": {
+              "update_code_id_whitelist": {
+                "type": "object",
+                "required": [
+                  "to_add",
+                  "to_remove"
+                ],
+                "properties": {
+                  "to_add": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "to_remove": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "start_admin_change"
+            ],
+            "properties": {
+              "start_admin_change": {
+                "type": "object",
+                "required": [
+                  "addr",
+                  "expiration"
+                ],
+                "properties": {
+                  "addr": {
+                    "type": "string"
+                  },
+                  "expiration": {
+                    "$ref": "#/definitions/Expiration"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Timestamp": {
+        "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Uint64"
+          }
+        ]
+      },
+      "Uint64": {
+        "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+        "type": "string"
+      },
+      "ValenceServices": {
+        "description": "An enum that represent all services that available for valence accounts",
+        "oneOf": [
+          {
+            "description": "The rebalancer service",
+            "type": "string",
+            "enum": [
+              "rebalancer"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "description": "Services manager query messages",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "get_rebalancer_config"
+        ],
+        "properties": {
+          "get_rebalancer_config": {
+            "type": "object",
+            "required": [
+              "account"
+            ],
+            "properties": {
+              "account": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Check if address is of a service",
+        "type": "object",
+        "required": [
+          "is_service"
+        ],
+        "properties": {
+          "is_service": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get the address of a service",
+        "type": "object",
+        "required": [
+          "get_service_addr"
+        ],
+        "properties": {
+          "get_service_addr": {
+            "type": "object",
+            "required": [
+              "service"
+            ],
+            "properties": {
+              "service": {
+                "$ref": "#/definitions/ValenceServices"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get the admin of the services manager",
+        "type": "string",
+        "enum": [
+          "get_admin"
+        ]
+      },
+      {
+        "description": "Get list of all services and their addresses",
+        "type": "object",
+        "required": [
+          "get_all_services"
+        ],
+        "properties": {
+          "get_all_services": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "start_from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "ValenceServices": {
+        "description": "An enum that represent all services that available for valence accounts",
+        "oneOf": [
+          {
+            "description": "The rebalancer service",
+            "type": "string",
+            "enum": [
+              "rebalancer"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "get_admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Addr",
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "get_all_services": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_Tuple_of_String_and_Addr",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/Addr"
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      },
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
+    "get_rebalancer_config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Addr",
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "get_service_addr": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Addr",
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "is_service": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ValenceServices",
+      "description": "An enum that represent all services that available for valence accounts",
+      "oneOf": [
+        {
+          "description": "The rebalancer service",
+          "type": "string",
+          "enum": [
+            "rebalancer"
+          ]
+        }
+      ]
+    }
+  }
+}

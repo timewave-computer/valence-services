@@ -5,7 +5,7 @@ use std::{
 
 use auction_package::Pair;
 use cosmwasm_schema::serde;
-use cosmwasm_std::{coin, coins, from_slice, Addr, Decimal, Uint128};
+use cosmwasm_std::{coin, coins, from_json, Addr, Decimal, Uint128};
 use cw_multi_test::{App, AppBuilder, Executor};
 use cw_storage_plus::Item;
 use valence_package::services::{
@@ -569,6 +569,6 @@ impl SuiteBuilder {
             .query_wasm_raw(contract_addr, item.as_slice())
             .unwrap()
             .unwrap();
-        from_slice::<T>(&res).unwrap()
+        from_json::<T>(&res).unwrap()
     }
 }

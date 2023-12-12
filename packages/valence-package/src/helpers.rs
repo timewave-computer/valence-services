@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, WasmMsg,
+    to_json_binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, WasmMsg,
 };
 use cw_utils::Expiration;
 
@@ -32,7 +32,7 @@ pub fn forward_to_services_manager(
 ) -> Result<Response, ValenceError> {
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: manager_addr,
-        msg: to_binary(&msg)?,
+        msg: to_json_binary(&msg)?,
         funds: vec![],
     });
     Ok(Response::default().add_message(msg))

@@ -6,7 +6,7 @@ use auction_package::states::{ADMIN, TWAP_PRICES};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 
@@ -297,7 +297,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig => {
             let config = AUCTION_CONFIG.load(deps.storage)?;
-            Ok(to_binary(&config)?)
+            Ok(to_json_binary(&config)?)
         }
         QueryMsg::GetFundsAmount { addr } => {
             let addr = deps.api.addr_validate(&addr)?;
@@ -309,25 +309,25 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, (auction_ids.next, addr))
                 .unwrap_or_default();
 
-            to_binary(&GetFundsAmountResponse { curr, next })
+            to_json_binary(&GetFundsAmountResponse { curr, next })
         }
         QueryMsg::GetAuction => {
             let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
-            to_binary(&active_auction)
+            to_json_binary(&active_auction)
         }
         QueryMsg::GetPrice => {
             let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
             let price = calc_price(&active_auction, env.block.height);
-            to_binary(&GetPriceResponse {
+            to_json_binary(&GetPriceResponse {
                 price,
                 time: env.block.time,
             })
         }
         QueryMsg::GetStrategy => {
             let auction_strategy = AUCTION_STRATEGY.load(deps.storage)?;
-            to_binary(&auction_strategy)
+            to_json_binary(&auction_strategy)
         }
-        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

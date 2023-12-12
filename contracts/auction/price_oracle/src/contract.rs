@@ -6,7 +6,7 @@ use auction_package::Price;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
 };
 use cw2::set_contract_version;
 
@@ -118,12 +118,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::GetPrice { pair } => {
             let price = PRICES.load(deps.storage, pair)?;
 
-            Ok(to_binary(&price)?)
+            Ok(to_json_binary(&price)?)
         }
         QueryMsg::GetConfig => {
             let config = CONFIG.load(deps.storage)?;
-            Ok(to_binary(&config)?)
+            Ok(to_json_binary(&config)?)
         }
-        QueryMsg::GetAdmin => Ok(to_binary(&ADMIN.load(deps.storage)?)?),
+        QueryMsg::GetAdmin => Ok(to_json_binary(&ADMIN.load(deps.storage)?)?),
     }
 }

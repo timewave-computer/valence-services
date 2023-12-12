@@ -3,7 +3,7 @@ use std::collections::HashSet;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -197,14 +197,14 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
     match msg {
         ServicesManagerQueryMsg::IsService { addr } => {
             let is_service = ADDR_TO_SERVICES.has(deps.storage, deps.api.addr_validate(&addr)?);
-            to_binary(&is_service)
+            to_json_binary(&is_service)
         }
         ServicesManagerQueryMsg::GetServiceAddr { service } => {
             let addr = get_service_addr(deps, service.to_string())
                 .map_err(|e| StdError::GenericErr { msg: e.to_string() })?;
-            to_binary(&addr)
+            to_json_binary(&addr)
         }
-        ServicesManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        ServicesManagerQueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
         ServicesManagerQueryMsg::GetAllServices { start_from, limit } => {
             let start_from = start_from.map(Bound::exclusive);
             let limit = limit.unwrap_or(50) as usize;
@@ -220,7 +220,7 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
                 .map(|item| item.map(|(name, addr)| (name, addr)))
                 .collect::<StdResult<Vec<(String, Addr)>>>()?;
 
-            to_binary(&services)
+            to_json_binary(&services)
         }
         ServicesManagerQueryMsg::GetRebalancerConfig { account } => {
             let service_addr = SERVICES_TO_ADDR.load(deps.storage, "rebalancer".to_string())?;
@@ -229,7 +229,7 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
                 &rebalancer::msg::QueryMsg::GetConfig { addr: account },
             )?;
 
-            to_binary(&config)
+            to_json_binary(&config)
         }
     }
 }

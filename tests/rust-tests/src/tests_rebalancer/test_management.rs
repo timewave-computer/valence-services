@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coins, testing::mock_env, to_binary, Addr, Timestamp, Uint128};
+use cosmwasm_std::{coins, testing::mock_env, to_json_binary, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
 use valence_package::services::{
     rebalancer::{BaseDenom, RebalancerUpdateData, SystemRebalanceStatus},
@@ -344,7 +344,7 @@ fn test_register_wrong_code_id() {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
                 data: Some(
-                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
+                    to_json_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
                 ),
             },
             &[],
@@ -390,7 +390,7 @@ fn test_register_wrong_code_id() {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
                 data: Some(
-                    to_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
+                    to_json_binary(&SuiteBuilder::get_default_rebalancer_register_data()).unwrap(),
                 ),
             },
             &[],

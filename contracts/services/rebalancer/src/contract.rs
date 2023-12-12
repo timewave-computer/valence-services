@@ -3,7 +3,7 @@ use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
     Uint128,
 };
 use cw2::set_contract_version;
@@ -556,14 +556,16 @@ mod admin {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig { addr } => {
-            to_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
+            to_json_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
         }
-        QueryMsg::GetSystemStatus {} => to_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?),
+        QueryMsg::GetSystemStatus {} => {
+            to_json_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?)
+        }
         QueryMsg::GetWhiteLists => {
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
             let base_denom_whitelist = BASE_DENOM_WHITELIST.load(deps.storage)?;
 
-            to_binary(&WhitelistsResponse {
+            to_json_binary(&WhitelistsResponse {
                 denom_whitelist,
                 base_denom_whitelist,
             })
@@ -572,9 +574,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let services = SERVICES_MANAGER.load(deps.storage)?;
             let auctions = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
 
-            to_binary(&ManagersAddrsResponse { services, auctions })
+            to_json_binary(&ManagersAddrsResponse { services, auctions })
         }
-        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
     }
 }
 
