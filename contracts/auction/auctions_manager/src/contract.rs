@@ -4,7 +4,7 @@ use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, ORACLE_ADDR, PAIRS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::{nonpayable, parse_reply_instantiate_data};
@@ -51,7 +51,7 @@ pub fn execute(
 
             let msg = WasmMsg::Execute {
                 contract_addr: pair_addr.to_string(),
-                msg: to_binary(&auction::msg::ExecuteMsg::AuctionFundsManager {
+                msg: to_json_binary(&auction::msg::ExecuteMsg::AuctionFundsManager {
                     sender: info.sender,
                 })?,
                 funds: info.funds,
@@ -66,7 +66,7 @@ pub fn execute(
 
             let msg = WasmMsg::Execute {
                 contract_addr: pair_addr.to_string(),
-                msg: to_binary(&auction::msg::ExecuteMsg::WithdrawFundsManager {
+                msg: to_json_binary(&auction::msg::ExecuteMsg::WithdrawFundsManager {
                     sender: info.sender,
                 })?,
                 funds: vec![],
@@ -81,7 +81,7 @@ pub fn execute(
 
             let msg = WasmMsg::Execute {
                 contract_addr: pair_addr.to_string(),
-                msg: to_binary(&auction::msg::ExecuteMsg::FinishAuction { limit })?,
+                msg: to_json_binary(&auction::msg::ExecuteMsg::FinishAuction { limit })?,
                 funds: vec![],
             };
 
@@ -94,7 +94,7 @@ pub fn execute(
 
 mod admin {
     use auction_package::helpers::{cancel_admin_change, start_admin_change, verify_admin};
-    use cosmwasm_std::{to_binary, SubMsg, WasmMsg};
+    use cosmwasm_std::{to_json_binary, SubMsg, WasmMsg};
 
     use crate::msg::AdminMsgs;
 
@@ -133,7 +133,7 @@ mod admin {
                     WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: AUCTION_CODE_ID.load(deps.storage)?,
-                        msg: to_binary(&msg)?,
+                        msg: to_json_binary(&msg)?,
                         funds: vec![],
                         label: format!("auction-{}-{}", msg.pair.0, msg.pair.1),
                     },
@@ -146,7 +146,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::PauseAuction,
                     ))?,
                     funds: vec![],
@@ -158,7 +158,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::ResumeAuction,
                     ))?,
                     funds: vec![],
@@ -170,7 +170,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::StartAuction(params),
                     ))?,
                     funds: vec![],
@@ -192,7 +192,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::UpdateStrategy { strategy },
                     ))?,
                     funds: vec![],
@@ -204,7 +204,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::UpdateChainHaltConfig(halt_config),
                     ))?,
                     funds: vec![],
@@ -216,7 +216,7 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
                         auction::msg::AdminMsgs::UpdatePriceFreshnessStrategy(strategy),
                     ))?,
                     funds: vec![],
@@ -236,28 +236,28 @@ mod admin {
 pub fn query(deps: Deps, _env: Env, msg: AuctionsManagerQueryMsg) -> StdResult<Binary> {
     match msg {
         AuctionsManagerQueryMsg::GetPairAddr { pair } => {
-            to_binary(&PAIRS.load(deps.storage, pair)?)
+            to_json_binary(&PAIRS.load(deps.storage, pair)?)
         }
         AuctionsManagerQueryMsg::GetPrice { pair } => {
             let oracle_addr = ORACLE_ADDR
                 .load(deps.storage)
                 .map_err(|_| ContractError::OracleAddrMissing)?;
 
-            to_binary(&deps.querier.query_wasm_smart::<GetPriceResponse>(
+            to_json_binary(&deps.querier.query_wasm_smart::<GetPriceResponse>(
                 oracle_addr,
                 &price_oracle::msg::QueryMsg::GetPrice { pair },
             )?)
         }
-        AuctionsManagerQueryMsg::GetOracleAddr => to_binary(&ORACLE_ADDR.load(deps.storage)?),
+        AuctionsManagerQueryMsg::GetOracleAddr => to_json_binary(&ORACLE_ADDR.load(deps.storage)?),
         AuctionsManagerQueryMsg::GetConfig { pair } => {
             let pair_addr = PAIRS.load(deps.storage, pair)?;
             deps.querier
                 .query_wasm_smart(pair_addr, &auction::msg::QueryMsg::GetConfig)
         }
         AuctionsManagerQueryMsg::GetMinLimit { denom } => {
-            to_binary(&MIN_AUCTION_AMOUNT.load(deps.storage, denom)?)
+            to_json_binary(&MIN_AUCTION_AMOUNT.load(deps.storage, denom)?)
         }
-        AuctionsManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        AuctionsManagerQueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

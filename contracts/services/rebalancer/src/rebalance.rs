@@ -2,8 +2,8 @@ use std::{borrow::BorrowMut, collections::HashMap, str::FromStr};
 
 use auction_package::{helpers::GetPriceResponse, states::MIN_AUCTION_AMOUNT, Pair};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Order, Response, StdError,
-    SubMsg, Uint128, WasmMsg,
+    coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Order, Response,
+    StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw_storage_plus::Bound;
 use valence_package::{
@@ -238,7 +238,7 @@ pub fn do_rebalance(
     let msg = SubMsg::reply_on_error(
         WasmMsg::Execute {
             contract_addr: account.to_string(),
-            msg: to_binary(
+            msg: to_json_binary(
                 &valence_package::msgs::core_execute::AccountBaseExecuteMsg::SendFundsByService {
                     msgs,
                     atomic: false,
@@ -531,7 +531,7 @@ fn construct_msg(
 ) -> Result<CosmosMsg, ContractError> {
     let msg = WasmMsg::Execute {
         contract_addr: auction_manager.to_string(),
-        msg: to_binary(&auctions_manager::msg::ExecuteMsg::AuctionFunds { pair })?,
+        msg: to_json_binary(&auctions_manager::msg::ExecuteMsg::AuctionFunds { pair })?,
         funds: vec![amount],
     };
 

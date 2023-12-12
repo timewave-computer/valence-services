@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply,
+    to_json_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply,
     Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -193,7 +193,7 @@ fn verify_cosmos_msg(msgs: &[CosmosMsg]) -> Result<(), ContractError> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
     }
 }
 

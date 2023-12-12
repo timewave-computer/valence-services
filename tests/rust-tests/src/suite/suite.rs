@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use auction_package::Pair;
 use cosmwasm_schema::{cw_serde, serde, QueryResponses};
-use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
     contract::DEFAULT_CYCLE_PERIOD,
@@ -178,7 +178,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
-                data: Some(to_binary(register_data).unwrap()),
+                data: Some(to_json_binary(register_data).unwrap()),
             },
             &[],
         )
@@ -393,7 +393,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::RegisterToService {
                 service_name,
-                data: Some(to_binary(&register_data).unwrap()),
+                data: Some(to_json_binary(&register_data).unwrap()),
             },
             &[],
         )
@@ -412,7 +412,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::UpdateService {
                 service_name,
-                data: to_binary(&update_data).unwrap(),
+                data: to_json_binary(&update_data).unwrap(),
             },
             &[],
         )

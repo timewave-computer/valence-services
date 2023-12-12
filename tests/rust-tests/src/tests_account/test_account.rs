@@ -1,4 +1,4 @@
-use cosmwasm_std::{coins, to_binary, Addr, BankMsg, WasmMsg};
+use cosmwasm_std::{coins, to_json_binary, Addr, BankMsg, WasmMsg};
 use cw_multi_test::Executor;
 use cw_utils::Expiration;
 
@@ -77,7 +77,7 @@ fn test_non_funds_by_service() {
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::ExecuteByService {
                 msgs: vec![WasmMsg::Execute {
                     contract_addr: suite.rebalancer_addr.to_string(),
-                    msg: to_binary(&"").unwrap(),
+                    msg: to_json_binary(&"").unwrap(),
                     funds: vec![],
                 }
                 .into()],
@@ -96,7 +96,7 @@ fn test_non_funds_by_service() {
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::ExecuteByService {
                 msgs: vec![WasmMsg::Execute {
                     contract_addr: suite.rebalancer_addr.to_string(),
-                    msg: to_binary(&"").unwrap(),
+                    msg: to_json_binary(&"").unwrap(),
                     funds: vec![],
                 }
                 .into()],
