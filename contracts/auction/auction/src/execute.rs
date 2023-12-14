@@ -218,10 +218,10 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         ActiveAuctionStatus::CloseAuction(addr, total_sent_sold_token, total_sent_bought_token) => {
             Ok((addr, total_sent_sold_token, total_sent_bought_token))
         }
-        ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
         ActiveAuctionStatus::Finished | ActiveAuctionStatus::Started => {
             Ok((None, Uint128::zero(), Uint128::zero()))
         }
+        ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
     }?;
 
     let config = AUCTION_CONFIG.load(deps.storage)?;
@@ -290,7 +290,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         })?;
 
     // If we looped over less than our limit, it means we resolved everything
-    let status = if total_resolved < limit {
+    let (status, price, is_closed) = if total_resolved < limit {
         // calculate if we have leftover from rounding and add it to the next auction
         let leftover_sold_token = active_auction
             .available_amount
@@ -306,7 +306,8 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         let sold_amount = active_auction
             .total_amount
             .checked_sub(active_auction.available_amount)?;
-        if !active_auction.total_amount.is_zero() && !sold_amount.is_zero() {
+
+        let price = if !active_auction.total_amount.is_zero() && !sold_amount.is_zero() {
             let avg_price = Decimal::from_atomics(active_auction.resolved_amount, 0)?
                 .checked_div(Decimal::from_atomics(sold_amount, 0)?)?;
 
@@ -320,14 +321,21 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                 prices.pop_back();
             }
             TWAP_PRICES.save(deps.storage, &prices)?;
-        }
+            avg_price.to_string()
+        } else {
+            "".to_string()
+        };
 
-        ActiveAuctionStatus::AuctionClosed
+        (ActiveAuctionStatus::AuctionClosed, price, true)
     } else {
-        ActiveAuctionStatus::CloseAuction(
-            last_resolved,
-            total_sent_sold_token,
-            total_sent_bought_token,
+        (
+            ActiveAuctionStatus::CloseAuction(
+                last_resolved,
+                total_sent_sold_token,
+                total_sent_bought_token,
+            ),
+            "".to_string(),
+            false,
         )
     };
 
@@ -336,8 +344,8 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
 
     Ok(Response::default().add_messages(bank_msgs).add_event(
         Event::new("close-auction")
-            .add_attribute("limit", limit.to_string())
-            .add_attribute("total_resolved", total_resolved.to_string()),
+            .add_attribute("is_closed", is_closed.to_string())
+            .add_attribute("price", price),
     ))
 }
 
