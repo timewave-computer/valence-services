@@ -1,0 +1,12 @@
+{
+  "base_denom": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", // neutron
+  "pid": {"p": "0.1", "i": "0", "d": "0"},
+  "target_override_strategy": "proportional",
+  "targets": [
+    {"denom": "untrn", "bps": 8000},
+    {
+      "denom": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
+      "bps": 2000
+    }
+  ]
+}

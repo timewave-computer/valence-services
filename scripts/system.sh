@@ -40,8 +40,8 @@ declare -a pairs=(
 
 if [[ "$COMMAND" == 'update-prices' ]]; then
 
-  declare -A price1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [price]="0.034139")
-  declare -A price2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn" [price]="29.40913")
+  declare -A price2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn" [price]="10.59551")
+  declare -A price1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [price]="0.09380")
 
   declare -a prices=(
     price1
@@ -57,14 +57,14 @@ if [[ "$COMMAND" == 'update-prices' ]]; then
 
     ./update_price.sh $CHAIN ${!pair1} ${!pair2} ${!price}
 
-    sleep 3
+    sleep 6
   done
 
 elif [[ "$COMMAND" == 'rebalance' ]]; then
   LIMIT=$1
   shift
 
-  if [ -z "$PRICE" ]; then
+  if [ -z "$LIMIT" ]; then
     execute_msg=$(jq -n \
       '{system_rebalance: {}}')
 
@@ -95,7 +95,7 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
       execute_msg=$(jq -n \
         --arg pair1 "${!pair1}" \
         --arg pair2 "${!pair2}" \
-        --argjson end_block $END_BLOCK \
+        --arg end_block $END_BLOCK \
         '{admin: {
         open_auction: {
           pair: [$pair1, $pair2],
@@ -109,8 +109,8 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
       execute_msg=$(jq -n \
         --arg pair1 "${!pair1}" \
         --arg pair2 "${!pair2}" \
-        --argjson end_block $END_BLOCK \
-        --argjson start_block $START_BLOCK \
+        --arg end_block $END_BLOCK \
+        --arg start_block $START_BLOCK \
         '{admin: {
         open_auction: {
           pair: [$pair1, $pair2],
@@ -125,7 +125,7 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
 
     $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
 
-    sleep 3
+    sleep 9
   done
 
 elif [[ "$COMMAND" == 'close-auctions' ]]; then
