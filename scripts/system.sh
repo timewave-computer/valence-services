@@ -148,9 +148,9 @@ elif [[ "$COMMAND" == 'close-auctions' ]]; then
           pair: [$pair1, $pair2],
           limit: $limit,
         }}')
-  done
 
-  $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
+    $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
+  done
 
 elif [[ "$COMMAND" == 'do-bid' ]]; then
   AMOUNT=$1
