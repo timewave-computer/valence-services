@@ -13,7 +13,7 @@ use valence_package::msgs::core_execute::{AccountBaseExecuteMsg, ServicesManager
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, QueryMsg};
+use crate::msg::{InstantiateMsg, QueryMsg, MigrateMsg};
 
 const CONTRACT_NAME: &str = "crates.io:valence-account";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -211,5 +211,12 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
         Ok(Response::default()
             .add_attribute("method", "reply_on_error")
             .add_attribute("error", msg.result.unwrap_err()))
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    match msg {
+        MigrateMsg::NoStateChange => Ok(Response::default()),
     }
 }
