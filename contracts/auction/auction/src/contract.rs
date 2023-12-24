@@ -13,7 +13,9 @@ use cw2::set_contract_version;
 use crate::error::ContractError;
 use crate::execute;
 use crate::helpers::calc_price;
-use crate::msg::{ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, NewAuctionParams, QueryMsg};
+use crate::msg::{
+    ExecuteMsg, GetFundsAmountResponse, GetMmResponse, InstantiateMsg, NewAuctionParams, QueryMsg,
+};
 use crate::state::{
     ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_FUNDS,
     AUCTION_FUNDS_SUM, AUCTION_IDS, AUCTION_STRATEGY,
@@ -328,6 +330,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&auction_strategy)
         }
         QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetMmData => {
+            let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
+            let price = calc_price(&active_auction, env.block.height);
+
+            to_json_binary(&GetMmResponse {
+                status: active_auction.status,
+                available_amount: active_auction.available_amount,
+                end_block: active_auction.end_block,
+                price,
+                block: env.block,
+            })
+        }
     }
 }
 

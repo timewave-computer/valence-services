@@ -3,9 +3,9 @@ use auction_package::{
     AuctionStrategy, Pair, PriceFreshnessStrategy,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, Decimal, Uint128};
 
-use crate::state::ActiveAuction;
+use crate::state::{ActiveAuction, ActiveAuctionStatus};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -87,6 +87,9 @@ pub enum QueryMsg {
 
     #[returns(Addr)]
     GetAdmin,
+
+    #[returns(GetMmResponse)]
+    GetMmData,
 }
 
 #[cw_serde]
@@ -96,4 +99,13 @@ pub enum MigrateMsg {}
 pub struct GetFundsAmountResponse {
     pub curr: Uint128,
     pub next: Uint128,
+}
+
+#[cw_serde]
+pub struct GetMmResponse {
+    pub status: ActiveAuctionStatus,
+    pub available_amount: Uint128,
+    pub end_block: u64,
+    pub price: Decimal,
+    pub block: BlockInfo,
 }
