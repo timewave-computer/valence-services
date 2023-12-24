@@ -1,9 +1,9 @@
-use std::{borrow::BorrowMut, str::FromStr};
+use std::{borrow::BorrowMut, collections::HashMap, str::FromStr};
 
 use auction_package::{helpers::GetPriceResponse, states::MIN_AUCTION_AMOUNT, Pair};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Event, Order, Response,
-    StdError, SubMsg, Uint128, WasmMsg,
+    coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Event, Order,
+    Response, StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw_storage_plus::Bound;
 use valence_package::{
@@ -12,6 +12,7 @@ use valence_package::{
         ParsedPID, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
     },
     signed_decimal::SignedDecimal,
+    CLOSEST_TO_ONE_POSSIBLE,
 };
 
 use crate::{
@@ -24,6 +25,8 @@ use crate::{
     },
 };
 
+const MAX_PID_DT_VALUE: u128 = 10;
+
 /// Main function for rebalancing using the system
 pub fn execute_system_rebalance(
     mut deps: DepsMut,
@@ -31,7 +34,11 @@ pub fn execute_system_rebalance(
     limit: Option<u64>,
 ) -> Result<Response, ContractError> {
     let cycle_period = CYCLE_PERIOD.load(deps.storage)?;
+    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT) as usize;
 
+    if limit == 0 {
+        return Err(ContractError::LimitIsZero);
+    }
     // start_from tells us if we should start form a specific addr or from the begining
     // cycle_start tells us when the cycle started to calculate for processing and finished status
     let (start_from, cycle_start, prices) = match SYSTEM_REBALANCE_STATUS.load(deps.storage)? {
@@ -73,24 +80,34 @@ pub fn execute_system_rebalance(
     // if exists we do have an address we should continue from
     // if its None, then we start the loop from the begining.
     let mut last_addr = start_from.clone();
-
     let start_from = start_from.map(Bound::exclusive);
-    let limit = limit.unwrap_or(DEFAULT_SYSTEM_LIMIT);
 
-    let mut total_accounts: u64 = 0;
-    let mut msgs: Vec<SubMsg> = vec![];
-
-    let configs = CONFIGS
+    let mut configs = CONFIGS
         .range(deps.storage, start_from, None, Order::Ascending)
-        .take(limit as usize)
+        .take(limit + 1)
         .collect::<Vec<Result<(Addr, RebalancerConfig), StdError>>>();
 
+    // Get the length of configs to check if we finished looping over all accounts
+    let configs_len = configs.len();
+
+    // If we took more then our limit (limit +1) than we have more to loop
+    // remove last element and loop only over the limit amount
+    if configs_len > limit {
+        configs.remove(configs_len - 1)?;
+    }
+
+    // get base denoms as hashMap
+    let base_denoms_min_values = BASE_DENOM_WHITELIST
+        .load(deps.storage)?
+        .iter()
+        .map(|bd| (bd.denom.clone(), bd.min_balance_limit))
+        .collect::<HashMap<String, Uint128>>();
+
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
+    let mut msgs: Vec<SubMsg> = vec![];
     let mut events: Vec<Event> = vec![];
 
     for res in configs {
-        total_accounts += 1;
-
         let Ok((account, config)) = res else {
                   continue;
                 };
@@ -110,6 +127,7 @@ pub fn execute_system_rebalance(
             &auction_manager,
             config,
             &mut min_amount_limits,
+            &base_denoms_min_values,
             &prices,
             cycle_period,
         );
@@ -124,13 +142,14 @@ pub fn execute_system_rebalance(
         // so we save the config here
         CONFIGS.save(deps.branch().storage, account, &config)?;
 
-        msgs.push(msg)
+        if let Some(msg) = msg {
+            msgs.push(msg);
+        }
     }
 
     // We checked if we finished looping over all accounts or not
     // and set the status based on that
-    // println!("{total_accounts:?} | {limit:?}");
-    let status = if total_accounts < limit {
+    let status = if configs_len <= limit {
         SystemRebalanceStatus::Finished {
             next_cycle: cycle_start.plus_seconds(cycle_period),
         }
@@ -150,8 +169,24 @@ pub fn execute_system_rebalance(
         .add_event(
             Event::new("rebalance_cycle")
                 .add_attribute("limit", limit.to_string())
-                .add_attribute("cycled_over", total_accounts.to_string()),
+                .add_attribute("cycled_over", configs_len.to_string()),
         ))
+}
+
+/// Make sure the balance of the account is not zero and is above our minimum value
+fn verify_account_balance(total_value: Uint128, min_value: Uint128) -> Result<(), ContractError> {
+    if total_value.is_zero() {
+        return Err(ContractError::AccountBalanceIsZero);
+    }
+
+    if total_value < min_value {
+        return Err(ContractError::InvalidAccountMinValue(
+            total_value.to_string(),
+            min_value.to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 /// Do a rebalance with PID calculation for a single account
@@ -163,18 +198,26 @@ pub fn do_rebalance(
     auction_manager: &Addr,
     mut config: RebalancerConfig,
     min_amount_limits: &mut Vec<(String, Uint128)>,
+    min_values: &HashMap<String, Uint128>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<(RebalancerConfig, SubMsg, Event), ContractError> {
+) -> Result<(RebalancerConfig, Option<SubMsg>, Event), ContractError> {
     // Create new event to show important data about the rebalance
     let mut event = Event::new("rebalance-account").add_attribute("account", account.to_string());
 
     // get a vec of inputs for our calculations
     let (total_value, mut target_helpers) = get_inputs(deps, account, &config, prices)?;
 
-    if total_value.is_zero() {
-        return Err(ContractError::AccountBalanceIsZero);
-    }
+    // Get required minim
+    let min_value = *min_values
+        .get(config.base_denom.as_str())
+        .unwrap_or(&Uint128::zero());
+
+    if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
+        // We pause the account if the account balance doesn't meet the minimum requirements
+        config.is_paused = Some(account.clone());
+        return Ok((config, None, event));
+    };
 
     event = event.add_attribute("total_account_value", total_value.to_string());
 
@@ -192,7 +235,7 @@ pub fn do_rebalance(
             env.block.time.seconds() - config.last_rebalance.seconds(),
             0,
         )?;
-        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(10_u128.into()))
+        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(MAX_PID_DT_VALUE.into()))
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
@@ -219,7 +262,7 @@ pub fn do_rebalance(
     let msg = SubMsg::reply_on_error(
         WasmMsg::Execute {
             contract_addr: account.to_string(),
-            msg: to_binary(
+            msg: to_json_binary(
                 &valence_package::msgs::core_execute::AccountBaseExecuteMsg::SendFundsByService {
                     msgs,
                     atomic: false,
@@ -233,7 +276,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    Ok((config, msg, event))
+    Ok((config, Some(msg), event))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token
@@ -286,18 +329,27 @@ pub fn get_prices(
 
     for base_denom in base_denoms {
         for denom in &denoms {
-            if &base_denom == denom {
+            if &base_denom.denom == denom {
                 continue;
             }
 
-            let pair = Pair::from((base_denom.clone(), denom.clone()));
+            let pair = Pair::from((base_denom.denom.clone(), denom.clone()));
 
-            let price = deps.querier.query_wasm_smart::<GetPriceResponse>(
-                auctions_manager_addr,
-                &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice { pair: pair.clone() },
-            )?;
+            let price = deps
+                .querier
+                .query_wasm_smart::<GetPriceResponse>(
+                    auctions_manager_addr,
+                    &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                        pair: pair.clone(),
+                    },
+                )?
+                .price;
 
-            prices.push((pair, price.price));
+            if price.is_zero() {
+                return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+            }
+
+            prices.push((pair, price));
         }
     }
 
@@ -312,12 +364,9 @@ fn get_inputs(
     config: &RebalancerConfig,
     prices: &[(Pair, Decimal)],
 ) -> Result<(Decimal, Vec<TargetHelper>), ContractError> {
-    // Get the current balances of the account
-    let all_balances = deps.querier.query_all_balances(account)?;
-
-    // get inputs per target (denom amount * price),
-    // and current total input of the account (vec![denom * price].sum())
-    Ok(config.targets.iter().fold(
+    // get inputs per target (balance amount / price),
+    // and current total input of the account (vec![denom / price].sum())
+    config.targets.iter().try_fold(
         (Decimal::zero(), vec![]),
         |(mut total_value, mut targets_helpers), target| {
             // Get the price of the denom, compared to the base denom,
@@ -333,36 +382,24 @@ fn get_inputs(
                     .1
             };
 
-            // Find the target denom in the balance of the account
-            // if it doesn't exists, set the input as 0, else set the input as the balance / price
-            if let Some(coin) = all_balances.iter().find(|b| b.denom == target.denom) {
-                // TODO: Unwrap should be safe here in theory
-                let balance_value = Decimal::from_atomics(coin.amount, 0).unwrap() / price;
+            // Get current balance of the target, and calculate the value
+            // safe if balance is 0, 0 / price = 0
+            let current_balance = deps.querier.query_balance(account, target.denom.clone())?;
+            let balance_value = Decimal::from_atomics(current_balance.amount, 0)? / price;
 
-                total_value += balance_value;
-                targets_helpers.push(TargetHelper {
-                    target: target.clone(),
-                    balance_amount: coin.amount,
-                    price,
-                    balance_value,
-                    value_to_trade: Decimal::zero(),
-                    auction_min_amount: Decimal::zero(),
-                });
+            total_value += balance_value;
+            targets_helpers.push(TargetHelper {
+                target: target.clone(),
+                balance_amount: current_balance.amount,
+                price,
+                balance_value,
+                value_to_trade: Decimal::zero(),
+                auction_min_amount: Decimal::zero(),
+            });
 
-                (total_value, targets_helpers)
-            } else {
-                targets_helpers.push(TargetHelper {
-                    target: target.clone(),
-                    balance_amount: Uint128::zero(),
-                    price,
-                    balance_value: Decimal::zero(),
-                    value_to_trade: Decimal::zero(),
-                    auction_min_amount: Decimal::zero(),
-                });
-                (total_value, targets_helpers)
-            }
+            Ok((total_value, targets_helpers))
         },
-    ))
+    )
 }
 
 /// Do the PID calculation for the targets
@@ -402,12 +439,16 @@ fn do_pid(
 
         let output = p + i - d;
 
-        target.value_to_trade = output.0;
+        target.value_to_trade = output.value();
 
         target.target.last_input = Some(target.balance_value);
         target.target.last_i = i;
 
-        match output.1 {
+        if output.is_zero() {
+            return;
+        }
+
+        match output.sign() {
             // output is negative, we need to sell
             false => to_sell.push(target.clone()),
             // output is positive, we need to buy
@@ -430,6 +471,8 @@ pub fn verify_targets(
         .ok_or(ContractError::NoMinBalanceTargetFound)?
         .clone();
 
+    // Safe to unwrap here, because we only enter the function is there is a min_balance target
+    // and we error out if we don't find the target above.
     let min_balance = Decimal::from_atomics(target.target.min_balance.unwrap(), 0)?;
     let min_balance_target = min_balance * target.price;
     let real_target = total_value * target.target.percentage;
@@ -439,14 +482,12 @@ pub fn verify_targets(
         // the target is below min_balance, so we set the min_balance as the new target
 
         // Verify that min_balance is not higher then our total value, if it is, then we sell everything to fulfill it.
-        // println!("{min_balance_input:?} | {total_value:?}");
         let (new_target_perc, mut leftover_perc) = if min_balance_target >= total_value {
             (Decimal::one(), Decimal::zero())
         } else {
             let perc = min_balance_target / total_value;
             (perc, Decimal::one() - perc)
         };
-        // println!("{new_target_perc:?} | {leftover_perc:?}");
 
         let old_leftover_perc = Decimal::one() - target.target.percentage;
         let mut new_total_perc = new_target_perc;
@@ -488,7 +529,9 @@ pub fn verify_targets(
             .collect();
 
         // If the new percentage is smaller then 0.9999 or higher then 1, we have something wrong in calculation
-        if new_total_perc > Decimal::one() || new_total_perc < Decimal::from_str("0.9999")? {
+        if new_total_perc > Decimal::one()
+            || new_total_perc < Decimal::from_str(CLOSEST_TO_ONE_POSSIBLE)?
+        {
             return Err(ContractError::InvalidTargetPercentage(
                 new_total_perc.to_string(),
             ));
@@ -512,7 +555,7 @@ fn construct_msg(
 ) -> Result<CosmosMsg, ContractError> {
     let msg = WasmMsg::Execute {
         contract_addr: auction_manager.to_string(),
-        msg: to_binary(&auctions_manager::msg::ExecuteMsg::AuctionFunds { pair })?,
+        msg: to_json_binary(&auctions_manager::msg::ExecuteMsg::AuctionFunds { pair })?,
         funds: vec![amount],
     };
 
@@ -615,6 +658,8 @@ fn generate_trades_msgs(
                     // If our sell results in less then min_balance, we sell the difference to hit min_balance
                     let diff = token_sell.balance_amount - min_balance;
 
+                    // Unwrap should be safe here because diff should be a small number
+                    // and directly related to users balance
                     token_sell.value_to_trade =
                         token_sell.price / Decimal::from_atomics(diff, 0).unwrap();
                 }

@@ -3,7 +3,7 @@ pub mod rebalancer;
 use std::{fmt, str::FromStr};
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_binary, to_binary, Binary, CosmosMsg, Empty, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, Binary, CosmosMsg, Empty, WasmMsg};
 use valence_macros::valence_service_execute_msgs;
 
 use crate::error::ValenceError;
@@ -38,7 +38,7 @@ impl ValenceServices {
         data: Binary,
         service_name: &str,
     ) -> Result<T, ValenceError> {
-        from_binary::<T>(&data).map_err(|_| {
+        from_json::<T>(&data).map_err(|_| {
             ValenceError::RegisterDataParseError(format!("{service_name} register msg",))
         })
     }
@@ -60,7 +60,7 @@ impl ValenceServices {
 
                 let msg = WasmMsg::Execute {
                     contract_addr: contract_addr.to_string(),
-                    msg: to_binary(
+                    msg: to_json_binary(
                         &GeneralServiceExecuteMsg::<RebalancerData, Empty>::Register {
                             register_for: sender.to_string(),
                             data: Some(register),
@@ -101,7 +101,7 @@ impl ValenceServices {
 
                 let msg = WasmMsg::Execute {
                     contract_addr: contract_addr.to_string(),
-                    msg: to_binary(
+                    msg: to_json_binary(
                         &GeneralServiceExecuteMsg::<Empty, RebalancerUpdateData>::Update {
                             update_for: sender.to_string(),
                             data: update,
@@ -137,7 +137,7 @@ impl ValenceServices {
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
-            msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Deregister {
+            msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Deregister {
                 deregister_for: sender.to_string(),
             })?,
             funds: vec![],
@@ -153,7 +153,7 @@ impl ValenceServices {
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
-            msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Pause {
+            msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Pause {
                 pause_for,
                 sender: sender.to_string(),
             })?,
@@ -170,7 +170,7 @@ impl ValenceServices {
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
-            msg: to_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Resume {
+            msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Resume {
                 resume_for,
                 sender: sender.to_string(),
             })?,

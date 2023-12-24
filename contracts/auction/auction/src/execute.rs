@@ -1,6 +1,6 @@
 use auction_package::{
     states::{ADMIN, MIN_AUCTION_AMOUNT, TWAP_PRICES},
-    Price,
+    Price, CLOSEST_TO_ONE_POSSIBLE,
 };
 use cosmwasm_std::{
     coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, Event, MessageInfo, Response,
@@ -10,7 +10,7 @@ use cw_storage_plus::Bound;
 use cw_utils::must_pay;
 
 use crate::{
-    contract::TWAP_PRICE_LIMIT,
+    contract::TWAP_PRICE_MAX_LEN,
     error::ContractError,
     helpers::{calc_buy_amount, calc_price, is_chain_halted},
     state::{
@@ -119,6 +119,11 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     // Verify auction started
     if active_auction.start_block > env.block.height {
         return Err(ContractError::AuctionNotStarted(active_auction.start_block));
+    }
+
+    // The end block is smaller then the current height so auction is finished
+    if active_auction.end_block < env.block.height {
+        return Err(ContractError::AuctionFinished);
     }
 
     let config = AUCTION_CONFIG.load(deps.storage)?;
@@ -258,12 +263,13 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                     Decimal::from_atomics(active_auction.resolved_amount, 0)? * perc_of_total;
 
                 // TODO: Verify this is correct
-                let to_send_amount =
-                    if to_send_amount - to_send_amount.floor() >= Decimal::bps(9999) {
-                        to_send_amount.to_uint_ceil()
-                    } else {
-                        to_send_amount.to_uint_floor()
-                    };
+                let to_send_amount = if to_send_amount - to_send_amount.floor()
+                    >= Decimal::bps(CLOSEST_TO_ONE_POSSIBLE)
+                {
+                    to_send_amount.to_uint_ceil()
+                } else {
+                    to_send_amount.to_uint_floor()
+                };
 
                 total_sent_bought_token += to_send_amount;
                 send_funds.push(coin(to_send_amount.u128(), &config.pair.1));
@@ -312,18 +318,21 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                 .checked_div(Decimal::from_atomics(sold_amount, 0)?)?;
 
             let mut prices = TWAP_PRICES.load(deps.storage)?;
+
+            // if we have the needed amount of prices already, remove the last one first
+            if prices.len() >= TWAP_PRICE_MAX_LEN as usize {
+                prices.pop_back();
+            }
+
             prices.push_front(Price {
                 price: avg_price,
                 time: env.block.time,
             });
 
-            if prices.len() > TWAP_PRICE_LIMIT as usize {
-                prices.pop_back();
-            }
             TWAP_PRICES.save(deps.storage, &prices)?;
             avg_price.to_string()
         } else {
-            "".to_string()
+            "0".to_string()
         };
 
         (ActiveAuctionStatus::AuctionClosed, price, true)
@@ -334,7 +343,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
                 total_sent_sold_token,
                 total_sent_bought_token,
             ),
-            "".to_string(),
+            "0".to_string(),
             false,
         )
     };

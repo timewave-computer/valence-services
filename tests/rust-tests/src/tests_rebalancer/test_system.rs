@@ -1,5 +1,9 @@
+use std::collections::HashSet;
+
 use auction_package::Pair;
-use cosmwasm_std::{testing::mock_env, BlockInfo, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{testing::mock_env, Addr, BlockInfo, Decimal, Empty, Timestamp};
+use cw_multi_test::Executor;
+use cw_utils::Expiration;
 use rebalancer::contract::DEFAULT_CYCLE_PERIOD;
 use valence_package::{
     error::ValenceError,
@@ -12,7 +16,9 @@ use valence_package::{
 
 use crate::suite::{
     instantiates::RebalancerInstantiate,
-    suite::{ATOM, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS, DEFAULT_OSMO_PRICE_BPS, NTRN, OSMO},
+    suite::{
+        Suite, ATOM, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS, DEFAULT_OSMO_PRICE_BPS, NTRN, OSMO,
+    },
     suite_builder::SuiteBuilder,
 };
 
@@ -163,29 +169,32 @@ fn test_register() {
 
     // Try to register with only 1 target
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![Target {
+    let mut targets = HashSet::with_capacity(1);
+    targets.insert(Target {
         denom: ATOM.to_string(),
         bps: 10000,
         min_balance: None,
-    }];
+    });
+    register_data.targets = targets.clone();
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(err, rebalancer::error::ContractError::TwoTargetsMinimum);
 
     // Try to register with not whitelisted denom
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![
-        Target {
-            denom: ATOM.to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-        Target {
-            denom: "not_whitelisted_denom".to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-    ];
+    targets.clear();
+    targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+    targets.insert(Target {
+        denom: "not_whitelisted_denom".to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+
+    register_data.targets = targets.clone();
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
@@ -195,18 +204,18 @@ fn test_register() {
 
     // Try to register with wrong total percentage (must equal 10000)
     register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets = vec![
-        Target {
-            denom: ATOM.to_string(),
-            bps: 6000,
-            min_balance: None,
-        },
-        Target {
-            denom: NTRN.to_string(),
-            bps: 5000,
-            min_balance: None,
-        },
-    ];
+    targets.clear();
+    targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 6000,
+        min_balance: None,
+    });
+    targets.insert(Target {
+        denom: NTRN.to_string(),
+        bps: 5000,
+        min_balance: None,
+    });
+    register_data.targets = targets;
 
     let err = suite.register_to_rebalancer_err(1, &register_data);
     assert_eq!(
@@ -229,10 +238,28 @@ fn test_dup_targets() {
         .unwrap();
 
     let mut register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets.push(register_data.targets[0].clone());
+    register_data.targets.insert(
+        register_data
+            .targets
+            .iter()
+            .find(|t| t.denom == ATOM)
+            .unwrap()
+            .clone(),
+    );
+    assert!(register_data.targets.len() == 2);
 
-    let err = suite.register_to_rebalancer_err(0, &register_data);
-    assert_eq!(err, rebalancer::error::ContractError::TargetsMustBeUnique);
+    // We try to insert different struct, with the the same denom
+    let mut new_target = register_data
+        .targets
+        .iter()
+        .find(|t| t.denom == ATOM)
+        .unwrap()
+        .clone();
+    new_target.bps = 1;
+
+    register_data.targets.insert(new_target);
+
+    assert!(register_data.targets.len() == 2);
 }
 
 #[test]
@@ -249,11 +276,13 @@ fn test_set_2_min_balance() {
         .unwrap();
 
     let mut register_data = SuiteBuilder::get_default_rebalancer_register_data();
-    register_data.targets.push(register_data.targets[0].clone());
 
     // set both to have min_balance
-    register_data.targets[0].min_balance = Some(Uint128::new(100));
-    register_data.targets[1].min_balance = Some(Uint128::new(100));
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].min_balance = Some(100_u128.into());
+    targets[1].min_balance = Some(100_u128.into());
+
+    register_data.targets = HashSet::from_iter(targets.iter().cloned());
 
     let err = suite.register_to_rebalancer_err(0, &register_data);
     assert_eq!(
@@ -386,4 +415,155 @@ fn test_custom_cycle_period() {
 
     // try to do another rebalance
     suite.rebalance(None).unwrap();
+}
+
+#[test]
+fn test_update_admin_start() {
+    let mut suite = Suite::default();
+    let new_admin = Addr::unchecked("new_admin_addr");
+
+    // Try to approve admin without starting a new change
+    // should error
+    suite
+        .app
+        .execute_contract(
+            new_admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::ApproveAdminChange::<
+                Empty,
+                Empty,
+            >,
+            &[],
+        )
+        .unwrap_err();
+
+    suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::Admin::<Empty, Empty>(
+                valence_package::services::rebalancer::RebalancerAdminMsg::StartAdminChange {
+                    addr: new_admin.to_string(),
+                    expiration: Expiration::Never {},
+                },
+            ),
+            &[],
+        )
+        .unwrap();
+
+    suite
+        .app
+        .execute_contract(
+            new_admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::ApproveAdminChange::<
+                Empty,
+                Empty,
+            >,
+            &[],
+        )
+        .unwrap();
+
+    let admin = suite.query_admin(&suite.rebalancer_addr).unwrap();
+    assert_eq!(admin, new_admin)
+}
+
+#[test]
+fn test_update_admin_cancel() {
+    let mut suite = Suite::default();
+    let new_admin = Addr::unchecked("new_admin_addr");
+
+    suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::Admin::<Empty, Empty>(
+                valence_package::services::rebalancer::RebalancerAdminMsg::StartAdminChange {
+                    addr: new_admin.to_string(),
+                    expiration: Expiration::Never {},
+                },
+            ),
+            &[],
+        )
+        .unwrap();
+
+    suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::Admin::<Empty, Empty>(
+                valence_package::services::rebalancer::RebalancerAdminMsg::CancelAdminChange,
+            ),
+            &[],
+        )
+        .unwrap();
+
+    // Should error because we cancelled the admin change
+    suite
+        .app
+        .execute_contract(
+            new_admin,
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::ApproveAdminChange::<
+                Empty,
+                Empty,
+            >,
+            &[],
+        )
+        .unwrap_err();
+}
+
+#[test]
+fn test_update_admin_fails() {
+    let mut suite = Suite::default();
+    let new_admin = Addr::unchecked("new_admin_addr");
+    let random_addr = Addr::unchecked("random_addr");
+
+    suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::Admin::<Empty, Empty>(
+                valence_package::services::rebalancer::RebalancerAdminMsg::StartAdminChange {
+                    addr: new_admin.to_string(),
+                    expiration: Expiration::AtHeight(suite.app.block_info().height + 5),
+                },
+            ),
+            &[],
+        )
+        .unwrap();
+
+    // Should fail because we are not the new admin
+    suite
+        .app
+        .execute_contract(
+            random_addr,
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::ApproveAdminChange::<
+                Empty,
+                Empty,
+            >,
+            &[],
+        )
+        .unwrap_err();
+
+    suite.update_block_cycle();
+
+    // Should fail because expired
+    suite
+        .app
+        .execute_contract(
+            new_admin,
+            suite.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::ApproveAdminChange::<
+                Empty,
+                Empty,
+            >,
+            &[],
+        )
+        .unwrap_err();
 }

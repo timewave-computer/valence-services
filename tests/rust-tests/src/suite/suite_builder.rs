@@ -1,8 +1,11 @@
-use std::{borrow::BorrowMut, collections::HashMap};
+use std::{
+    borrow::BorrowMut,
+    collections::{HashMap, HashSet},
+};
 
 use auction_package::Pair;
 use cosmwasm_schema::serde;
-use cosmwasm_std::{coin, coins, from_slice, Addr, Decimal, Uint128};
+use cosmwasm_std::{coin, coins, from_json, Addr, Decimal, Uint128};
 use cw_multi_test::{App, AppBuilder, Executor};
 use cw_storage_plus::Item;
 use valence_package::services::{
@@ -79,24 +82,42 @@ impl Default for SuiteBuilder {
 
 // get defaults
 impl SuiteBuilder {
+    pub fn get_default_targets() -> Vec<Target> {
+        vec![
+            Target {
+                denom: ATOM.to_string(),
+                bps: 7500,
+                // min_balance: Some(7800_u128.into()),
+                min_balance: None,
+            },
+            Target {
+                denom: NTRN.to_string(),
+                bps: 2500,
+                min_balance: None,
+            },
+        ]
+    }
+
     pub fn get_default_rebalancer_register_data(
     ) -> valence_package::services::rebalancer::RebalancerData {
+        let mut targets = HashSet::with_capacity(2);
+
+        targets.insert(Target {
+            denom: ATOM.to_string(),
+            bps: 7500,
+            // min_balance: Some(7800_u128.into()),
+            min_balance: None,
+        });
+        targets.insert(Target {
+            denom: NTRN.to_string(),
+            bps: 2500,
+            min_balance: None,
+        });
+
         valence_package::services::rebalancer::RebalancerData {
             trustee: None,
             base_denom: ATOM.to_string(),
-            targets: vec![
-                Target {
-                    denom: ATOM.to_string(),
-                    bps: 7500,
-                    // min_balance: Some(7800_u128.into()),
-                    min_balance: None,
-                },
-                Target {
-                    denom: NTRN.to_string(),
-                    bps: 2500,
-                    min_balance: None,
-                },
-            ],
+            targets,
             pid: PID {
                 p: DEFAULT_P.to_string(),
                 i: DEFAULT_I.to_string(),
@@ -204,11 +225,11 @@ impl SuiteBuilder {
             app.execute_contract(
                 self.admin.clone(),
                 auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateOracle {
                         oracle_addr: price_oracle_addr.to_string(),
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -219,12 +240,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_ntrn().into(),
                     min_amount: Some(Uint128::new(5)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -233,12 +254,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_osmo().into(),
                     min_amount: Some(Uint128::new(5)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -247,12 +268,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_atom().into(),
                     min_amount: Some(Uint128::new(10)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -261,12 +282,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_osmo().into(),
                     min_amount: Some(Uint128::new(10)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -275,12 +296,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_atom().into(),
                     min_amount: Some(Uint128::new(10)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -289,12 +310,12 @@ impl SuiteBuilder {
         app.execute_contract(
             self.admin.clone(),
             auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_ntrn().into(),
                     min_amount: Some(Uint128::new(10)),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -490,6 +511,7 @@ impl SuiteBuilder {
             rebalancer_addr,
             account_addrs,
             auction_addrs,
+            account_code_id: self.account_code_id,
             pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
         }
     }
@@ -547,6 +569,6 @@ impl SuiteBuilder {
             .query_wasm_raw(contract_addr, item.as_slice())
             .unwrap()
             .unwrap();
-        from_slice::<T>(&res).unwrap()
+        from_json::<T>(&res).unwrap()
     }
 }

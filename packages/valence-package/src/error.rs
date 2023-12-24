@@ -32,4 +32,13 @@ pub enum ValenceError {
 
     #[error("max_limit_bps must be between 1-10000")]
     InvalidMaxLimitRange,
+
+    #[error("No new admin change started")]
+    NoAdminChangeData,
+
+    #[error("Not the new admin")]
+    NotNewAdmin,
+
+    #[error("Change admin is expired")]
+    AdminChangeExpired,
 }

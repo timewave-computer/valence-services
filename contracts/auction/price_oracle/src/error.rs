@@ -13,9 +13,6 @@ pub enum ContractError {
     #[error("Sender is not admin")]
     NotAdmin,
 
-    #[error("Price expired and no longer fresh")]
-    PriceExpired,
-
     #[error("Couldn't find auction for this pair")]
     PairAuctionNotFound,
 
@@ -24,4 +21,10 @@ pub enum ContractError {
 
     #[error("No auction happened in the last 3 days")]
     NoAuctionInLast3Days,
+
+    #[error("Set price cannot be zero")]
+    PriceIsZero,
+
+    #[error("Can't manually update price")]
+    NoTermsForManualUpdate,
 }

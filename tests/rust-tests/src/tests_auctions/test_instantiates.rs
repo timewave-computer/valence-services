@@ -51,7 +51,6 @@ fn test_instantiate_oracle() {
     assert_eq!(
         config,
         price_oracle::state::Config {
-            admin: builder.admin.clone(),
             auction_manager_addr: manager_addr,
         }
     )
@@ -126,4 +125,39 @@ fn test_instantiate_auction_err() {
         .root_cause()
         .to_string();
     assert!(err.contains(&auction_package::error::AuctionError::InvalidPair.to_string()));
+}
+
+#[test]
+fn test_auction_strategy() {
+    let mut suite = SuiteBuilder::default().build_basic();
+
+    // Try with start price 0
+    let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
+    init_msg.auction_strategy.start_price_perc = 0;
+
+    let err = suite.init_auction_err(init_msg, None);
+
+    assert!(err.root_cause().to_string().contains(
+        &auction_package::error::AuctionError::InvalidAuctionStrategyStartPrice.to_string()
+    ));
+
+    // Try with end price 0
+    let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
+    init_msg.auction_strategy.end_price_perc = 0;
+
+    let err = suite.init_auction_err(init_msg, None);
+
+    assert!(err.root_cause().to_string().contains(
+        &auction_package::error::AuctionError::InvalidAuctionStrategyEndPrice.to_string()
+    ));
+
+    // Try with end price over 10000
+    let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
+    init_msg.auction_strategy.end_price_perc = 10001;
+
+    let err = suite.init_auction_err(init_msg, None);
+
+    assert!(err.root_cause().to_string().contains(
+        &auction_package::error::AuctionError::InvalidAuctionStrategyEndPrice.to_string()
+    ));
 }

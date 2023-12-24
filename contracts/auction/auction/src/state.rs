@@ -13,7 +13,7 @@ pub const AUCTION_FUNDS: Map<(u64, Addr), Uint128> = Map::new("funds");
 pub const AUCTION_FUNDS_SUM: Map<u64, Uint128> = Map::new("funds_sum");
 
 /// The active auction data
-pub(crate) const ACTIVE_AUCTION: Item<ActiveAuction> = Item::new("active_auction");
+pub const ACTIVE_AUCTION: Item<ActiveAuction> = Item::new("active_auction");
 /// The strategy we use when setting min and max prices for an auction
 pub(crate) const AUCTION_STRATEGY: Item<AuctionStrategy> = Item::new("auction_strategy");
 

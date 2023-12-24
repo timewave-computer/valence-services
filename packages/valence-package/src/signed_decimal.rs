@@ -26,7 +26,7 @@ use cosmwasm_std::{Decimal, StdError, Uint128};
 /// the calculation is done, in order to know if we should buy or sell.
 #[derive(Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord, JsonSchema, Debug)]
 #[schemars(crate = "::cosmwasm_schema::schemars")]
-pub struct SignedDecimal(pub Decimal, pub bool);
+pub struct SignedDecimal(Decimal, bool);
 
 impl From<Decimal> for SignedDecimal {
     fn from(value: Decimal) -> Self {
@@ -48,9 +48,15 @@ impl From<Uint128> for SignedDecimal {
 
 // impl for signed decimal
 impl SignedDecimal {
+    pub fn new(num: Decimal, mut sign: bool) -> Self {
+        if num.is_zero() {
+            sign = true;
+        }
+        SignedDecimal(num, sign)
+    }
     pub fn __add(self, add: impl Into<SignedDecimal>) -> Self {
         let add: SignedDecimal = add.into();
-        match (self.1, add.1) {
+        let mut res = match (self.1, add.1) {
             (true, true) => {
                 // ("+" + "+") = +
                 Self(self.0 + add.0, true)
@@ -79,12 +85,17 @@ impl SignedDecimal {
                     Self(add.0 - self.0, true)
                 }
             }
+        };
+
+        if res.is_zero() {
+            res.1 = true;
         }
+        res
     }
 
     pub fn __sub(self, sub: impl Into<SignedDecimal>) -> Self {
         let sub: SignedDecimal = sub.into();
-        match (self.1, sub.1) {
+        let mut res = match (self.1, sub.1) {
             (true, true) => {
                 // ("+" - "+") = -/+
                 if self.0 > sub.0 {
@@ -109,7 +120,12 @@ impl SignedDecimal {
                 // ("-" - "+") = -
                 Self(self.0 + sub.0, false)
             }
+        };
+
+        if res.is_zero() {
+            res.1 = true;
         }
+        res
     }
 
     pub fn __mul(self, mul: impl Into<SignedDecimal>) -> Self {
@@ -126,6 +142,14 @@ impl SignedDecimal {
             (true, true) | (false, false) => Self(self.0 / div.0, true),
             (true, false) | (false, true) => Self(self.0 / div.0, false),
         }
+    }
+
+    pub fn value(self) -> Decimal {
+        self.0
+    }
+
+    pub fn sign(self) -> bool {
+        self.1
     }
 
     pub fn zero() -> Self {
@@ -448,5 +472,29 @@ mod test {
         // "-" * "+" = "-"
         let res = negative / positive;
         assert!(!res.1);
+    }
+
+    #[test]
+    fn test_verify_0_always_pos() {
+        let one = SignedDecimal::positive_one();
+        let neg_one = SignedDecimal::neg_one();
+
+        let res = SignedDecimal::zero();
+        assert!(res.is_pos());
+
+        let res = SignedDecimal::new(Decimal::zero(), false);
+        assert!(res.is_pos());
+
+        let res = one - one;
+        assert!(res.is_pos());
+
+        let res = neg_one - neg_one;
+        assert!(res.is_pos());
+
+        let res = neg_one + one;
+        assert!(res.is_pos());
+
+        let res = one + neg_one;
+        assert!(res.is_pos());
     }
 }

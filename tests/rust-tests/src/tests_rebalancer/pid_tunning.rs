@@ -25,8 +25,11 @@ fn get_traget(suite: &Suite, config: RebalancerData, price: Decimal) -> (Decimal
     let ntrn_balance = Decimal::from_atomics(suite.get_balance(0, NTRN).amount, 0).unwrap();
 
     let total_value = atom_balance + (ntrn_balance / price);
-    let atom_target = total_value * Decimal::bps(config.targets[0].bps);
-    let ntrn_target = total_value * Decimal::bps(config.targets[1].bps) * price;
+    let atom_target =
+        total_value * Decimal::bps(config.targets.iter().find(|t| t.denom == ATOM).unwrap().bps);
+    let ntrn_target = total_value
+        * Decimal::bps(config.targets.iter().find(|t| t.denom == NTRN).unwrap().bps)
+        * price;
     (atom_target, ntrn_target)
 }
 
@@ -201,22 +204,22 @@ fn terminal_play() {
         if x % 100 == 0 && x % 200 != 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.05").unwrap(), true),
+                SignedDecimal::new(Decimal::from_str("0.05").unwrap(), true),
             );
         } else if x % 20 == 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.10").unwrap(), false),
+                SignedDecimal::new(Decimal::from_str("0.10").unwrap(), false),
             );
         } else if x % 5 == 0 {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.02").unwrap(), false),
+                SignedDecimal::new(Decimal::from_str("0.02").unwrap(), false),
             );
         } else {
             suite.change_price_perc(
                 pair.clone(),
-                SignedDecimal(Decimal::from_str("0.01").unwrap(), true),
+                SignedDecimal::new(Decimal::from_str("0.01").unwrap(), true),
             );
         }
 

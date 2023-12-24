@@ -24,12 +24,12 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg.clone(),
                         min_amount,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -58,12 +58,12 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg,
                         min_amount,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap_err()
@@ -109,7 +109,7 @@ impl Suite {
         self.app.execute_contract(
             self.admin.clone(),
             self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::OpenAuction {
                     pair,
                     params: NewAuctionParams {
@@ -117,7 +117,7 @@ impl Suite {
                         end_block,
                     },
                 },
-            ),
+            )),
             &[],
         )
     }
@@ -298,9 +298,9 @@ impl Suite {
     pub fn change_price_perc(&mut self, pair: Pair, price_change: SignedDecimal) {
         let price = self.get_price(pair.clone());
         let new_price = if price_change.is_pos() {
-            price + price * price_change.0
+            price + price * price_change.value()
         } else {
-            price - price * price_change.0
+            price - price * price_change.value()
         };
 
         self.update_price(pair, Some(new_price)).unwrap();
@@ -351,9 +351,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::PauseAuction { pair },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -364,9 +364,9 @@ impl Suite {
         self.app.execute_contract(
             self.admin.clone(),
             self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::ResumeAuction { pair },
-            ),
+            )),
             &[],
         )
     }
@@ -402,9 +402,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateStrategy { pair, strategy },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -417,11 +417,11 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateOracle {
                         oracle_addr: oracle_addr.to_string(),
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -450,9 +450,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateChainHaltConfig { pair, halt_config },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -469,12 +469,12 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdatePriceFreshnessStrategy {
                         pair,
                         strategy,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();

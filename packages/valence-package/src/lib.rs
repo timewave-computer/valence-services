@@ -4,3 +4,5 @@ pub mod msgs;
 pub mod services;
 pub mod signed_decimal;
 pub mod states;
+
+pub const CLOSEST_TO_ONE_POSSIBLE: &str = "0.9999";

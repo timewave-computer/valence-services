@@ -27,4 +27,7 @@ pub enum AuctionsManagerQueryMsg {
 
     #[returns(Uint128)]
     GetMinLimit { denom: String },
+
+    #[returns(Addr)]
+    GetAdmin,
 }

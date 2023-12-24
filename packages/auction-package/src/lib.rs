@@ -7,12 +7,29 @@ pub mod msgs;
 pub mod pair;
 pub mod states;
 
+use error::AuctionError;
 pub use pair::Pair;
+
+pub const CLOSEST_TO_ONE_POSSIBLE: u64 = 9999;
 
 #[cw_serde]
 pub struct AuctionStrategy {
     pub start_price_perc: u64, // BPS
     pub end_price_perc: u64,   // BPS
+}
+
+impl AuctionStrategy {
+    pub fn verify(&self) -> Result<(), AuctionError> {
+        if self.start_price_perc == 0 {
+            return Err(AuctionError::InvalidAuctionStrategyStartPrice);
+        }
+
+        if self.end_price_perc == 0 || self.end_price_perc >= 10000 {
+            return Err(AuctionError::InvalidAuctionStrategyEndPrice);
+        }
+
+        Ok(())
+    }
 }
 
 /// Gives us the strategy we should use for when the data is not fresh.

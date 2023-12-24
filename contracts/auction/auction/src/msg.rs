@@ -3,9 +3,9 @@ use auction_package::{
     AuctionStrategy, Pair, PriceFreshnessStrategy,
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, BlockInfo, Decimal, Uint128};
 
-use crate::state::ActiveAuction;
+use crate::state::{ActiveAuction, ActiveAuctionStatus};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -29,12 +29,12 @@ pub enum ExecuteMsg {
     Bid,
     /// Finish the current auction and send funds to the funds provider
     /// Send pair.1 according to the weight of the funds provider from the total amount
-    /// If we have unsold pair.0, send to funds provider accoring to provided weight
+    /// If we have unsold pair.0, send to funds provider according to provided weight
     FinishAuction { limit: u64 },
     /// Message to clean finished auction unneeded storage
     CleanAfterAuction,
     /// Admin messages that can only be called by the auctions manager
-    Admin(AdminMsgs),
+    Admin(Box<AdminMsgs>),
 }
 
 #[cw_serde]
@@ -86,6 +86,12 @@ pub enum QueryMsg {
     /// Get the strategy of the auction
     #[returns(AuctionStrategy)]
     GetStrategy,
+
+    #[returns(Addr)]
+    GetAdmin,
+
+    #[returns(GetMmResponse)]
+    GetMmData,
 }
 
 #[cw_serde]
@@ -97,4 +103,13 @@ pub enum MigrateMsg {
 pub struct GetFundsAmountResponse {
     pub curr: Uint128,
     pub next: Uint128,
+}
+
+#[cw_serde]
+pub struct GetMmResponse {
+    pub status: ActiveAuctionStatus,
+    pub available_amount: Uint128,
+    pub end_block: u64,
+    pub price: Decimal,
+    pub block: BlockInfo,
 }

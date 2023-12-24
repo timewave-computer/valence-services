@@ -25,6 +25,15 @@ pub enum ContractError {
 
     #[error("Minimum amount for the token: {0} is missing")]
     MustSetMinAuctionAmount(String),
+
+    #[error("No new admin change started")]
+    NoAdminChangeData,
+
+    #[error("Not the new admin")]
+    NotNewAdmin,
+
+    #[error("Not the new admin")]
+    AdminChangeExpired,
 }
 
 impl From<ContractError> for StdError {

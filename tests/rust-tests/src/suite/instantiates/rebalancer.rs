@@ -1,4 +1,5 @@
-use cosmwasm_std::{testing::mock_env, Timestamp};
+use cosmwasm_std::{testing::mock_env, Timestamp, Uint128};
+use valence_package::services::rebalancer::BaseDenom;
 
 use crate::suite::suite::{ATOM, NTRN, OSMO};
 
@@ -18,7 +19,16 @@ impl RebalancerInstantiate {
         Self {
             msg: rebalancer::msg::InstantiateMsg {
                 denom_whitelist: vec![ATOM.to_string(), NTRN.to_string(), OSMO.to_string()],
-                base_denom_whitelist: vec![ATOM.to_string(), NTRN.to_string()],
+                base_denom_whitelist: vec![
+                    BaseDenom {
+                        denom: ATOM.to_string(),
+                        min_balance_limit: Uint128::from(100_u128),
+                    },
+                    BaseDenom {
+                        denom: NTRN.to_string(),
+                        min_balance_limit: Uint128::from(100_u128),
+                    },
+                ],
                 services_manager_addr: services_manager.to_string(),
                 cycle_start: mock_env().block.time,
                 auctions_manager_addr: auctions_manager.to_string(), // to modify
@@ -29,7 +39,7 @@ impl RebalancerInstantiate {
 
     pub fn new(
         denom_whitelist: Vec<String>,
-        base_denom_whitelist: Vec<String>,
+        base_denom_whitelist: Vec<BaseDenom>,
         cycle_start: Timestamp,
         services_manager: &str,
         auctions_manager: &str,
@@ -53,7 +63,10 @@ impl RebalancerInstantiate {
         self
     }
 
-    pub fn change_base_denom_whitelist(&mut self, base_denom_whitelist: Vec<String>) -> &mut Self {
+    pub fn change_base_denom_whitelist(
+        &mut self,
+        base_denom_whitelist: Vec<BaseDenom>,
+    ) -> &mut Self {
         self.msg.base_denom_whitelist = base_denom_whitelist;
         self
     }

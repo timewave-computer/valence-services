@@ -1,12 +1,13 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, Deps, DepsMut, MessageInfo, Response, Timestamp, WasmMsg,
+    to_json_binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, WasmMsg,
 };
+use cw_utils::Expiration;
 
 use crate::{
     error::ValenceError,
     msgs::{core_execute::ServicesManagerExecuteMsg, core_query::ServicesManagerQueryMsg},
-    states::{ADMIN, SERVICES_MANAGER},
+    states::{AdminChange, ADMIN, ADMIN_CHANGE, SERVICES_MANAGER},
 };
 
 /// An optional helper for Option, for when we need to update an optional field in storage.
@@ -31,7 +32,7 @@ pub fn forward_to_services_manager(
 ) -> Result<Response, ValenceError> {
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: manager_addr,
-        msg: to_binary(&msg)?,
+        msg: to_json_binary(&msg)?,
         funds: vec![],
     });
     Ok(Response::default().add_message(msg))
@@ -75,6 +76,57 @@ pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), Val
 pub fn start_of_cycle(time: Timestamp, cycle: u64) -> Timestamp {
     let leftover = time.seconds() % cycle; // How much leftover from the start of the day (mid night UTC)
     time.minus_seconds(leftover)
+}
+
+pub fn start_admin_change(
+    deps: DepsMut,
+    info: &MessageInfo,
+    addr: &str,
+    expiration: Expiration,
+) -> Result<Response, ValenceError> {
+    verify_admin(deps.as_ref(), info)?;
+
+    let admin_change = AdminChange {
+        addr: deps.api.addr_validate(addr)?,
+        expiration,
+    };
+
+    ADMIN_CHANGE.save(deps.storage, &admin_change)?;
+
+    Ok(Response::default()
+        .add_attribute("new_admin_address", admin_change.addr.to_string())
+        .add_attribute("expire", expiration.to_string()))
+}
+
+pub fn cancel_admin_change(deps: DepsMut, info: &MessageInfo) -> Result<Response, ValenceError> {
+    verify_admin(deps.as_ref(), info)?;
+
+    ADMIN_CHANGE.remove(deps.storage);
+
+    Ok(Response::default())
+}
+
+pub fn approve_admin_change(
+    deps: DepsMut,
+    env: &Env,
+    info: &MessageInfo,
+) -> Result<Response, ValenceError> {
+    let admin_data = ADMIN_CHANGE
+        .load(deps.storage)
+        .map_err(|_| ValenceError::NoAdminChangeData)?;
+
+    if admin_data.addr != info.sender {
+        return Err(ValenceError::NotNewAdmin);
+    }
+
+    if admin_data.expiration.is_expired(&env.block) {
+        return Err(ValenceError::AdminChangeExpired);
+    }
+
+    ADMIN.save(deps.storage, &admin_data.addr)?;
+    ADMIN_CHANGE.remove(deps.storage);
+
+    Ok(Response::default())
 }
 
 #[cfg(test)]

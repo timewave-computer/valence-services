@@ -41,6 +41,8 @@ pub fn valence_service_manager_execute_msgs(
               service_name: ValenceServices,
               resume_for: String
           },
+          /// Message to aprprove the admin change if you are the new admin
+          ApproveAdminChange,
       }
     };
 
@@ -88,7 +90,14 @@ pub fn valence_account_execute_msgs(metadata: TokenStream, input: TokenStream) -
         /// Messages that can be executed by the admin
         ExecuteByAdmin {
           msgs: Vec<CosmosMsg>
-        }
+        },
+
+        StartAdminChange {
+          addr: String,
+          expiration: Expiration,
+        },
+        CancelAdminChange,
+        ApproveAdminChange,
       }
     };
 
@@ -171,7 +180,10 @@ pub fn valence_services_manager_query_msgs(
         GetAdmin,
         /// Get list of all services and their addresses
         #[returns(Vec<(String, Addr)>)]
-        GetAllServices,
+        GetAllServices {
+          start_from: Option<String>,
+          limit: Option<u64>
+        },
       }
     };
 

@@ -1,4 +1,4 @@
-use cosmwasm_std::{DecimalRangeExceeded, StdError};
+use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use thiserror::Error;
 use valence_package::error::ValenceError;
 
@@ -9,6 +9,12 @@ pub enum ContractError {
 
     #[error(transparent)]
     ValenceError(#[from] ValenceError),
+
+    #[error(transparent)]
+    OverflowError(#[from] OverflowError),
+
+    #[error(transparent)]
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
@@ -52,9 +58,6 @@ pub enum ContractError {
     #[error("A minimum of 2 targets are required")]
     TwoTargetsMinimum,
 
-    #[error("Target list must contain only a single instance of a denom")]
-    TargetsMustBeUnique,
-
     #[error("Target with a min_balance wasn't found")]
     NoMinBalanceTargetFound,
 
@@ -72,4 +75,21 @@ pub enum ContractError {
 
     #[error("System status can't be updated to processing")]
     CantUpdateStatusToProcessing,
+
+    #[error("Price of the pair is zero: {0} / {1}")]
+    PairPriceIsZero(String, String),
+
+    #[error("Target BPS overflowed")]
+    BpsOverflow,
+
+    #[error("Limit cannot be zero")]
+    LimitIsZero,
+
+    #[error("Data is not provided to the rebalancer")]
+    MustProvideRebalancerData,
+
+    #[error(
+        "Account balance doesn't meet the minimum balance requirement: Current: {0}, Minimum: {1}"
+    )]
+    InvalidAccountMinValue(String, String),
 }

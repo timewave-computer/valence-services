@@ -1,9 +1,13 @@
+use std::collections::HashSet;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
+use valence_package::helpers::approve_admin_change;
 use valence_package::msgs::core_execute::ServicesManagerExecuteMsg;
 use valence_package::msgs::core_query::ServicesManagerQueryMsg;
 use valence_package::services::rebalancer::RebalancerConfig;
@@ -11,8 +15,8 @@ use valence_package::states::ADMIN;
 
 use crate::error::ContractError;
 use crate::helpers::{get_service_addr, save_service};
-use crate::msg::{InstantiateMsg, MigrateMsg};
-use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR, WHITELISTED_CODE_IDS};
+use crate::msg::InstantiateMsg;
+use crate::state::{ACCOUNT_WHITELISTED_CODE_IDS, ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
 const CONTRACT_NAME: &str = "crates.io:services-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -28,7 +32,10 @@ pub fn instantiate(
 
     ADMIN.save(deps.storage, &info.sender)?;
 
-    WHITELISTED_CODE_IDS.save(deps.storage, &msg.whitelisted_code_ids)?;
+    ACCOUNT_WHITELISTED_CODE_IDS.save(
+        deps.storage,
+        &HashSet::from_iter(msg.whitelisted_code_ids.iter().cloned()),
+    )?;
 
     Ok(Response::default().add_attribute("method", "instantiate"))
 }
@@ -44,12 +51,15 @@ pub fn execute(
         ServicesManagerExecuteMsg::Admin(admin_msg) => {
             admin::handle_msg(deps, env, info, admin_msg)
         }
+        ServicesManagerExecuteMsg::ApproveAdminChange => {
+            Ok(approve_admin_change(deps, &env, &info)?)
+        }
         ServicesManagerExecuteMsg::RegisterToService { service_name, data } => {
             let sender_code_id = deps
                 .querier
                 .query_wasm_contract_info(info.sender.clone())?
                 .code_id;
-            let whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+            let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
 
             if !whitelist.contains(&sender_code_id) {
                 return Err(ContractError::NotWhitelistedContract(sender_code_id));
@@ -108,7 +118,10 @@ pub fn execute(
 }
 
 mod admin {
-    use valence_package::{helpers::verify_admin, msgs::core_execute::ServicesManagerAdminMsg};
+    use valence_package::{
+        helpers::{cancel_admin_change, start_admin_change, verify_admin},
+        msgs::core_execute::ServicesManagerAdminMsg,
+    };
 
     use crate::helpers::remove_service;
 
@@ -157,24 +170,24 @@ mod admin {
                 Ok(Response::default().add_attribute("method", "remove_service"))
             }
             ServicesManagerAdminMsg::UpdateCodeIdWhitelist { to_add, to_remove } => {
-                let mut whitelist = WHITELISTED_CODE_IDS.load(deps.storage)?;
+                let mut whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
 
-                for code_id in to_add {
-                    if !whitelist.contains(&code_id) {
-                        whitelist.push(code_id);
-                    }
-                }
+                whitelist.extend(to_add);
 
                 for code_id in to_remove {
-                    if let Some(index) = whitelist.iter().position(|x| *x == code_id) {
-                        whitelist.remove(index);
+                    if !whitelist.remove(&code_id) {
+                        return Err(ContractError::CodeIdNotInWhitelist(code_id));
                     }
                 }
 
-                WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
+                ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
                 Ok(Response::default().add_attribute("method", "update_code_id_whitelist"))
             }
+            ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
+                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+            }
+            ServicesManagerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
         }
     }
 }
@@ -184,21 +197,30 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
     match msg {
         ServicesManagerQueryMsg::IsService { addr } => {
             let is_service = ADDR_TO_SERVICES.has(deps.storage, deps.api.addr_validate(&addr)?);
-            to_binary(&is_service)
+            to_json_binary(&is_service)
         }
         ServicesManagerQueryMsg::GetServiceAddr { service } => {
             let addr = get_service_addr(deps, service.to_string())
                 .map_err(|e| StdError::GenericErr { msg: e.to_string() })?;
-            to_binary(&addr)
+            to_json_binary(&addr)
         }
-        ServicesManagerQueryMsg::GetAdmin => to_binary(&ADMIN.load(deps.storage)?),
-        ServicesManagerQueryMsg::GetAllServices => {
+        ServicesManagerQueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+        ServicesManagerQueryMsg::GetAllServices { start_from, limit } => {
+            let start_from = start_from.map(Bound::exclusive);
+            let limit = limit.unwrap_or(50) as usize;
+
             let services = SERVICES_TO_ADDR
-                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .range(
+                    deps.storage,
+                    start_from,
+                    None,
+                    cosmwasm_std::Order::Ascending,
+                )
+                .take(limit)
                 .map(|item| item.map(|(name, addr)| (name, addr)))
                 .collect::<StdResult<Vec<(String, Addr)>>>()?;
 
-            to_binary(&services)
+            to_json_binary(&services)
         }
         ServicesManagerQueryMsg::GetRebalancerConfig { account } => {
             let service_addr = SERVICES_TO_ADDR.load(deps.storage, "rebalancer".to_string())?;
@@ -207,17 +229,7 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
                 &rebalancer::msg::QueryMsg::GetConfig { addr: account },
             )?;
 
-            to_binary(&config)
+            to_json_binary(&config)
         }
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    unimplemented!()
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }

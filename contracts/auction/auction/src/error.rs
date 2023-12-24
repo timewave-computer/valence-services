@@ -73,6 +73,9 @@ pub enum ContractError {
 
     #[error("Couldn't get a minimum amount for auction")]
     NoTokenMinAmount,
+
+    #[error("End block is smaller or equal to the start block")]
+    InvalidAuctionEndBlock,
 }
 
 impl From<ContractError> for StdError {

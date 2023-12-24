@@ -6,8 +6,7 @@ use auction_package::states::{ADMIN, TWAP_PRICES};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Uint128,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 
@@ -15,7 +14,8 @@ use crate::error::ContractError;
 use crate::execute;
 use crate::helpers::calc_price;
 use crate::msg::{
-    ExecuteMsg, GetFundsAmountResponse, InstantiateMsg, MigrateMsg, NewAuctionParams, QueryMsg,
+    ExecuteMsg, GetFundsAmountResponse, GetMmResponse, InstantiateMsg, MigrateMsg,
+    NewAuctionParams, QueryMsg,
 };
 use crate::state::{
     ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_FUNDS,
@@ -25,7 +25,7 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:auction";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const TWAP_PRICE_LIMIT: u64 = 10;
+pub const TWAP_PRICE_MAX_LEN: u64 = 10;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -60,6 +60,7 @@ pub fn instantiate(
     )?;
 
     // Set the strategy for this auction
+    msg.auction_strategy.verify()?;
     AUCTION_STRATEGY.save(deps.storage, &msg.auction_strategy)?;
 
     // Set auction ids as starter
@@ -109,7 +110,7 @@ pub fn execute(
         }
         ExecuteMsg::AuctionFunds => execute::auction_funds(deps, &info, info.sender.clone()),
         ExecuteMsg::WithdrawFunds => execute::withdraw_funds(deps, info.sender),
-        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
+        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
         ExecuteMsg::Bid => execute::do_bid(deps, &info, &env),
         ExecuteMsg::FinishAuction { limit } => execute::finish_auction(deps, &env, limit),
         ExecuteMsg::CleanAfterAuction => execute::clean_auction(deps),
@@ -191,6 +192,13 @@ mod admin {
         env: &Env,
         new_auction_params: NewAuctionParams,
     ) -> Result<Response, ContractError> {
+        let start_block = new_auction_params.start_block.unwrap_or(env.block.height);
+        let end_block = new_auction_params.end_block;
+
+        if end_block <= start_block {
+            return Err(ContractError::InvalidAuctionEndBlock);
+        }
+
         let config = AUCTION_CONFIG.load(deps.storage)?;
 
         if config.is_paused {
@@ -220,8 +228,8 @@ mod admin {
 
         let new_active_auction = ActiveAuction {
             status: ActiveAuctionStatus::Started,
-            start_block: new_auction_params.start_block.unwrap_or(env.block.height),
-            end_block: new_auction_params.end_block,
+            start_block,
+            end_block,
             start_price,
             end_price,
             available_amount: total_funds,
@@ -304,7 +312,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig => {
             let config = AUCTION_CONFIG.load(deps.storage)?;
-            Ok(to_binary(&config)?)
+            Ok(to_json_binary(&config)?)
         }
         QueryMsg::GetFundsAmount { addr } => {
             let addr = deps.api.addr_validate(&addr)?;
@@ -316,35 +324,38 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .load(deps.storage, (auction_ids.next, addr))
                 .unwrap_or_default();
 
-            to_binary(&GetFundsAmountResponse { curr, next })
+            to_json_binary(&GetFundsAmountResponse { curr, next })
         }
         QueryMsg::GetAuction => {
             let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
-            to_binary(&active_auction)
+            to_json_binary(&active_auction)
         }
         QueryMsg::GetPrice => {
             let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
             let price = calc_price(&active_auction, env.block.height);
-            to_binary(&GetPriceResponse {
+            to_json_binary(&GetPriceResponse {
                 price,
                 time: env.block.time,
             })
         }
         QueryMsg::GetStrategy => {
             let auction_strategy = AUCTION_STRATEGY.load(deps.storage)?;
-            to_binary(&auction_strategy)
+            to_json_binary(&auction_strategy)
+        }
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetMmData => {
+            let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
+            let price = calc_price(&active_auction, env.block.height);
+
+            to_json_binary(&GetMmResponse {
+                status: active_auction.status,
+                available_amount: active_auction.available_amount,
+                end_block: active_auction.end_block,
+                price,
+                block: env.block,
+            })
         }
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(_deps: DepsMut, _env: Env, _msg: Reply) -> Result<Response, ContractError> {
-    // Tick messages are dispatched with reply ID 0 and reply on
-    // error. If an error occurs, we ignore it but stop the parent
-    // message from failing, so the state change which moved the tick
-    // receiver to the end of the message queue gets committed. This
-    // prevents an erroring tick receiver from locking the clock.
-    unimplemented!()
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

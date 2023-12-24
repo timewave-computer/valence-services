@@ -1,22 +1,24 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, Event, IbcMsg, MessageInfo, Reply, Response,
-    StdResult, SubMsg, WasmMsg,
+    to_json_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply,
+    Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use valence_package::helpers::{forward_to_services_manager, sender_is_a_service, verify_admin};
+use valence_package::helpers::{
+    approve_admin_change, cancel_admin_change, forward_to_services_manager, sender_is_a_service,
+    start_admin_change, verify_admin,
+};
 use valence_package::msgs::core_execute::{AccountBaseExecuteMsg, ServicesManagerExecuteMsg};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{InstantiateMsg, QueryMsg};
 
 const CONTRACT_NAME: &str = "crates.io:valence-account";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const EXECUTE_BY_SERVICE_REPLY_ID: u64 = 0;
-const SEND_FUNDS_BY_SERVICE_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -97,7 +99,7 @@ pub fn execute(
                 },
             )?)
         }
-        // Messages to be exected by the service, with sending funds.
+        // Messages to be executed by the service, with sending funds.
         AccountBaseExecuteMsg::SendFundsByService { msgs, atomic } => {
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
             sender_is_a_service(deps, &info, services_manager_addr.to_string())?;
@@ -106,35 +108,17 @@ pub fn execute(
             // By default msgs are atomic, if 1 fails all fails
             // but services can explicitly set atomic to false
             // to allow the msgs to fail without failing the rest of the messages
-            let msgs: Vec<SubMsg> = msgs
-                .into_iter()
-                .map(|msg| {
-                    if atomic {
-                        SubMsg::new(msg)
-                    } else {
-                        SubMsg::reply_on_error(msg, SEND_FUNDS_BY_SERVICE_REPLY_ID)
-                    }
-                })
-                .collect();
+            let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             Ok(Response::default().add_submessages(msgs))
         }
-        // Messages to be exected by the service, without sending funds.
+        // Messages to be executed by the service, without sending funds.
         AccountBaseExecuteMsg::ExecuteByService { msgs, atomic } => {
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
             sender_is_a_service(deps, &info, services_manager_addr.to_string())?;
             verify_cosmos_msg(&msgs)?;
 
-            let msgs: Vec<SubMsg> = msgs
-                .into_iter()
-                .map(|msg| {
-                    if atomic {
-                        SubMsg::new(msg)
-                    } else {
-                        SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
-                    }
-                })
-                .collect();
+            let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             Ok(Response::default().add_submessages(msgs))
         }
@@ -143,7 +127,24 @@ pub fn execute(
             verify_admin(deps.as_ref(), &info)?;
             Ok(Response::default().add_messages(msgs))
         }
+        AccountBaseExecuteMsg::StartAdminChange { addr, expiration } => {
+            Ok(start_admin_change(deps, &info, &addr, expiration)?)
+        }
+        AccountBaseExecuteMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+        AccountBaseExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
     }
+}
+
+fn msgs_into_sub_msgs(msgs: Vec<CosmosMsg>, atomic: bool) -> Vec<SubMsg> {
+    msgs.into_iter()
+        .map(|msg| {
+            if atomic {
+                SubMsg::new(msg)
+            } else {
+                SubMsg::reply_on_error(msg, EXECUTE_BY_SERVICE_REPLY_ID)
+            }
+        })
+        .collect()
 }
 
 /// List and verify all messages the can be sent by an account which includes
@@ -190,11 +191,10 @@ fn verify_cosmos_msg(msgs: &[CosmosMsg]) -> Result<(), ContractError> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    // match msg {
-    //     QueryMsg::IsQueued { address } => todo!(),
-    // }
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -205,19 +205,11 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
     // Example case for this is the rebalancer service,
     // the rebalancer send trade messages to be executed by the account,
     // trade1 message doesn't rely on trade2 message, so they can be non-atomic.
-    match msg.id {
-        EXECUTE_BY_SERVICE_REPLY_ID => Ok(Response::default().add_event(
-            Event::new("fail-execute-by-service").add_attribute("error", msg.result.unwrap_err()),
-        )),
-        SEND_FUNDS_BY_SERVICE_REPLY_ID => Ok(Response::default().add_event(
-            Event::new("fail-send-funds-by-service")
-                .add_attribute("error", msg.result.unwrap_err()),
-        )),
-        _ => Err(ContractError::UnexpectedReplyId(msg.id)),
+    if msg.id != EXECUTE_BY_SERVICE_REPLY_ID {
+        Err(ContractError::UnexpectedReplyId(msg.id))
+    } else {
+        Ok(Response::default()
+            .add_attribute("method", "reply_on_error")
+            .add_attribute("error", msg.result.unwrap_err()))
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }

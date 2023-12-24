@@ -1,16 +1,19 @@
+use auction_package::helpers::GetPriceResponse;
+use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response,
+    StdResult, Uint128,
 };
 use cw2::set_contract_version;
-use valence_package::helpers::{verify_services_manager, OptionalField};
+use valence_package::error::ValenceError;
+use valence_package::helpers::{approve_admin_change, verify_services_manager, OptionalField};
 use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanceStatus};
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::helpers::has_dup;
-use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
+use crate::msg::{InstantiateMsg, ManagersAddrsResponse, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
     AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
@@ -87,20 +90,30 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
+        RebalancerExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
         RebalancerExecuteMsg::Register { register_for, data } => {
             verify_services_manager(deps.as_ref(), &info)?;
-            let data = data.expect("We must have register data");
+            let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
             let registree = deps.api.addr_validate(&register_for)?;
+            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
 
             if CONFIGS.has(deps.storage, registree.clone()) {
                 return Err(ContractError::AccountAlreadyRegistered);
             }
 
-            // check base denom is whitelisted
-            let base_denom_whitelist = BASE_DENOM_WHITELIST.load(deps.storage)?;
-            if !base_denom_whitelist.contains(&data.base_denom) {
-                return Err(ContractError::BaseDenomNotWhitelisted(data.base_denom));
-            }
+            // Find base denom in our whitelist
+            let base_denom_whitelist = BASE_DENOM_WHITELIST
+                .load(deps.storage)?
+                .into_iter()
+                .find(|bd| bd.denom == data.base_denom);
+
+            // If not found error out, because base denom is not whitelisted
+            let base_denom = match base_denom_whitelist {
+                Some(bd) => Ok(bd),
+                None => Err(ContractError::BaseDenomNotWhitelisted(
+                    data.base_denom.clone(),
+                )),
+            }?;
 
             // Verify we have at least 2 targets
             if data.targets.len() < 2 {
@@ -109,18 +122,21 @@ pub fn execute(
 
             // check target denoms are whitelisted
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
-            let mut total_bps = 0;
+            let mut total_bps: u64 = 0;
             let mut has_min_balance = false;
-
-            // Make sure denom is unique
-            if has_dup(&data.targets) {
-                return Err(ContractError::TargetsMustBeUnique);
-            };
+            let mut min_value_is_met = false;
+            let mut total_value = Uint128::zero();
 
             for target in data.targets.clone() {
-                total_bps += target.bps;
+                if !(1..=9999).contains(&target.bps) {
+                    return Err(ValenceError::InvalidMaxLimitRange.into());
+                }
 
-                // Verify we only have a single min_Balance target
+                total_bps = total_bps
+                    .checked_add(target.bps)
+                    .ok_or(ContractError::BpsOverflow)?;
+
+                // Verify we only have a single min_balance target
                 if target.min_balance.is_some() && has_min_balance {
                     return Err(ContractError::MultipleMinBalanceTargets);
                 } else if target.min_balance.is_some() {
@@ -131,10 +147,53 @@ pub fn execute(
                 if !denom_whitelist.contains(&target.denom) {
                     return Err(ContractError::DenomNotWhitelisted(target.denom));
                 }
+
+                // Calculate value of the target and make sure we have the minimum value required
+                let curr_balance = deps.querier.query_balance(&registree, &target.denom)?;
+
+                if !min_value_is_met {
+                    let value = if target.denom == base_denom.denom {
+                        curr_balance.amount
+                    } else {
+                        let pair = Pair::from((base_denom.denom.clone(), target.denom.clone()));
+                        let price = deps
+                            .querier
+                            .query_wasm_smart::<GetPriceResponse>(
+                                auctions_manager_addr.clone(),
+                                &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                                    pair: pair.clone(),
+                                },
+                            )?
+                            .price;
+
+                        if price.is_zero() {
+                            return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+                        }
+
+                        Decimal::from_atomics(curr_balance.amount, 0)?
+                            .checked_div(price)?
+                            .to_uint_floor()
+                    };
+
+                    total_value = total_value.checked_add(value)?;
+
+                    if total_value >= base_denom.min_balance_limit {
+                        min_value_is_met = true;
+                    }
+                }
             }
+
             if total_bps != 10000 {
                 return Err(ContractError::InvalidTargetPercentage(
                     total_bps.to_string(),
+                ));
+            }
+
+            // Error if minimum account value is not met
+            if !min_value_is_met {
+                return Err(ContractError::InvalidAccountMinValue(
+                    total_value.to_string(),
+                    base_denom.min_balance_limit.to_string(),
                 ));
             }
 
@@ -153,23 +212,6 @@ pub fn execute(
             verify_services_manager(deps.as_ref(), &info)?;
             let account = deps.api.addr_validate(&update_for)?;
             let mut config = CONFIGS.load(deps.storage, account.clone())?;
-
-            if let Some(trustee) = data.trustee {
-                config.trustee = match trustee {
-                    OptionalField::Set(trustee) => Some(trustee),
-                    OptionalField::Clear => None,
-                };
-            }
-
-            if let Some(base_denom) = data.base_denom {
-                if !BASE_DENOM_WHITELIST
-                    .load(deps.storage)?
-                    .contains(&base_denom)
-                {
-                    return Err(ContractError::BaseDenomNotWhitelisted(base_denom));
-                }
-                config.base_denom = base_denom;
-            }
 
             if !data.targets.is_empty() {
                 let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
@@ -198,6 +240,35 @@ pub fn execute(
 
                 config.has_min_balance = has_min_balance;
                 config.targets = data.targets.into_iter().map(|t| t.into()).collect();
+            } else {
+                // We verify the targets he currently has is still whitelisted
+                let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
+
+                for target in &config.targets {
+                    if !denom_whitelist.contains(&target.denom) {
+                        return Err(ContractError::DenomNotWhitelisted(target.denom.to_string()));
+                    }
+                }
+            }
+
+            if let Some(trustee) = data.trustee {
+                config.trustee = match trustee {
+                    OptionalField::Set(trustee) => {
+                        Some(deps.api.addr_validate(&trustee)?.to_string())
+                    }
+                    OptionalField::Clear => None,
+                };
+            }
+
+            if let Some(base_denom) = data.base_denom {
+                if !BASE_DENOM_WHITELIST
+                    .load(deps.storage)?
+                    .iter()
+                    .any(|bd| bd.denom == base_denom)
+                {
+                    return Err(ContractError::BaseDenomNotWhitelisted(base_denom));
+                }
+                config.base_denom = base_denom;
             }
 
             if let Some(pid) = data.pid {
@@ -205,6 +276,10 @@ pub fn execute(
             }
 
             if let Some(max_limit) = data.max_limit_bps {
+                if !(1..=10000).contains(&max_limit) {
+                    return Err(ValenceError::InvalidMaxLimitRange.into());
+                }
+
                 config.max_limit = Decimal::bps(max_limit);
             }
 
@@ -273,6 +348,63 @@ pub fn execute(
             let sender = deps.api.addr_validate(&sender)?;
 
             let mut config = CONFIGS.load(deps.storage, account.clone())?;
+            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
+
+            // verify minimum balance is met
+            let base_denom = BASE_DENOM_WHITELIST
+                .load(deps.storage)?
+                .iter()
+                .find(|bd| bd.denom == config.base_denom)
+                .expect("Base denom not found in whitelist")
+                .clone();
+
+            let mut total_value = Uint128::zero();
+            let mut min_value_met = false;
+
+            for target in &config.targets {
+                let target_balance = deps.querier.query_balance(&account, &target.denom)?;
+
+                let value = if target.denom == base_denom.denom {
+                    target_balance.amount
+                } else {
+                    let pair = Pair::from((base_denom.denom.clone(), target.denom.clone()));
+                    let price = deps
+                        .querier
+                        .query_wasm_smart::<GetPriceResponse>(
+                            auctions_manager_addr.clone(),
+                            &auction_package::msgs::AuctionsManagerQueryMsg::GetPrice {
+                                pair: pair.clone(),
+                            },
+                        )?
+                        .price;
+
+                    if price.is_zero() {
+                        return Err(ContractError::PairPriceIsZero(pair.0, pair.1));
+                    }
+
+                    Decimal::from_atomics(target_balance.amount, 0)?
+                        .checked_div(price)?
+                        .to_uint_floor()
+                };
+
+                total_value = total_value.checked_add(value)?;
+
+                if total_value >= base_denom.min_balance_limit {
+                    min_value_met = true;
+                }
+
+                if min_value_met {
+                    break;
+                }
+            }
+
+            if !min_value_met {
+                return Err(ContractError::InvalidAccountMinValue(
+                    total_value.to_string(),
+                    base_denom.min_balance_limit.to_string(),
+                ));
+            }
+
             let trustee = config
                 .trustee
                 .clone()
@@ -314,7 +446,7 @@ pub fn execute(
 mod admin {
     use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
     use valence_package::{
-        helpers::verify_admin,
+        helpers::{cancel_admin_change, start_admin_change, verify_admin},
         services::rebalancer::{RebalancerAdminMsg, SystemRebalanceStatus},
         states::SERVICES_MANAGER,
     };
@@ -375,14 +507,16 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = base_denoms.iter().position(|d| d == &denom) {
+                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom) {
                         base_denoms.remove(index);
                     }
                 }
 
                 // add new denoms
                 for denom in to_add {
-                    if !base_denoms.contains(&denom) {
+                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom.denom) {
+                        base_denoms[index] = denom;
+                    } else {
                         base_denoms.push(denom);
                     }
                 }
@@ -410,6 +544,10 @@ mod admin {
 
                 Ok(Response::default())
             }
+            RebalancerAdminMsg::StartAdminChange { addr, expiration } => {
+                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+            }
+            RebalancerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
         }
     }
 }
@@ -418,14 +556,16 @@ mod admin {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig { addr } => {
-            to_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
+            to_json_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
         }
-        QueryMsg::GetSystemStatus {} => to_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?),
+        QueryMsg::GetSystemStatus {} => {
+            to_json_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?)
+        }
         QueryMsg::GetWhiteLists => {
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
             let base_denom_whitelist = BASE_DENOM_WHITELIST.load(deps.storage)?;
 
-            to_binary(&WhitelistsResponse {
+            to_json_binary(&WhitelistsResponse {
                 denom_whitelist,
                 base_denom_whitelist,
             })
@@ -434,8 +574,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let services = SERVICES_MANAGER.load(deps.storage)?;
             let auctions = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
 
-            to_binary(&ManagersAddrsResponse { services, auctions })
+            to_json_binary(&ManagersAddrsResponse { services, auctions })
         }
+        QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
     }
 }
 
@@ -447,9 +588,4 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
         )),
         _ => Err(ContractError::UnexpectedReplyId(msg.id)),
     }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    unimplemented!()
 }

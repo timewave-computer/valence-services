@@ -1,6 +1,7 @@
 use auction_package::{helpers::GetPriceResponse, Pair};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Decimal;
+use cosmwasm_std::{Addr, Decimal};
+use cw_utils::Expiration;
 
 use crate::state::Config;
 
@@ -11,7 +12,16 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    UpdatePrice { pair: Pair, price: Option<Decimal> },
+    UpdatePrice {
+        pair: Pair,
+        price: Option<Decimal>,
+    },
+    StartAdminChange {
+        addr: String,
+        expiration: Expiration,
+    },
+    CancelAdminChange,
+    ApproveAdminChange,
 }
 
 #[cw_serde]
@@ -22,6 +32,8 @@ pub enum QueryMsg {
     GetPrice { pair: Pair },
     #[returns(Config)]
     GetConfig,
+    #[returns(Addr)]
+    GetAdmin,
 }
 
 #[cw_serde]

@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 
 use auction_package::Pair;
-use cosmwasm_schema::serde;
-use cosmwasm_std::{to_binary, Addr, Coin, Empty, StdError};
+use cosmwasm_schema::{cw_serde, serde, QueryResponses};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
     contract::DEFAULT_CYCLE_PERIOD,
     msg::{ManagersAddrsResponse, WhitelistsResponse},
 };
 use valence_package::services::{
-    rebalancer::{RebalancerConfig, SystemRebalanceStatus},
+    rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus},
     ValenceServices,
 };
 
-use super::suite_builder::SuiteBuilder;
+use super::{instantiates::AccountInstantiate, suite_builder::SuiteBuilder};
 
 pub const ATOM: &str = "uatom";
 pub const NTRN: &str = "untrn";
@@ -50,6 +50,9 @@ pub(crate) struct Suite {
     pub auction_addrs: HashMap<(String, String), Addr>,
     /// Used mainly for auction tests, a default pair of (ATOM, NTRN)
     pub pair: Pair,
+
+    // code ids for future use
+    pub account_code_id: u64,
 }
 
 impl Default for Suite {
@@ -117,6 +120,28 @@ impl Suite {
         });
         self
     }
+
+    pub fn create_temp_account(&mut self, balance: &[Coin]) -> (u64, Addr) {
+        let account_init: valence_account::msg::InstantiateMsg =
+            AccountInstantiate::new(self.manager_addr.as_str()).into();
+
+        let account_addr = self
+            .app
+            .instantiate_contract(
+                self.account_code_id,
+                self.owner.clone(),
+                &account_init,
+                balance,
+                "account_temp".to_string(),
+                Some(self.owner.to_string()),
+            )
+            .unwrap();
+
+        let position = self.account_addrs.len() as u64;
+        self.account_addrs.push(account_addr.clone());
+
+        (position, account_addr)
+    }
 }
 
 // Balances
@@ -153,7 +178,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::RegisterToService {
                 service_name: ValenceServices::Rebalancer,
-                data: Some(to_binary(register_data).unwrap()),
+                data: Some(to_json_binary(register_data).unwrap()),
             },
             &[],
         )
@@ -172,7 +197,7 @@ impl Suite {
 
     pub fn rebalance(&mut self, limit: Option<u64>) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
-        self.admin.clone(),
+        Addr::unchecked("random_addr"),
         self.rebalancer_addr.clone(),
     &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty,Empty>::SystemRebalance {
           limit,
@@ -244,7 +269,7 @@ impl Suite {
     pub fn update_rebalancer_base_denom_whitelist(
         &mut self,
         sender: Addr,
-        to_add: Vec<String>,
+        to_add: Vec<BaseDenom>,
         to_remove: Vec<String>,
     ) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
@@ -368,7 +393,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::RegisterToService {
                 service_name,
-                data: Some(to_binary(&register_data).unwrap()),
+                data: Some(to_json_binary(&register_data).unwrap()),
             },
             &[],
         )
@@ -387,7 +412,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::UpdateService {
                 service_name,
-                data: to_binary(&update_data).unwrap(),
+                data: to_json_binary(&update_data).unwrap(),
             },
             &[],
         )
@@ -460,6 +485,17 @@ impl Suite {
         )
     }
 
+    pub fn resume_service_err(
+        &mut self,
+        account_position: u64,
+        service_name: ValenceServices,
+    ) -> rebalancer::error::ContractError {
+        self.resume_service(account_position, service_name)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
+    }
+
     pub fn resume_service_with_sender(
         &mut self,
         sender: Addr,
@@ -529,6 +565,17 @@ impl Suite {
             &rebalancer::msg::QueryMsg::GetManagersAddrs,
         )
     }
+
+    pub fn query_admin(&self, contract: &Addr) -> Result<Addr, StdError> {
+        #[cw_serde]
+        #[derive(QueryResponses)]
+        enum Query {
+            #[returns(Addr)]
+            GetAdmin,
+        }
+
+        self.app.wrap().query_wasm_smart(contract, &Query::GetAdmin)
+    }
 }
 
 // Assertions
@@ -536,7 +583,23 @@ impl Suite {
     pub fn assert_rebalancer_config(&self, account_position: u64, config: RebalancerConfig) {
         let account_addr = self.get_account_addr(account_position);
         let query_config = self.query_rebalancer_config(account_addr).unwrap();
-        assert_eq!(query_config, config)
+
+        // Assert targets are correct
+        for target in config.targets.iter() {
+            assert!(query_config.targets.contains(target));
+        }
+
+        assert_eq!(query_config.is_paused, config.is_paused);
+        assert_eq!(query_config.trustee, config.trustee);
+        assert_eq!(query_config.base_denom, config.base_denom);
+        assert_eq!(query_config.pid, config.pid);
+        assert_eq!(query_config.max_limit, config.max_limit);
+        assert_eq!(query_config.last_rebalance, config.last_rebalance);
+        assert_eq!(query_config.has_min_balance, config.has_min_balance);
+        assert_eq!(
+            query_config.target_override_strategy,
+            config.target_override_strategy
+        );
     }
 
     pub fn assert_rebalancer_is_paused(&self, account_position: u64, is_paused: Option<Addr>) {
