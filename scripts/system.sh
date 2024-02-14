@@ -16,7 +16,7 @@ if [[ "$CHAIN" == 'juno' ]]; then
 
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.015untrn"
+  GAS_PRICES="0.6untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
