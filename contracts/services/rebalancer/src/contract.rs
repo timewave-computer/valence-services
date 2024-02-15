@@ -493,8 +493,6 @@ mod admin {
                     }
                 }
 
-                println!("denoms: {denoms:?}");
-
                 // add new denoms
                 denoms.extend(to_add);
 
@@ -504,8 +502,7 @@ mod admin {
             }
             RebalancerAdminMsg::UpdateBaseDenomWhitelist { to_add, to_remove } => {
                 let mut base_denoms = BASE_DENOM_WHITELIST.load(deps.storage)?;
-                println!("base_denoms: {base_denoms:?}");
-                println!("to_remove: {to_remove:?}");
+
                 // first remove denoms
                 for denom in to_remove {
                     let bd = BaseDenom::new_empty(&denom);
