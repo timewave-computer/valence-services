@@ -1,11 +1,13 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 use valence_package::services::rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus};
 
 /// All available denom to target (denom whitelist)
-pub(crate) const DENOM_WHITELIST: Item<Vec<String>> = Item::new("token_whitelist");
+pub(crate) const DENOM_WHITELIST: Item<HashSet<String>> = Item::new("token_whitelist");
 /// Base denom whitelist
-pub(crate) const BASE_DENOM_WHITELIST: Item<Vec<BaseDenom>> = Item::new("base_token_whitelist");
+pub(crate) const BASE_DENOM_WHITELIST: Item<HashSet<BaseDenom>> = Item::new("base_token_whitelist");
 /// Storage to keep all configs of  all registered accounts
 pub(crate) const CONFIGS: Map<Addr, RebalancerConfig> = Map::new("configs");
 /// Storage to keep the current status of the system rebalance

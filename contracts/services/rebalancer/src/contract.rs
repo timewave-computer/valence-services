@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use auction_package::helpers::GetPriceResponse;
 use auction_package::Pair;
 #[cfg(not(feature = "library"))]
@@ -63,8 +65,8 @@ pub fn instantiate(
     )?;
 
     // Set our whitelist
-    DENOM_WHITELIST.save(deps.storage, &msg.denom_whitelist)?;
-    BASE_DENOM_WHITELIST.save(deps.storage, &msg.base_denom_whitelist)?;
+    DENOM_WHITELIST.save(deps.storage, &HashSet::from_iter(msg.denom_whitelist))?;
+    BASE_DENOM_WHITELIST.save(deps.storage, &HashSet::from_iter(msg.base_denom_whitelist))?;
 
     // save auction addr
     AUCTIONS_MANAGER_ADDR.save(
@@ -447,7 +449,7 @@ mod admin {
     use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
     use valence_package::{
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
-        services::rebalancer::{RebalancerAdminMsg, SystemRebalanceStatus},
+        services::rebalancer::{BaseDenom, RebalancerAdminMsg, SystemRebalanceStatus},
         states::SERVICES_MANAGER,
     };
 
@@ -486,17 +488,15 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = denoms.iter().position(|d| d == &denom) {
-                        denoms.remove(index);
+                    if !denoms.remove(&denom) {
+                        return Err(ContractError::CannotRemoveDenoms(denom));
                     }
                 }
 
+                println!("denoms: {denoms:?}");
+
                 // add new denoms
-                for denom in to_add {
-                    if !denoms.contains(&denom) {
-                        denoms.push(denom);
-                    }
-                }
+                denoms.extend(to_add);
 
                 DENOM_WHITELIST.save(deps.storage, &denoms)?;
 
@@ -504,22 +504,18 @@ mod admin {
             }
             RebalancerAdminMsg::UpdateBaseDenomWhitelist { to_add, to_remove } => {
                 let mut base_denoms = BASE_DENOM_WHITELIST.load(deps.storage)?;
-
+                println!("base_denoms: {base_denoms:?}");
+                println!("to_remove: {to_remove:?}");
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom) {
-                        base_denoms.remove(index);
+                    let bd = BaseDenom::new_empty(&denom);
+                    if !base_denoms.remove(&bd) {
+                        return Err(ContractError::CannotRemoveBaseDenoms(denom));
                     }
                 }
 
                 // add new denoms
-                for denom in to_add {
-                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom.denom) {
-                        base_denoms[index] = denom;
-                    } else {
-                        base_denoms.push(denom);
-                    }
-                }
+                base_denoms.extend(to_add);
 
                 BASE_DENOM_WHITELIST.save(deps.storage, &base_denoms)?;
 

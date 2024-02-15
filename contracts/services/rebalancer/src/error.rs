@@ -92,4 +92,10 @@ pub enum ContractError {
         "Account balance doesn't meet the minimum balance requirement: Current: {0}, Minimum: {1}"
     )]
     InvalidAccountMinValue(String, String),
+
+    #[error("Cannot remove base denom doesn't exists: {0}")]
+    CannotRemoveBaseDenoms(String),
+
+    #[error("Cannot remove denom doesn't exists: {0}")]
+    CannotRemoveDenoms(String),
 }

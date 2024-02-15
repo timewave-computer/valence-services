@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Timestamp};
 use valence_package::services::rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus};
@@ -34,8 +36,8 @@ pub enum MigrateMsg {}
 
 #[cw_serde]
 pub struct WhitelistsResponse {
-    pub denom_whitelist: Vec<String>,
-    pub base_denom_whitelist: Vec<BaseDenom>,
+    pub denom_whitelist: HashSet<String>,
+    pub base_denom_whitelist: HashSet<BaseDenom>,
 }
 
 #[cw_serde]

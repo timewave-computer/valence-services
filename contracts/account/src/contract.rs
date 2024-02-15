@@ -13,7 +13,7 @@ use valence_package::msgs::core_execute::{AccountBaseExecuteMsg, ServicesManager
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, QueryMsg, MigrateMsg};
+use crate::msg::{InstantiateMsg, MigrateMsg, QueryMsg};
 
 const CONTRACT_NAME: &str = "crates.io:valence-account";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");

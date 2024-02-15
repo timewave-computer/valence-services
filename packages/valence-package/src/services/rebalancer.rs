@@ -248,10 +248,47 @@ impl ParsedPID {
     }
 }
 
-#[cw_serde]
+#[derive(
+    ::cosmwasm_schema::serde::Serialize,
+    ::cosmwasm_schema::serde::Deserialize,
+    ::std::clone::Clone,
+    ::std::fmt::Debug,
+    ::cosmwasm_schema::schemars::JsonSchema,
+)]
+#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
+#[serde(deny_unknown_fields, crate = "::cosmwasm_schema::serde")]
+#[schemars(crate = "::cosmwasm_schema::schemars")]
+#[derive(Eq)]
 pub struct BaseDenom {
     pub denom: String,
     pub min_balance_limit: Uint128,
+}
+
+impl BaseDenom {
+    pub fn new_empty(denom: impl Into<String>) -> Self {
+        Self {
+            denom: denom.into(),
+            min_balance_limit: Uint128::zero(),
+        }
+    }
+}
+
+impl PartialEq for BaseDenom {
+    fn eq(&self, other: &BaseDenom) -> bool {
+        self.denom == other.denom
+    }
+}
+
+impl Hash for BaseDenom {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.denom.hash(state);
+    }
+}
+
+impl Borrow<String> for BaseDenom {
+    fn borrow(&self) -> &String {
+        &self.denom
+    }
 }
 
 #[cfg(test)]
