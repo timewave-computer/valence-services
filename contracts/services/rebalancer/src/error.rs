@@ -97,9 +97,9 @@ pub enum ContractError {
     )]
     InvalidAccountMinValue(String, String),
 
-    #[error("Cannot remove base denom doesn't exists: {0}")]
-    CannotRemoveBaseDenoms(String),
+    #[error("Cannot remove base denom that doesn't exist: {0}")]
+    CannotRemoveBaseDenom(String),
 
-    #[error("Cannot remove denom doesn't exists: {0}")]
-    CannotRemoveDenoms(String),
+    #[error("Cannot remove denom that doesn't exist: {0}")]
+    CannotRemoveDenom(String),
 }

@@ -18,7 +18,7 @@ use valence_package::{
 use crate::{
     contract::{DEFAULT_SYSTEM_LIMIT, REPLY_DEFAULT_REBALANCE},
     error::ContractError,
-    helpers::{TargetHelper, TradesTuple},
+    helpers::{RebalanceResponse, TargetHelper, TradesTuple},
     state::{
         AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
         PAUSED_CONFIGS, SYSTEM_REBALANCE_STATUS,
@@ -126,7 +126,13 @@ pub fn execute_system_rebalance(
             &prices,
             cycle_period,
         );
-        let Ok((config, msg, event, should_pause)) = rebalance_res else {
+        let Ok(RebalanceResponse {
+            config,
+            msg,
+            event,
+            should_pause,
+        }) = rebalance_res
+        else {
             continue;
         };
 
@@ -141,8 +147,8 @@ pub fn execute_system_rebalance(
             // remove from active configs
             CONFIGS.remove(deps.storage, account);
         } else {
-            // Rebalacing does edit some config fields that are needed for future rebalancing
-            // so we save the config here
+            // Rebalacing modify the config to include the latest data available to us
+            // as well as some rebalancing data we need for the next rebalance cycle
             CONFIGS.save(deps.branch().storage, account, &config)?;
         }
 
@@ -208,7 +214,7 @@ pub fn do_rebalance(
     min_values: &HashMap<String, Uint128>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<(RebalancerConfig, Option<SubMsg>, Event, bool), ContractError> {
+) -> Result<RebalanceResponse, ContractError> {
     // Create new event to show important data about the rebalance
     let mut event = Event::new("rebalance-account").add_attribute("account", account.to_string());
 
@@ -222,7 +228,7 @@ pub fn do_rebalance(
 
     if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
         // We pause the account if the account balance doesn't meet the minimum requirements
-        return Ok((config, None, event, true));
+        return Ok(RebalanceResponse::new(config, None, event, true));
     };
 
     event = event.add_attribute("total_account_value", total_value.to_string());
@@ -282,7 +288,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    Ok((config, Some(msg), event, false))
+    Ok(RebalanceResponse::new(config, Some(msg), event, false))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token

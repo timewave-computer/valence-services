@@ -498,7 +498,7 @@ mod admin {
                 // first remove denoms
                 for denom in to_remove {
                     if !denoms.remove(&denom) {
-                        return Err(ContractError::CannotRemoveDenoms(denom));
+                        return Err(ContractError::CannotRemoveDenom(denom));
                     }
                 }
 
@@ -514,9 +514,9 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    let bd = BaseDenom::new_empty(&denom);
-                    if !base_denoms.remove(&bd) {
-                        return Err(ContractError::CannotRemoveBaseDenoms(denom));
+                    let base_denom = BaseDenom::new_empty(&denom);
+                    if !base_denoms.remove(&base_denom) {
+                        return Err(ContractError::CannotRemoveBaseDenom(denom));
                     }
                 }
 
@@ -591,8 +591,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let fees = SERVICE_FEE_CONFIG.load(deps.storage)?;
             let fee_amount = match action {
                 QueryFeeAction::Register => fees.register_fee,
-                // TODO: In resume, we also want to check that the reason we paused, is because of the rebalancer,
-                // and because its was a user action.
                 QueryFeeAction::Resume => {
                     let Ok(paused_config) =
                         PAUSED_CONFIGS.load(deps.storage, deps.api.addr_validate(&account)?)
