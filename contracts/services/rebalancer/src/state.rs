@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
-use valence_package::services::rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus};
+use valence_package::services::rebalancer::{
+    BaseDenom, PauseData, RebalancerConfig, SystemRebalanceStatus,
+};
 
 /// All available denom to target (denom whitelist)
 pub(crate) const DENOM_WHITELIST: Item<HashSet<String>> = Item::new("token_whitelist");
@@ -17,3 +19,5 @@ pub(crate) const SYSTEM_REBALANCE_STATUS: Item<SystemRebalanceStatus> =
 pub(crate) const AUCTIONS_MANAGER_ADDR: Item<Addr> = Item::new("auctions_manager_addr");
 
 pub(crate) const CYCLE_PERIOD: Item<u64> = Item::new("cycle_period");
+
+pub const PAUSED_CONFIGS: Map<Addr, PauseData> = Map::new("paused_configs");

@@ -1,5 +1,5 @@
 use cosmwasm_std::{testing::mock_env, Timestamp, Uint128};
-use valence_package::services::rebalancer::BaseDenom;
+use valence_package::services::rebalancer::{BaseDenom, ServiceFeeConfig};
 
 use crate::suite::suite::{ATOM, NTRN, OSMO};
 
@@ -33,6 +33,11 @@ impl RebalancerInstantiate {
                 cycle_start: mock_env().block.time,
                 auctions_manager_addr: auctions_manager.to_string(), // to modify
                 cycle_period: None,
+                fees: ServiceFeeConfig {
+                    denom: NTRN.to_string(),
+                    register_fee: Uint128::zero(),
+                    resume_fee: Uint128::zero(),
+                },
             },
         }
     }
@@ -44,6 +49,7 @@ impl RebalancerInstantiate {
         services_manager: &str,
         auctions_manager: &str,
         cycle_period: Option<u64>,
+        fees: ServiceFeeConfig,
     ) -> Self {
         Self {
             msg: rebalancer::msg::InstantiateMsg {
@@ -53,6 +59,7 @@ impl RebalancerInstantiate {
                 cycle_start,
                 auctions_manager_addr: auctions_manager.to_string(), // to modify
                 cycle_period,
+                fees,
             },
         }
     }
@@ -85,8 +92,18 @@ impl RebalancerInstantiate {
         self.msg.auctions_manager_addr = auctions_manager.to_string();
         self
     }
+
     pub fn change_cycle_period(mut self, cycle_period: Option<u64>) -> Self {
         self.msg.cycle_period = cycle_period;
+        self
+    }
+
+    pub fn change_fees(&mut self, fee: impl Into<Uint128> + Copy) -> &mut Self {
+        self.msg.fees = ServiceFeeConfig {
+            denom: NTRN.to_string(),
+            register_fee: fee.into(),
+            resume_fee: fee.into(),
+        };
         self
     }
 }

@@ -3,7 +3,7 @@ pub mod rebalancer;
 use std::{fmt, str::FromStr};
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_json, to_json_binary, Binary, CosmosMsg, Empty, WasmMsg};
+use cosmwasm_std::{from_json, to_json_binary, Binary, CosmosMsg, Empty, MessageInfo, WasmMsg};
 use valence_macros::valence_service_execute_msgs;
 
 use crate::error::ValenceError;
@@ -48,7 +48,7 @@ impl ValenceServices {
     /// Return `Some(...)` with the required register message if the service requires it
     pub fn get_register_msg(
         &self,
-        sender: &str,
+        info: &MessageInfo,
         contract_addr: &str,
         data: Option<Binary>,
     ) -> Result<CosmosMsg, ValenceError> {
@@ -62,11 +62,11 @@ impl ValenceServices {
                     contract_addr: contract_addr.to_string(),
                     msg: to_json_binary(
                         &GeneralServiceExecuteMsg::<RebalancerData, Empty>::Register {
-                            register_for: sender.to_string(),
+                            register_for: info.sender.to_string(),
                             data: Some(register),
                         },
                     )?,
-                    funds: vec![],
+                    funds: info.funds.clone(),
                 };
 
                 Ok(msg.into())
@@ -91,7 +91,7 @@ impl ValenceServices {
     /// Return `Some(...)` with the required register message if the service requires it
     pub fn get_update_msg(
         &self,
-        sender: &str,
+        info: &MessageInfo,
         contract_addr: &str,
         data: Binary,
     ) -> Result<CosmosMsg, ValenceError> {
@@ -103,11 +103,11 @@ impl ValenceServices {
                     contract_addr: contract_addr.to_string(),
                     msg: to_json_binary(
                         &GeneralServiceExecuteMsg::<Empty, RebalancerUpdateData>::Update {
-                            update_for: sender.to_string(),
+                            update_for: info.sender.to_string(),
                             data: update,
                         },
                     )?,
-                    funds: vec![],
+                    funds: info.funds.clone(),
                 };
 
                 Ok(msg.into())
@@ -132,15 +132,15 @@ impl ValenceServices {
     /// can be switched to work indevidually if needed.
     pub fn get_deregister_msg(
         &self,
-        sender: &str,
+        info: &MessageInfo,
         contract_addr: &str,
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
             msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Deregister {
-                deregister_for: sender.to_string(),
+                deregister_for: info.sender.to_string(),
             })?,
-            funds: vec![],
+            funds: info.funds.clone(),
         }
         .into())
     }
@@ -148,16 +148,18 @@ impl ValenceServices {
     pub fn get_pause_msg(
         &self,
         pause_for: String,
-        sender: &str,
+        info: &MessageInfo,
         contract_addr: &str,
+        reason: Option<String>,
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
             msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Pause {
                 pause_for,
-                sender: sender.to_string(),
+                sender: info.sender.to_string(),
+                reason,
             })?,
-            funds: vec![],
+            funds: info.funds.clone(),
         }
         .into())
     }
@@ -165,16 +167,16 @@ impl ValenceServices {
     pub fn get_resume_msg(
         &self,
         resume_for: String,
-        sender: &str,
+        info: &MessageInfo,
         contract_addr: &str,
     ) -> Result<CosmosMsg, ValenceError> {
         Ok(WasmMsg::Execute {
             contract_addr: contract_addr.to_string(),
             msg: to_json_binary(&GeneralServiceExecuteMsg::<Empty, Empty>::Resume {
                 resume_for,
-                sender: sender.to_string(),
+                sender: info.sender.to_string(),
             })?,
-            funds: vec![],
+            funds: info.funds.clone(),
         }
         .into())
     }

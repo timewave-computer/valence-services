@@ -9,7 +9,7 @@ use rebalancer::{
     msg::{ManagersAddrsResponse, WhitelistsResponse},
 };
 use valence_package::services::{
-    rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus},
+    rebalancer::{BaseDenom, PauseData, RebalancerConfig, ServiceFeeConfig, SystemRebalanceStatus},
     ValenceServices,
 };
 
@@ -184,6 +184,17 @@ impl Suite {
         )
     }
 
+    pub fn register_to_rebalancer_fee_err<D: serde::ser::Serialize>(
+        &mut self,
+        account_position: u64,
+        register_data: &D,
+    ) -> StdError {
+        self.register_to_rebalancer(account_position, register_data)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
+    }
+
     pub fn register_to_rebalancer_err<D: serde::ser::Serialize>(
         &mut self,
         account_position: u64,
@@ -318,6 +329,20 @@ impl Suite {
             &[],
         )
     }
+
+    pub fn update_rebalancer_fees(
+        &mut self,
+        fees: ServiceFeeConfig,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFess { fees },
+            ),
+            &[],
+        )
+    }
 }
 
 // Execute service management
@@ -446,6 +471,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::PauseService {
                 service_name,
+                reason: Some("Some reason".to_string()),
             },
             &[],
         )
@@ -464,6 +490,7 @@ impl Suite {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::PauseService {
                 service_name,
                 pause_for: account_addr.to_string(),
+                reason: Some("Some reason".to_string()),
             },
             &[],
         )
@@ -521,6 +548,15 @@ impl Suite {
         self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetConfig {
+                addr: account.to_string(),
+            },
+        )
+    }
+
+    pub fn query_rebalancer_paused_config(&self, account: Addr) -> Result<PauseData, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetPausedConfig {
                 addr: account.to_string(),
             },
         )
@@ -589,7 +625,6 @@ impl Suite {
             assert!(query_config.targets.contains(target));
         }
 
-        assert_eq!(query_config.is_paused, config.is_paused);
         assert_eq!(query_config.trustee, config.trustee);
         assert_eq!(query_config.base_denom, config.base_denom);
         assert_eq!(query_config.pid, config.pid);
@@ -600,11 +635,5 @@ impl Suite {
             query_config.target_override_strategy,
             config.target_override_strategy
         );
-    }
-
-    pub fn assert_rebalancer_is_paused(&self, account_position: u64, is_paused: Option<Addr>) {
-        let account_addr = self.get_account_addr(account_position);
-        let query_config = self.query_rebalancer_config(account_addr).unwrap();
-        assert_eq!(query_config.is_paused, is_paused)
     }
 }

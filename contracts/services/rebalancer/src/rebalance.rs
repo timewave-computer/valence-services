@@ -9,7 +9,7 @@ use cw_storage_plus::Bound;
 use valence_package::{
     helpers::start_of_cycle,
     services::rebalancer::{
-        ParsedPID, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
+        ParsedPID, PauseData, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
     },
     signed_decimal::SignedDecimal,
     CLOSEST_TO_ONE_POSSIBLE,
@@ -21,7 +21,7 @@ use crate::{
     helpers::{TargetHelper, TradesTuple},
     state::{
         AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
-        SYSTEM_REBALANCE_STATUS,
+        PAUSED_CONFIGS, SYSTEM_REBALANCE_STATUS,
     },
 };
 
@@ -114,11 +114,6 @@ pub fn execute_system_rebalance(
 
         last_addr = Some(account.clone());
 
-        // If account paused rebalancing, we continue
-        if config.is_paused.is_some() {
-            continue;
-        };
-
         // Do rebalance for the account, and construct the msg
         let rebalance_res = do_rebalance(
             deps.as_ref(),
@@ -131,16 +126,28 @@ pub fn execute_system_rebalance(
             &prices,
             cycle_period,
         );
-        let Ok((config, msg, event)) = rebalance_res else {
+        let Ok((config, msg, event, should_pause)) = rebalance_res else {
             continue;
         };
 
+        // check if we should pause the account or not.
+        if should_pause {
+            // Save to the paused config
+            PAUSED_CONFIGS.save(
+                deps.storage,
+                account.clone(),
+                &PauseData::new_empty_balance(env, &config),
+            )?;
+            // remove from active configs
+            CONFIGS.remove(deps.storage, account);
+        } else {
+            // Rebalacing does edit some config fields that are needed for future rebalancing
+            // so we save the config here
+            CONFIGS.save(deps.branch().storage, account, &config)?;
+        }
+
         // Add event to all events
         events.push(event);
-
-        // Rebalacing does edit some config fields that are needed for future rebalancing
-        // so we save the config here
-        CONFIGS.save(deps.branch().storage, account, &config)?;
 
         if let Some(msg) = msg {
             msgs.push(msg);
@@ -201,7 +208,7 @@ pub fn do_rebalance(
     min_values: &HashMap<String, Uint128>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<(RebalancerConfig, Option<SubMsg>, Event), ContractError> {
+) -> Result<(RebalancerConfig, Option<SubMsg>, Event, bool), ContractError> {
     // Create new event to show important data about the rebalance
     let mut event = Event::new("rebalance-account").add_attribute("account", account.to_string());
 
@@ -215,8 +222,7 @@ pub fn do_rebalance(
 
     if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
         // We pause the account if the account balance doesn't meet the minimum requirements
-        config.is_paused = Some(account.clone());
-        return Ok((config, None, event));
+        return Ok((config, None, event, true));
     };
 
     event = event.add_attribute("total_account_value", total_value.to_string());
@@ -276,7 +282,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    Ok((config, Some(msg), event))
+    Ok((config, Some(msg), event, false))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token

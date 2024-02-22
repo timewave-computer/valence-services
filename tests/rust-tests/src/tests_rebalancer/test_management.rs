@@ -1,9 +1,14 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coins, testing::mock_env, to_json_binary, Addr, Timestamp, Uint128};
+use cosmwasm_std::{
+    coin, coins, testing::mock_env, to_json_binary, Addr, OverflowError, StdError, Timestamp,
+    Uint128,
+};
 use cw_multi_test::Executor;
 use valence_package::services::{
-    rebalancer::{BaseDenom, RebalancerUpdateData, SystemRebalanceStatus},
+    rebalancer::{
+        BaseDenom, PauseReason, RebalancerUpdateData, ServiceFeeConfig, SystemRebalanceStatus,
+    },
     ValenceServices,
 };
 
@@ -23,7 +28,7 @@ fn test_remove_trustee() {
     let config = suite
         .query_rebalancer_config(suite.account_addrs[0].clone())
         .unwrap();
-    assert_eq!(config.trustee, Some(TRUSTEE.to_string()));
+    assert_eq!(config.trustee, Some(Addr::unchecked(TRUSTEE)));
 
     suite
         .update_config(
@@ -479,29 +484,25 @@ fn test_account_balance_limit() {
         .unwrap();
 
     // make sure account 2 and 3 are not paused
-    let config_2 = suite
+    suite
         .query_rebalancer_config(account_addr_2.clone())
         .unwrap();
-    assert!(config_2.is_paused.is_none());
 
-    let config_3 = suite
+    suite
         .query_rebalancer_config(account_addr_3.clone())
         .unwrap();
-    assert!(config_3.is_paused.is_none());
 
     // do a rebalance with an account with no balance
     suite.rebalance_with_update_block(None).unwrap();
 
     // Account 2 and 3 should be paused now.
-    let config_2 = suite
-        .query_rebalancer_config(account_addr_2.clone())
+    suite
+        .query_rebalancer_paused_config(account_addr_2.clone())
         .unwrap();
-    assert!(config_2.is_paused.is_some());
 
-    let config_3 = suite
-        .query_rebalancer_config(account_addr_3.clone())
+    suite
+        .query_rebalancer_paused_config(account_addr_3.clone())
         .unwrap();
-    assert!(config_3.is_paused.is_some());
 
     // Try to resuem without enough balance
     let err = suite.resume_service_err(account_position_2, ValenceServices::Rebalancer);
@@ -548,4 +549,150 @@ fn test_account_balance_limit() {
     suite
         .resume_service(account_position_3, ValenceServices::Rebalancer)
         .unwrap();
+}
+
+#[test]
+fn test_with_fee() {
+    let mut suite = Suite::default();
+
+    suite
+        .update_rebalancer_fees(ServiceFeeConfig {
+            denom: NTRN.to_string(),
+            register_fee: 100_u128.into(),
+            resume_fee: 100_u128.into(),
+        })
+        .unwrap();
+
+    let (account_position, _) = suite.create_temp_account(&coins(1000, ATOM.to_string()));
+    let register_data = SuiteBuilder::get_default_rebalancer_register_data();
+
+    // Register account without enough fee token should fail.
+    let err = suite.register_to_rebalancer_fee_err(account_position, &register_data);
+    assert_eq!(
+        err,
+        StdError::overflow(OverflowError::new(
+            cosmwasm_std::OverflowOperation::Sub,
+            "0",
+            "100"
+        ))
+    );
+
+    // set balance of account to ntrn
+    suite.set_balance(account_position, coin(1000, NTRN.to_string()));
+
+    // Should successfully register
+    suite
+        .register_to_rebalancer(account_position, &register_data)
+        .unwrap();
+
+    // Account balance should be - 900 ntrn
+    let balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.get_account_addr(account_position), NTRN.to_string())
+        .unwrap();
+    assert!(balance.amount == Uint128::new(900_u128))
+}
+
+#[test]
+fn test_manual_resume_without_fee() {
+    let mut suite = Suite::default();
+
+    suite
+        .update_rebalancer_fees(ServiceFeeConfig {
+            denom: NTRN.to_string(),
+            register_fee: 100_u128.into(),
+            resume_fee: 100_u128.into(),
+        })
+        .unwrap();
+
+    let (account_position, _) = suite.create_temp_account(&coins(1000, NTRN.to_string()));
+    let register_data = SuiteBuilder::get_default_rebalancer_register_data();
+    suite
+        .register_to_rebalancer(account_position, &register_data)
+        .unwrap();
+
+    let balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.get_account_addr(account_position), NTRN.to_string())
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(900_u128));
+
+    // account pause the rebalancer
+    suite
+        .pause_service(account_position, ValenceServices::Rebalancer)
+        .unwrap();
+
+    let paused_config = suite
+        .query_rebalancer_paused_config(suite.get_account_addr(account_position))
+        .unwrap();
+    assert_eq!(
+        paused_config.reason,
+        PauseReason::AccountReason("Some reason".to_string())
+    );
+
+    suite
+        .resume_service(account_position, ValenceServices::Rebalancer)
+        .unwrap();
+
+    suite
+        .query_rebalancer_config(suite.get_account_addr(account_position))
+        .unwrap();
+
+    // Verify fee was not taken from the account, (still 900 NTRN)
+    let balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.get_account_addr(account_position), NTRN.to_string())
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(900_u128));
+}
+
+#[test]
+fn test_resume_with_fee() {
+    let mut suite = Suite::default();
+
+    suite
+        .update_rebalancer_fees(ServiceFeeConfig {
+            denom: NTRN.to_string(),
+            register_fee: 100_u128.into(),
+            resume_fee: 100_u128.into(),
+        })
+        .unwrap();
+
+    let (account_position, _) = suite.create_temp_account(&coins(1000, NTRN.to_string()));
+    let register_data = SuiteBuilder::get_default_rebalancer_register_data();
+    suite
+        .register_to_rebalancer(account_position, &register_data)
+        .unwrap();
+
+    suite.set_balance(account_position, coin(0, NTRN.to_string()));
+
+    suite.rebalance(None).unwrap();
+
+    // Account should be paused because of empty balance
+    let paused_config = suite
+        .query_rebalancer_paused_config(suite.get_account_addr(account_position))
+        .unwrap();
+    assert_eq!(paused_config.reason, PauseReason::EmptyBalance);
+
+    suite.set_balance(account_position, coin(1000, NTRN.to_string()));
+
+    suite
+        .resume_service(account_position, ValenceServices::Rebalancer)
+        .unwrap();
+
+    // Verify the account is resumed (if we get config, it means it's not paused)
+    suite
+        .query_rebalancer_config(suite.get_account_addr(account_position))
+        .unwrap();
+
+    // Verify balance is 900 because we paid 100 for resume fee
+    let balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.get_account_addr(account_position), NTRN.to_string())
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(900_u128));
 }

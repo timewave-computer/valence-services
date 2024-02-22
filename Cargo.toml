@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
   "packages/*",
   "contracts/services/*",
@@ -43,14 +44,14 @@ valence-macros  = { path = "packages/valence-macros" }
 valence-package = { path = "packages/valence-package" }
 auction-package = { path = "packages/auction-package" }
 
-cosmwasm-schema  = "1.5.0"
-cosmwasm-std     = { version = "1.5.0", features = ["ibc3"] }
-cw-storage-plus  = "1.2.0"
-cw-utils         = "1.0.3"
-cw2              = "1.1.2"
-serde            = { version = "1.0.183", default-features = false, features = ["derive"] }
-thiserror        = "1.0.31"
-schemars         = "0.8.10"
+cosmwasm-schema = "1.5.0"
+cosmwasm-std    = { version = "1.5.0", features = ["ibc3"] }
+cw-storage-plus = "1.2.0"
+cw-utils        = "1.0.3"
+cw2             = "1.1.2"
+serde           = { version = "1.0.183", default-features = false, features = ["derive"] }
+thiserror       = "1.0.31"
+schemars        = "0.8.10"
 
 # dev-dependencies
 cw-multi-test = "0.16.5"

@@ -1,4 +1,5 @@
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cw_utils::PaymentError;
 use thiserror::Error;
 use valence_package::error::ValenceError;
 
@@ -18,6 +19,9 @@ pub enum ContractError {
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error(transparent)]
+    PaymentError(#[from] PaymentError),
 
     #[error("Account is already registered")]
     AccountAlreadyRegistered,

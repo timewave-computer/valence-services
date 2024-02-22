@@ -3,6 +3,8 @@ use cosmwasm_std::Addr;
 use cw_storage_plus::Item;
 use cw_utils::Expiration;
 
+use crate::services::rebalancer::ServiceFeeConfig;
+
 /// State to store the address of the services manager contract.
 pub const SERVICES_MANAGER: Item<Addr> = Item::new("services_manager");
 
@@ -16,4 +18,12 @@ pub const ADMIN_CHANGE: Item<AdminChange> = Item::new("admin_change");
 pub struct AdminChange {
     pub addr: Addr,
     pub expiration: Expiration,
+}
+
+pub const SERVICE_FEE_CONFIG: Item<ServiceFeeConfig> = Item::new("fee_config");
+
+#[cw_serde]
+pub enum QueryFeeAction {
+    Register,
+    Resume,
 }

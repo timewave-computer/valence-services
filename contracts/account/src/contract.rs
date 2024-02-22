@@ -1,15 +1,16 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo, Reply,
-    Response, StdResult, SubMsg, WasmMsg,
+    to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo,
+    Reply, Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
 use valence_package::helpers::{
-    approve_admin_change, cancel_admin_change, forward_to_services_manager, sender_is_a_service,
-    start_admin_change, verify_admin,
+    approve_admin_change, cancel_admin_change, forward_to_services_manager,
+    forward_to_services_manager_with_funds, sender_is_a_service, start_admin_change, verify_admin,
 };
 use valence_package::msgs::core_execute::{AccountBaseExecuteMsg, ServicesManagerExecuteMsg};
+use valence_package::msgs::core_query::ServicesManagerQueryMsg;
 use valence_package::states::{ADMIN, SERVICES_MANAGER};
 
 use crate::error::ContractError;
@@ -52,10 +53,27 @@ pub fn execute(
         AccountBaseExecuteMsg::RegisterToService { service_name, data } => {
             verify_admin(deps.as_ref(), &info)?;
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
-            Ok(forward_to_services_manager(
-                services_manager_addr.to_string(),
-                ServicesManagerExecuteMsg::RegisterToService { service_name, data },
-            )?)
+            // Query service fee
+            Ok(
+                match deps.querier.query_wasm_smart::<Option<Coin>>(
+                    services_manager_addr.clone(),
+                    &ServicesManagerQueryMsg::GetServiceFee {
+                        account: env.contract.address.to_string(),
+                        service: service_name.clone(),
+                        action: valence_package::states::QueryFeeAction::Register,
+                    },
+                )? {
+                    Some(fee) => forward_to_services_manager_with_funds(
+                        services_manager_addr.to_string(),
+                        ServicesManagerExecuteMsg::RegisterToService { service_name, data },
+                        vec![fee],
+                    )?,
+                    None => forward_to_services_manager(
+                        services_manager_addr.to_string(),
+                        ServicesManagerExecuteMsg::RegisterToService { service_name, data },
+                    )?,
+                },
+            )
         }
         // unregister from a service
         AccountBaseExecuteMsg::DeregisterFromService { service_name } => {
@@ -76,7 +94,10 @@ pub fn execute(
             )?)
         }
         // Pause the service
-        AccountBaseExecuteMsg::PauseService { service_name } => {
+        AccountBaseExecuteMsg::PauseService {
+            service_name,
+            reason,
+        } => {
             verify_admin(deps.as_ref(), &info)?;
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
             Ok(forward_to_services_manager(
@@ -84,6 +105,7 @@ pub fn execute(
                 ServicesManagerExecuteMsg::PauseService {
                     service_name,
                     pause_for: env.contract.address.to_string(),
+                    reason,
                 },
             )?)
         }
@@ -91,13 +113,33 @@ pub fn execute(
         AccountBaseExecuteMsg::ResumeService { service_name } => {
             verify_admin(deps.as_ref(), &info)?;
             let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
-            Ok(forward_to_services_manager(
-                services_manager_addr.to_string(),
-                ServicesManagerExecuteMsg::ResumeService {
-                    service_name,
-                    resume_for: env.contract.address.to_string(),
+
+            Ok(
+                match deps.querier.query_wasm_smart::<Option<Coin>>(
+                    services_manager_addr.clone(),
+                    &ServicesManagerQueryMsg::GetServiceFee {
+                        account: env.contract.address.to_string(),
+                        service: service_name.clone(),
+                        action: valence_package::states::QueryFeeAction::Resume,
+                    },
+                )? {
+                    Some(fee) => forward_to_services_manager_with_funds(
+                        services_manager_addr.to_string(),
+                        ServicesManagerExecuteMsg::ResumeService {
+                            service_name,
+                            resume_for: env.contract.address.to_string(),
+                        },
+                        vec![fee],
+                    )?,
+                    None => forward_to_services_manager(
+                        services_manager_addr.to_string(),
+                        ServicesManagerExecuteMsg::ResumeService {
+                            service_name,
+                            resume_for: env.contract.address.to_string(),
+                        },
+                    )?,
                 },
-            )?)
+            )
         }
         // Messages to be executed by the service, with sending funds.
         AccountBaseExecuteMsg::SendFundsByService { msgs, atomic } => {

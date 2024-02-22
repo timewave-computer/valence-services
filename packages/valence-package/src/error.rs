@@ -1,4 +1,5 @@
 use cosmwasm_std::{DecimalRangeExceeded, StdError};
+use cw_utils::PaymentError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -8,6 +9,9 @@ pub enum ValenceError {
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error(transparent)]
+    PaymentError(#[from] PaymentError),
 
     #[error("Sender is not a service!")]
     UnauthorizedService,
@@ -41,4 +45,7 @@ pub enum ValenceError {
 
     #[error("Change admin is expired")]
     AdminChangeExpired,
+
+    #[error("Must pay the registeration fee of: {0}{1}")]
+    MustPayRegisterationFee(String, String),
 }

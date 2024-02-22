@@ -1,8 +1,14 @@
 use std::collections::HashSet;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Timestamp};
-use valence_package::services::rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus};
+use cosmwasm_std::{Addr, Coin, Timestamp};
+use valence_macros::valence_service_query_msgs;
+use valence_package::{
+    services::rebalancer::{
+        BaseDenom, PauseData, RebalancerConfig, ServiceFeeConfig, SystemRebalanceStatus,
+    },
+    states::QueryFeeAction,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -12,8 +18,10 @@ pub struct InstantiateMsg {
     pub cycle_start: Timestamp,
     pub auctions_manager_addr: String,
     pub cycle_period: Option<u64>,
+    pub fees: ServiceFeeConfig,
 }
 
+#[valence_service_query_msgs]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
@@ -21,6 +29,8 @@ pub enum QueryMsg {
     // /// otherwise.
     #[returns(RebalancerConfig)]
     GetConfig { addr: String },
+    #[returns(PauseData)]
+    GetPausedConfig { addr: String },
     #[returns(SystemRebalanceStatus)]
     GetSystemStatus {},
     #[returns(WhitelistsResponse)]
