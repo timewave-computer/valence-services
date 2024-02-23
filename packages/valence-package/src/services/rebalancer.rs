@@ -335,17 +335,17 @@ pub struct ServiceFeeConfig {
 }
 
 impl ServiceFeeConfig {
-    pub fn verify_registeration_fee_paid(&self, info: &MessageInfo) -> Result<(), ValenceError> {
+    pub fn verify_registration_fee_paid(&self, info: &MessageInfo) -> Result<(), ValenceError> {
         if !self.register_fee.is_zero() {
             let paid = must_pay(info, &self.denom).map_err(|_| {
-                ValenceError::MustPayRegisterationFee(
+                ValenceError::MustPayRegistrationFee(
                     self.register_fee.to_string(),
                     self.denom.clone(),
                 )
             })?;
 
             if self.register_fee != paid {
-                return Err(ValenceError::MustPayRegisterationFee(
+                return Err(ValenceError::MustPayRegistrationFee(
                     self.register_fee.to_string(),
                     self.denom.clone(),
                 ));

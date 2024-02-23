@@ -107,10 +107,10 @@ pub fn execute(
                 return Err(ContractError::AccountAlreadyRegistered);
             }
 
-            // Verify user paid the registeration fee
+            // Verify user paid the registration fee
             SERVICE_FEE_CONFIG
                 .load(deps.storage)?
-                .verify_registeration_fee_paid(&info)?;
+                .verify_registration_fee_paid(&info)?;
 
             // Find base denom in our whitelist
             let base_denom_whitelist = BASE_DENOM_WHITELIST

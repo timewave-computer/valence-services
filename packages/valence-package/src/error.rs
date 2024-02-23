@@ -46,6 +46,6 @@ pub enum ValenceError {
     #[error("Change admin is expired")]
     AdminChangeExpired,
 
-    #[error("Must pay the registeration fee of: {0}{1}")]
-    MustPayRegisterationFee(String, String),
+    #[error("Must pay the registration fee of: {0}{1}")]
+    MustPayRegistrationFee(String, String),
 }
