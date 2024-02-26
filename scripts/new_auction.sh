@@ -12,11 +12,11 @@ if [[ "$CHAIN" == 'juno' ]]; then
   ADDR_AUCTIONS_MANAGER="juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.015untrn"
+  GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-  ADDR_AUCTIONS_MANAGER="neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84"
+  ADDR_AUCTIONS_MANAGER="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 else
   echo "Unknown chain"
 fi
@@ -25,7 +25,7 @@ EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
 # EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
 ## You can change value manually and uncomment it here
-PAIR='["untrn", "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"]'
+PAIR='["ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "untrn"]'
 AUCTION_STRATEGY='{ "start_price_perc": 2000, "end_price_perc": 2000 }'
 CHAIN_HALT='{ "cap": "14400", "block_avg": "3" }'
 PRICE_FRESHNESS='{ "limit": "3", "multipliers": [["2", "2"], ["1", "1.5"]] }'

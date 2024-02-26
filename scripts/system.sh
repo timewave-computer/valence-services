@@ -16,12 +16,12 @@ if [[ "$CHAIN" == 'juno' ]]; then
 
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.6untrn"
+  GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-  REBALANCER_ADDR="neutron1jreurhf7g43l0zdxu26fa8aahnjxyng8sjh5vvwjpn4lucwq8tsq7jxl5t"
-  AUCTIONS_MANAGER="neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84"
+  REBALANCER_ADDR="neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2"
+  AUCTIONS_MANAGER="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 
 else
   echo "Unknown chain"

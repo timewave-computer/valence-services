@@ -18,11 +18,11 @@ if [[ "$CHAIN" == 'juno' ]]; then
   ORACLE_ADDR="juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.015untrn"
+  GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-  ORACLE_ADDR="neutron16zrrr6dxlqvcuht99g57k6dujvtdy5hq7pn66mqmmkvdj7pf3rwspasd4t"
+  ORACLE_ADDR="neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf"
 else
   echo "Unknown chain"
 fi

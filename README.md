@@ -2,29 +2,30 @@
 
 ## Code ids
 
-- auctions manager = `591`
-- auction = `590`
-- oracle = `438`
-- rebalancer = `592`
-- services manager = `439`
-- account = `589`
+- auctions manager = `752`
+- auction = `756`
+- oracle = `753`
+- rebalancer = `755`
+- services manager = `754`
+- account = `750`
 - empty = `588` // DO NOT USE
 
 ## Owner / Admin
+
 `neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68`
 
 ## Addresses
 
-- Services manager - `neutron1g4ylhl0x2k5gjmd7vhyqv2q7cwhd6gmpwspgktlqcq8s38c7f3gs90rv07`
-- Auctions manager - `neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84`
-- Rebalancer - `neutron1jreurhf7g43l0zdxu26fa8aahnjxyng8sjh5vvwjpn4lucwq8tsq7jxl5t`
+- Services manager - `neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa`
+- Auctions manager - `neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz`
+- Rebalancer - `neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2`
 - Account - ``
-- Oracle - `neutron16zrrr6dxlqvcuht99g57k6dujvtdy5hq7pn66mqmmkvdj7pf3rwspasd4t`
+- Oracle - `neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf`
 
 ### Auctions
 
-- [uatom, untrn] - `neutron16f3v0xx6tt64lg9wzhxla34v35de3v7f3apa7s3usa2wyxc7a65q7ykfc6`
-- [untrn, uatom] - `neutron1jf5868tm9nmwm6u8pcu9ya8r7kjen9z52vsw68zlpsehsa2lturs9rsdlh`
+- [uatom, untrn] - `neutron1l9zmckc8j7zhutx088g6ppd9dfs45jet6dyq3pypc0gt5h9ncsvs5m4tsz`
+- [untrn, uatom] - `neutron13jppm4n77u8ud5wma9xe0dqnaz85ne9jem3r0scc009uemvh49qqxuuggf`
 
 # Juno Contracts
 

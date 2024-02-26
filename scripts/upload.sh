@@ -14,7 +14,7 @@ if [[ "$CHAIN" == 'juno' ]]; then
 
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.6untrn"
+  GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
 
 else
@@ -28,7 +28,7 @@ else
 fi
 
 EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json --instantiate-anyof-addresses $ADDRESSES -y"
-ACCOUNT_EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -y"
+ACCOUNT_EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -b sync -y"
 ARTIFACTS_PATH="../artifacts"
 
 # File names

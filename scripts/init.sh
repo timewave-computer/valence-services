@@ -26,23 +26,23 @@ if [[ "$CHAIN" == 'juno' ]]; then
   WHITELISTED_BASE_DENOMS='[\"ujunox\", \"factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx\"]'
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.015untrn"
+  GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
 
-  CODE_ID_ACCOUNT=435
-  CODE_ID_SERVICES_MANAGER=439
-  CODE_ID_REBALANCER=440
-  CODE_ID_ORACLE=438
-  CODE_ID_AUCTION=436
-  CODE_ID_AUCTIONS_MANAGER=437
+  CODE_ID_ACCOUNT=750
+  CODE_ID_SERVICES_MANAGER=754
+  CODE_ID_REBALANCER=755
+  CODE_ID_ORACLE=753
+  CODE_ID_AUCTION=751
+  CODE_ID_AUCTIONS_MANAGER=752
 
   # Contracts addresses for init below
-  ADDR_SERVICES_MANAGER="neutron1g4ylhl0x2k5gjmd7vhyqv2q7cwhd6gmpwspgktlqcq8s38c7f3gs90rv07"
-  ADDR_AUCTIONS_MANAGER="neutron1ufvps7qx984unupds40zg79rmju3cj7pueay30hxkdt6373c8g0q66qq84"
+  ADDR_SERVICES_MANAGER="neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa"
+  ADDR_AUCTIONS_MANAGER="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 
   # General data per chain
   WHITELISTED_DENOMS='["untrn", "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"]'
-  WHITELISTED_BASE_DENOMS='["untrn", "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9"]'
+  WHITELISTED_BASE_DENOMS='[{"denom": "untrn", "min_balance_limit": "10000000"}, {"denom": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "min_balance_limit": "10000000"}]'
 else
   echo "Unknown chain"
 fi
@@ -107,6 +107,11 @@ elif [[ "$COMMAND" == 'rebalancer' ]]; then
       denom_whitelist: $whitelist_denom,
       base_denom_whitelist: $whitelist_base_denom,
       cycle_period: 60,
+      fees: {
+        denom: "untrn",
+        register_fee: "1000000",
+        resume_fee: "1000000"
+      },
       }')
 
   $BINARY tx wasm init $CODE_ID_REBALANCER "$init_msg" --label "Valence rebalancer" \
