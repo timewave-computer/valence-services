@@ -392,7 +392,7 @@ fn test_update() {
                     i: "0.5".to_string(),
                     d: "0.5".to_string(),
                 }),
-                max_limit_bps: Some(5000),
+                max_limit_bps: Some(valence_package::helpers::OptionalField::Set(5000)),
                 target_override_strategy: Some(TargetOverrideStrategy::Priority),
             },
         )

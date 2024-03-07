@@ -28,8 +28,8 @@ pub enum ValenceError {
     #[error("This services expects data on register: {0}")]
     MissingRegisterData(String),
 
-    #[error("Couldn't parse binary into: {0}")]
-    RegisterDataParseError(String),
+    #[error("Service: {service}, Couldn't parse binary into: {ty}")]
+    DataParseError { service: String, ty: String },
 
     #[error("PID values cannot be more then 1")]
     PIDErrorOver,

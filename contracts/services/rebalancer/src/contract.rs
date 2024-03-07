@@ -217,7 +217,7 @@ pub fn execute(
         RebalancerExecuteMsg::Deregister { deregister_for } => {
             verify_services_manager(deps.as_ref(), &info)?;
             let account = deps.api.addr_validate(&deregister_for)?;
-            
+
             CONFIGS.remove(deps.storage, account.clone());
             PAUSED_CONFIGS.remove(deps.storage, account);
 

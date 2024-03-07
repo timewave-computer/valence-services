@@ -33,7 +33,12 @@ pub struct RebalanceResponse {
 }
 
 impl RebalanceResponse {
-    pub fn new(config: RebalancerConfig, msg: Option<SubMsg>, event: Event, should_pause: bool) -> Self {
+    pub fn new(
+        config: RebalancerConfig,
+        msg: Option<SubMsg>,
+        event: Event,
+        should_pause: bool,
+    ) -> Self {
         Self {
             config,
             msg,

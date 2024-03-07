@@ -98,7 +98,7 @@ pub fn execute(
                     Ok((prices_sum / total_count, twap_prices[0].time))
                 }
             }?;
-            
+
             // Save price
             PRICES.save(deps.storage, pair, &Price { price, time })?;
 

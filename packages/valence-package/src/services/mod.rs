@@ -1,6 +1,6 @@
 pub mod rebalancer;
 
-use std::{fmt, str::FromStr};
+use std::{any::type_name, fmt, str::FromStr};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, to_json_binary, Binary, CosmosMsg, Empty, MessageInfo, WasmMsg};
@@ -38,8 +38,9 @@ impl ValenceServices {
         data: Binary,
         service_name: &str,
     ) -> Result<T, ValenceError> {
-        from_json::<T>(&data).map_err(|_| {
-            ValenceError::RegisterDataParseError(format!("{service_name} register msg",))
+        from_json::<T>(&data).map_err(|_| ValenceError::DataParseError {
+            service: service_name.to_string(),
+            ty: type_name::<T>().to_string(),
         })
     }
 
