@@ -216,7 +216,10 @@ pub fn execute(
         }
         RebalancerExecuteMsg::Deregister { deregister_for } => {
             verify_services_manager(deps.as_ref(), &info)?;
-            CONFIGS.remove(deps.storage, deps.api.addr_validate(&deregister_for)?);
+            let account = deps.api.addr_validate(&deregister_for)?;
+            
+            CONFIGS.remove(deps.storage, account.clone());
+            PAUSED_CONFIGS.remove(deps.storage, account);
 
             Ok(Response::default())
         }
@@ -285,12 +288,16 @@ pub fn execute(
                 config.pid = pid.into_parsed()?;
             }
 
-            if let Some(max_limit) = data.max_limit_bps {
-                if !(1..=10000).contains(&max_limit) {
-                    return Err(ValenceError::InvalidMaxLimitRange.into());
-                }
-
-                config.max_limit = Decimal::bps(max_limit);
+            if let Some(max_limit_option) = data.max_limit_bps {
+                config.max_limit = match max_limit_option {
+                    OptionalField::Set(max_limit) => {
+                        if !(1..=10000).contains(&max_limit) {
+                            return Err(ValenceError::InvalidMaxLimitRange.into());
+                        }
+                        Decimal::bps(max_limit)
+                    }
+                    OptionalField::Clear => Decimal::one(),
+                };
             }
 
             if let Some(target_override_strategy) = data.target_override_strategy {

@@ -45,8 +45,7 @@ pub struct ActiveAuction {
 pub enum ActiveAuctionStatus {
     /// The auction started, and last resolved block height is (u64)
     Started,
-    /// The auction is finished, if param is 0, we resolved everything,
-    /// else it holds the last resovled height
+    /// The auction is finished, waiting for the funds to be resolved
     Finished,
     /// Handle closing auction, addr of the last funds provider we resolved
     /// and the total amounts of the pair we sent already

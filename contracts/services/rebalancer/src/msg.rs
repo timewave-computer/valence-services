@@ -32,7 +32,7 @@ pub enum QueryMsg {
     #[returns(PauseData)]
     GetPausedConfig { addr: String },
     #[returns(SystemRebalanceStatus)]
-    GetSystemStatus {},
+    GetSystemStatus,
     #[returns(WhitelistsResponse)]
     GetWhiteLists,
     #[returns(ManagersAddrsResponse)]
