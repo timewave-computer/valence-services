@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
+    WasmMsg,
 };
 use cw_utils::Expiration;
 
@@ -74,11 +75,12 @@ pub fn verify_admin(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> 
 }
 
 /// Verify the sender is the services manager
-pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> {
-    if SERVICES_MANAGER.load(deps.storage)? != info.sender {
+pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<Addr, ValenceError> {
+    let manager_addr = SERVICES_MANAGER.load(deps.storage)?;
+    if manager_addr != info.sender {
         return Err(ValenceError::NotServicesManager {});
     }
-    Ok(())
+    Ok(manager_addr)
 }
 
 /// Get the timestomt of the start of the day (00:00 midnight)

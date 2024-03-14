@@ -540,6 +540,22 @@ impl Suite {
             &[],
         )
     }
+
+    pub fn withdraw_fees_from_manager(
+        &mut self,
+        denom: impl Into<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::Admin(
+                valence_package::msgs::core_execute::ServicesManagerAdminMsg::Withdraw {
+                    denom: denom.into(),
+                },
+            ),
+            &[],
+        )
+    }
 }
 
 // Queries

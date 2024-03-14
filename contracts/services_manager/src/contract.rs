@@ -3,8 +3,8 @@ use std::collections::HashSet;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult,
+    to_json_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response,
+    StdError, StdResult,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -121,7 +121,7 @@ mod admin {
 
     pub fn handle_msg(
         deps: DepsMut,
-        _env: Env,
+        env: Env,
         info: MessageInfo,
         msg: ServicesManagerAdminMsg,
     ) -> Result<Response, ContractError> {
@@ -180,6 +180,16 @@ mod admin {
                 Ok(start_admin_change(deps, &info, &addr, expiration)?)
             }
             ServicesManagerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+            ServicesManagerAdminMsg::Withdraw { denom } => {
+                let amount = deps.querier.query_balance(env.contract.address, denom)?;
+
+                let msg = BankMsg::Send {
+                    to_address: info.sender.to_string(), // sender must be admin
+                    amount: vec![amount],
+                };
+
+                Ok(Response::default().add_message(msg))
+            }
         }
     }
 }

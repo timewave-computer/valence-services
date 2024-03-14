@@ -1,6 +1,8 @@
 use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Decimal, Env, MessageInfo, Timestamp, Uint128};
+use cosmwasm_std::{
+    coins, Addr, Api, BankMsg, CosmosMsg, Decimal, Env, MessageInfo, Timestamp, Uint128,
+};
 use cw_utils::{must_pay, Expiration};
 use std::borrow::Borrow;
 use std::hash::Hash;
@@ -156,6 +158,12 @@ pub enum PauseReason {
     /// This reason is given by the user/account, he might forget why he paused the account
     /// this will remind him of it.
     AccountReason(String),
+}
+
+impl PauseReason {
+    pub fn is_empty_balance(&self) -> bool {
+        matches!(self, PauseReason::EmptyBalance)
+    }
 }
 
 /// The strategy we will use when overriding targets
@@ -335,7 +343,14 @@ pub struct ServiceFeeConfig {
 }
 
 impl ServiceFeeConfig {
-    pub fn verify_registration_fee_paid(&self, info: &MessageInfo) -> Result<(), ValenceError> {
+    /// We verify the registration fee is paid and generate msg to send it to the manager
+    pub fn handle_registration_fee(
+        self,
+        info: &MessageInfo,
+        manager_addr: &Addr,
+    ) -> Result<Vec<CosmosMsg>, ValenceError> {
+        let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+
         if !self.register_fee.is_zero() {
             let paid = must_pay(info, &self.denom).map_err(|_| {
                 ValenceError::MustPayRegistrationFee(
@@ -350,9 +365,52 @@ impl ServiceFeeConfig {
                     self.denom.clone(),
                 ));
             }
+
+            msgs.push(self.generate_transfer_msg(paid, manager_addr).into());
         }
 
-        Ok(())
+        Ok(msgs)
+    }
+
+    /// We verify the resume fee is paid if needed and generate msg to send it to the manager
+    pub fn handle_resume_fee(
+        self,
+        info: &MessageInfo,
+        manager_addr: &Addr,
+        reason: PauseReason,
+    ) -> Result<Vec<CosmosMsg>, ValenceError> {
+        let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+
+        if !self.resume_fee.is_zero() {
+            if !reason.is_empty_balance() {
+                return Ok(msgs);
+            }
+
+            let paid = must_pay(info, &self.denom).map_err(|_| {
+                ValenceError::MustPayRegistrationFee(
+                    self.resume_fee.to_string(),
+                    self.denom.clone(),
+                )
+            })?;
+
+            if self.resume_fee != paid {
+                return Err(ValenceError::MustPayRegistrationFee(
+                    self.resume_fee.to_string(),
+                    self.denom.clone(),
+                ));
+            }
+
+            msgs.push(self.generate_transfer_msg(paid, manager_addr).into());
+        }
+
+        Ok(msgs)
+    }
+
+    fn generate_transfer_msg(self, amount: Uint128, manager_addr: &Addr) -> BankMsg {
+        BankMsg::Send {
+            to_address: manager_addr.to_string(),
+            amount: coins(amount.u128(), self.denom),
+        }
     }
 }
 

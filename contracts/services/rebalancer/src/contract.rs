@@ -99,7 +99,7 @@ pub fn execute(
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
         RebalancerExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
         RebalancerExecuteMsg::Register { register_for, data } => {
-            verify_services_manager(deps.as_ref(), &info)?;
+            let manager_addr = verify_services_manager(deps.as_ref(), &info)?;
             let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
             let registree = deps.api.addr_validate(&register_for)?;
 
@@ -108,9 +108,9 @@ pub fn execute(
             }
 
             // Verify user paid the registration fee
-            SERVICE_FEE_CONFIG
+            let fee_msg = SERVICE_FEE_CONFIG
                 .load(deps.storage)?
-                .verify_registration_fee_paid(&info)?;
+                .handle_registration_fee(&info, &manager_addr)?;
 
             // Find base denom in our whitelist
             let base_denom_whitelist = BASE_DENOM_WHITELIST
@@ -212,7 +212,7 @@ pub fn execute(
             // save config
             CONFIGS.save(deps.storage, registree, &data.to_config(deps.api)?)?;
 
-            Ok(Response::default())
+            Ok(Response::default().add_messages(fee_msg))
         }
         RebalancerExecuteMsg::Deregister { deregister_for } => {
             verify_services_manager(deps.as_ref(), &info)?;
@@ -371,7 +371,7 @@ pub fn execute(
             Err(ContractError::NotAuthorizedToPause)
         }
         RebalancerExecuteMsg::Resume { resume_for, sender } => {
-            verify_services_manager(deps.as_ref(), &info)?;
+            let manager_addr = verify_services_manager(deps.as_ref(), &info)?;
             let account = deps.api.addr_validate(&resume_for)?;
             let sender = deps.api.addr_validate(&sender)?;
 
@@ -379,6 +379,13 @@ pub fn execute(
                 .load(deps.storage, account.clone())
                 .map_err(|_| ContractError::NotPaused)?;
             let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
+
+            // Verify user paid the resume fee if its needed
+            let fee_msg = SERVICE_FEE_CONFIG.load(deps.storage)?.handle_resume_fee(
+                &info,
+                &manager_addr,
+                paused_data.reason,
+            )?;
 
             // Verify sender is autorized to resume
             (|| {
@@ -453,7 +460,7 @@ pub fn execute(
             CONFIGS.save(deps.storage, account.clone(), &paused_data.config)?;
             PAUSED_CONFIGS.remove(deps.storage, account);
 
-            Ok(Response::default())
+            Ok(Response::default().add_messages(fee_msg))
         }
         RebalancerExecuteMsg::SystemRebalance { limit } => {
             execute_system_rebalance(deps, &env, limit)

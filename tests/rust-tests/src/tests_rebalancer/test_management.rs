@@ -696,3 +696,62 @@ fn test_resume_with_fee() {
         .unwrap();
     assert_eq!(balance.amount, Uint128::new(900_u128));
 }
+
+#[test]
+fn test_fee_withdraw() {
+    let mut suite = Suite::default();
+
+    suite
+        .update_rebalancer_fees(ServiceFeeConfig {
+            denom: NTRN.to_string(),
+            register_fee: 100_u128.into(),
+            resume_fee: 100_u128.into(),
+        })
+        .unwrap();
+
+    let (account_position, _) = suite.create_temp_account(&coins(1000, NTRN.to_string()));
+    let register_data = SuiteBuilder::get_default_rebalancer_register_data();
+
+    // Register account without enough fee token should fail.
+    suite
+        .register_to_rebalancer(account_position, &register_data)
+        .unwrap();
+
+    // account balance should be 900 (1000 - 100)
+    let balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.get_account_addr(account_position), NTRN.to_string())
+        .unwrap();
+    assert_eq!(balance.amount, Uint128::new(900_u128));
+
+    // manager should have the 100 NTRN fee
+    let manager_balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.manager_addr.clone(), NTRN.to_string())
+        .unwrap();
+    assert_eq!(manager_balance.amount, Uint128::new(100_u128));
+
+    // Get initial admin balance of NTRN
+    let admin_initial_balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.admin.clone(), NTRN.to_string())
+        .unwrap();
+
+    // Do the withdraw from naanger (should send it to the admin)
+    suite.withdraw_fees_from_manager(NTRN).unwrap();
+
+    // Get balance of the admin after withdraw, should be extra 100 NTRN
+    let admin_new_balance = suite
+        .app
+        .wrap()
+        .query_balance(suite.admin.clone(), NTRN.to_string())
+        .unwrap();
+
+    assert_eq!(
+        admin_new_balance.amount,
+        admin_initial_balance.amount + Uint128::new(100_u128)
+    );
+}
