@@ -21,7 +21,7 @@ checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "auction"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "auction-package",
@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "auction-package"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -49,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "auctions-manager"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "auction",
@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "price-oracle"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "auction-package",
@@ -797,7 +797,7 @@ dependencies = [
 
 [[package]]
 name = "rebalancer"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "auction-package",
@@ -974,7 +974,7 @@ dependencies = [
 
 [[package]]
 name = "services-manager"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
@@ -1131,7 +1131,7 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "valence-account"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
@@ -1147,7 +1147,7 @@ dependencies = [
 
 [[package]]
 name = "valence-macros"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1158,7 +1158,7 @@ dependencies = [
 
 [[package]]
 name = "valence-package"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "auction-package",
  "cosmwasm-schema",

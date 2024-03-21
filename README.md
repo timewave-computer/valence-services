@@ -2,13 +2,12 @@
 
 ## Code ids
 
-- auctions manager = `752`
-- auction = `756`
-- oracle = `753`
-- rebalancer = `755`
-- services manager = `754`
-- account = `750`
-- empty = `588` // DO NOT USE
+- auctions manager = `833`
+- auction = `832`
+- oracle = `834`
+- rebalancer = `835`
+- services manager = `836`
+- account = `831`
 
 ## Owner / Admin
 
