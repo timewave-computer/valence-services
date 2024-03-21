@@ -884,3 +884,71 @@ fn test_open_auction_bid_after_end_block_passed() {
 
     assert_eq!(err, auction::error::ContractError::AuctionFinished)
 }
+
+#[test]
+fn test_minimum_amounts() {
+    let mut suite = Suite::default();
+
+    // Try to send 1 denom to the auction (minimum is 5)
+    let err = suite.auction_funds_err(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(1_u128, suite.pair.0.clone()),
+    );
+
+    // should error telling us minimum is 5
+    assert_eq!(
+        err,
+        auction::error::ContractError::AuctionAmountTooLow(5_u128.into())
+    );
+
+    // get the old balance of the account
+    let old_balance = suite.get_balance(0, suite.pair.0.as_str());
+
+    // send 5 denom to the auction
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(5_u128, suite.pair.0.clone()),
+    );
+
+    // we try to star start the auction, it doesn't fail, but doesn't start and refunds to the account the sent amount
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+
+    // get new balance of the account
+    let new_balance = suite.get_balance(0, suite.pair.0.as_str());
+    assert_eq!(old_balance.amount, new_balance.amount);
+
+    // the auction status should be still AuctionClosed
+    let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
+    assert_eq!(active_auction.status, ActiveAuctionStatus::AuctionClosed);
+
+    // send 10 denom
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(10_u128, suite.pair.0.clone()),
+    );
+    // start auction as usual
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+
+    let curr_balance = suite.get_balance(0, suite.pair.0.as_str());
+    assert_eq!(old_balance.amount - Uint128::new(10), curr_balance.amount);
+
+    // The auction status should be started, and avilable funds should be 10
+    let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
+    assert_eq!(active_auction.status, ActiveAuctionStatus::Started);
+    assert_eq!(active_auction.available_amount, Uint128::new(10));
+}

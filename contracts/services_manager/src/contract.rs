@@ -16,7 +16,7 @@ use valence_package::states::ADMIN;
 
 use crate::error::ContractError;
 use crate::helpers::{get_service_addr, save_service};
-use crate::msg::InstantiateMsg;
+use crate::msg::{InstantiateMsg, MigrateMsg};
 use crate::state::{ACCOUNT_WHITELISTED_CODE_IDS, ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
 const CONTRACT_NAME: &str = "crates.io:services-manager";
@@ -52,7 +52,7 @@ pub fn execute(
         ServicesManagerExecuteMsg::Admin(admin_msg) => {
             admin::handle_msg(deps, env, info, admin_msg)
         }
-        ServicesManagerExecuteMsg::ApproveAdminChange => {
+        ServicesManagerExecuteMsg::ApproveAdminChange {} => {
             Ok(approve_admin_change(deps, &env, &info)?)
         }
         ServicesManagerExecuteMsg::RegisterToService { service_name, data } => {
@@ -246,5 +246,14 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
 
             to_json_binary(&config)
         }
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

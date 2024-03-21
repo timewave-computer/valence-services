@@ -85,6 +85,3 @@ Example to add oracle address:
 ```sh
 ./update_oracle_addr.sh juno juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2
 ```
-
-# TODO
-Change from fixed fees to gas auto once juno testnet is fixed.

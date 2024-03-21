@@ -166,10 +166,17 @@
       },
       {
         "description": "Message to aprprove the admin change if you are the new admin",
-        "type": "string",
-        "enum": [
+        "type": "object",
+        "required": [
           "approve_admin_change"
-        ]
+        ],
+        "properties": {
+          "approve_admin_change": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
         "description": "Add admin messages",
@@ -373,6 +380,27 @@
                   },
                   "expiration": {
                     "$ref": "#/definitions/Expiration"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "withdraw"
+            ],
+            "properties": {
+              "withdraw": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
                   }
                 },
                 "additionalProperties": false

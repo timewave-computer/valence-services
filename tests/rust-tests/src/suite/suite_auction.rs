@@ -4,6 +4,7 @@ use auction::{
 };
 use auction_package::{
     helpers::{ChainHaltConfig, GetPriceResponse},
+    states::MinAmount,
     AuctionStrategy, Pair, PriceFreshnessStrategy,
 };
 use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, Uint128};
@@ -18,7 +19,7 @@ impl Suite {
         &mut self,
         pair: Pair,
         init_msg: auction::msg::InstantiateMsg,
-        min_amount: Option<Uint128>,
+        min_amount: Option<MinAmount>,
     ) -> &mut Self {
         self.app
             .execute_contract(
@@ -52,7 +53,7 @@ impl Suite {
     pub fn init_auction_err(
         &mut self,
         init_msg: auction::msg::InstantiateMsg,
-        min_amount: Option<Uint128>,
+        min_amount: Option<MinAmount>,
     ) -> anyhow::Error {
         self.app
             .execute_contract(
@@ -74,7 +75,7 @@ impl Suite {
             .execute_contract(
                 user,
                 auction_addr,
-                &auction::msg::ExecuteMsg::AuctionFunds,
+                &auction::msg::ExecuteMsg::AuctionFunds {},
                 amount,
             )
             .unwrap();
@@ -92,7 +93,7 @@ impl Suite {
             .execute_contract(
                 user,
                 auction_addr,
-                &auction::msg::ExecuteMsg::AuctionFunds,
+                &auction::msg::ExecuteMsg::AuctionFunds {},
                 amount,
             )
             .unwrap_err()
@@ -154,7 +155,7 @@ impl Suite {
         self.app.execute_contract(
             self.mm.clone(),
             auction_addr,
-            &auction::msg::ExecuteMsg::Bid,
+            &auction::msg::ExecuteMsg::Bid {},
             &[amount],
         )
     }
@@ -173,7 +174,7 @@ impl Suite {
             .execute_contract(
                 self.mm.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::Bid,
+                &auction::msg::ExecuteMsg::Bid {},
                 &[amount],
             )
             .unwrap_err()
@@ -231,25 +232,39 @@ impl Suite {
 
         self.rebalance(None).unwrap();
 
-        // Its find if we can't update price yet
+        // Its fine if we can't update price yet
         let _ = self.update_price(pair1.clone(), None);
         let _ = self.update_price(pair2.clone(), None);
 
+        let _ = self.start_auction(
+            pair1.clone(),
+            None,
+            self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+        );
         let auction1_started = self
-            .start_auction(
-                pair1.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+            .query_auction_details(
+                self.auction_addrs
+                    .get(&pair1.clone().into())
+                    .unwrap()
+                    .clone(),
             )
-            .is_ok();
+            .status
+            == auction::state::ActiveAuctionStatus::Started;
 
+        let _ = self.start_auction(
+            pair2.clone(),
+            None,
+            self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+        );
         let auction2_started = self
-            .start_auction(
-                pair2.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+            .query_auction_details(
+                self.auction_addrs
+                    .get(&pair2.clone().into())
+                    .unwrap()
+                    .clone(),
             )
-            .is_ok();
+            .status
+            == auction::state::ActiveAuctionStatus::Started;
 
         self.update_block(HALF_DAY / DEFAULT_BLOCK_TIME);
 
@@ -340,7 +355,7 @@ impl Suite {
             .execute_contract(
                 self.mm.clone(),
                 self.get_default_auction_addr(),
-                &auction::msg::ExecuteMsg::Bid,
+                &auction::msg::ExecuteMsg::Bid {},
                 &coins(amount.u128(), self.pair.1.clone()),
             )
             .unwrap()
@@ -376,7 +391,7 @@ impl Suite {
             .execute_contract(
                 self.auctions_manager_addr.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::CleanAfterAuction,
+                &auction::msg::ExecuteMsg::CleanAfterAuction {},
                 &[],
             )
             .unwrap();
@@ -389,7 +404,7 @@ impl Suite {
             .execute_contract(
                 self.auctions_manager_addr.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::CleanAfterAuction,
+                &auction::msg::ExecuteMsg::CleanAfterAuction {},
                 &[],
             )
             .unwrap_err()
@@ -490,7 +505,7 @@ impl Suite {
         self.app.execute_contract(
             user,
             auction_addr,
-            &auction::msg::ExecuteMsg::WithdrawFunds,
+            &auction::msg::ExecuteMsg::WithdrawFunds {},
             &[],
         )
     }
@@ -540,16 +555,17 @@ impl Suite {
             .price
     }
 
-    pub fn get_min_limit(&mut self, denom: &str) -> Uint128 {
+    pub fn get_send_min_limit(&mut self, denom: &str) -> Uint128 {
         self.app
             .wrap()
-            .query_wasm_smart(
+            .query_wasm_smart::<MinAmount>(
                 self.auctions_manager_addr.clone(),
                 &auction_package::msgs::AuctionsManagerQueryMsg::GetMinLimit {
                     denom: denom.to_string(),
                 },
             )
             .unwrap()
+            .send
     }
 
     pub fn query_auction_details(&self, auction_addr: Addr) -> ActiveAuction {

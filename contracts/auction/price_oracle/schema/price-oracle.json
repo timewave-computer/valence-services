@@ -21,13 +21,6 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
-        "type": "string",
-        "enum": [
-          "cancel_admin_change",
-          "approve_admin_change"
-        ]
-      },
-      {
         "type": "object",
         "required": [
           "update_price"
@@ -78,6 +71,32 @@
                 "$ref": "#/definitions/Expiration"
               }
             },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "cancel_admin_change"
+        ],
+        "properties": {
+          "cancel_admin_change": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "approve_admin_change"
+        ],
+        "properties": {
+          "approve_admin_change": {
+            "type": "object",
             "additionalProperties": false
           }
         },

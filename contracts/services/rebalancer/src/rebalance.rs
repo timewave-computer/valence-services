@@ -1,6 +1,10 @@
 use std::{borrow::BorrowMut, collections::HashMap, str::FromStr};
 
-use auction_package::{helpers::GetPriceResponse, states::MIN_AUCTION_AMOUNT, Pair};
+use auction_package::{
+    helpers::GetPriceResponse,
+    states::{MinAmount, MIN_AUCTION_AMOUNT},
+    Pair,
+};
 use cosmwasm_std::{
     coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Event, Order,
     Response, StdError, SubMsg, Uint128, WasmMsg,
@@ -315,10 +319,13 @@ pub(crate) fn set_auction_min_amounts(
                     auction_manager.clone(),
                     sell_token.target.denom.clone(),
                 )? {
-                    Some(min_amount) => {
+                    Some(MinAmount {
+                        send: min_send_amount,
+                        ..
+                    }) => {
                         sell_token.auction_min_amount =
-                            Decimal::from_atomics(min_amount, 0)? / sell_token.price;
-                        min_amount_limits.push((sell_token.target.denom.clone(), min_amount));
+                            Decimal::from_atomics(min_send_amount, 0)? / sell_token.price;
+                        min_amount_limits.push((sell_token.target.denom.clone(), min_send_amount));
                         Ok(())
                     }
                     None => Err(ContractError::NoMinAuctionAmountFound),

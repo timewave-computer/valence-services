@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use auction_package::Pair;
+use auction_package::{states::MinAmount, Pair};
 use cosmwasm_schema::serde;
 use cosmwasm_std::{coin, coins, from_json, Addr, Decimal, Uint128};
 use cw_multi_test::{App, AppBuilder, Executor};
@@ -243,7 +243,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_ntrn().into(),
-                    min_amount: Some(Uint128::new(5)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],
@@ -257,7 +260,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_osmo().into(),
-                    min_amount: Some(Uint128::new(5)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],
@@ -271,7 +277,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_atom().into(),
-                    min_amount: Some(Uint128::new(10)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],
@@ -285,7 +294,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_osmo().into(),
-                    min_amount: Some(Uint128::new(10)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],
@@ -299,7 +311,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_atom().into(),
-                    min_amount: Some(Uint128::new(10)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],
@@ -313,7 +328,10 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_ntrn().into(),
-                    min_amount: Some(Uint128::new(10)),
+                    min_amount: Some(MinAmount {
+                        send: Uint128::new(5),
+                        start_auction: Uint128::new(10),
+                    }),
                 },
             )),
             &[],

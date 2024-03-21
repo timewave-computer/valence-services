@@ -88,7 +88,7 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
-        ExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
+        ExecuteMsg::ApproveAdminChange {} => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
@@ -235,18 +235,10 @@ mod admin {
 
                 Ok(Response::default().add_message(migrate_msg))
             }
-            AdminMsgs::UpdateActiveAuction { pair, params } => {
-                let pair_addr = PAIRS.load(deps.storage, pair)?;
+            AdminMsgs::UpdateMinAmount { denom, min_amount } => {
+                MIN_AUCTION_AMOUNT.save(deps.storage, denom, &min_amount)?;
 
-                let msg = WasmMsg::Execute {
-                    contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
-                        auction::msg::AdminMsgs::UpdateActiveAuction(params),
-                    )))?,
-                    funds: vec![],
-                };
-
-                Ok(Response::default().add_message(msg))
+                Ok(Response::default())
             }
             AdminMsgs::StartAdminChange { addr, expiration } => {
                 Ok(start_admin_change(deps, &info, &addr, expiration)?)
@@ -309,6 +301,6 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     match msg {
-        MigrateMsg::NoStateChange => Ok(Response::default()),
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

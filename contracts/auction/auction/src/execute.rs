@@ -33,7 +33,7 @@ pub(crate) fn auction_funds(
 
     let funds = must_pay(info, &config.pair.0)?;
     let min_amount = match MIN_AUCTION_AMOUNT.query(&deps.querier, admin, config.pair.0)? {
-        Some(amount) => Ok(amount),
+        Some(amount) => Ok(amount.send),
         None => Err(ContractError::NoTokenMinAmount),
     }?;
 

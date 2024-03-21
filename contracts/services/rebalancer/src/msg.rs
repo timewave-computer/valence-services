@@ -25,10 +25,13 @@ pub struct InstantiateMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    // /// Returns true if `address` is in the queue, and false
-    // /// otherwise.
     #[returns(RebalancerConfig)]
     GetConfig { addr: String },
+    #[returns(Vec<(Addr, RebalancerConfig)>)]
+    GetAllConfigs {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
     #[returns(PauseData)]
     GetPausedConfig { addr: String },
     #[returns(SystemRebalanceStatus)]
@@ -42,7 +45,9 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    NoStateChange {},
+}
 
 #[cw_serde]
 pub struct WhitelistsResponse {

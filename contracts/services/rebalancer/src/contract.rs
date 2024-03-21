@@ -9,6 +9,7 @@ use cosmwasm_std::{
     Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use valence_package::error::ValenceError;
 use valence_package::helpers::{approve_admin_change, verify_services_manager, OptionalField};
 use valence_package::services::rebalancer::{
@@ -17,7 +18,7 @@ use valence_package::services::rebalancer::{
 use valence_package::states::{QueryFeeAction, ADMIN, SERVICES_MANAGER, SERVICE_FEE_CONFIG};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, ManagersAddrsResponse, QueryMsg, WhitelistsResponse};
+use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
     AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
@@ -27,7 +28,6 @@ use crate::state::{
 const CONTRACT_NAME: &str = "crates.io:rebalancer";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// TODO: Make cycle period configurable
 pub const DEFAULT_CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
 /// The default limit of how many accounts we loop over in a single message
 /// If wasn't specified in the message
@@ -632,6 +632,22 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
             to_json_binary::<Option<Coin>>(&None)
         }
+        QueryMsg::GetAllConfigs { start_after, limit } => {
+            let start_after =
+                start_after.map(|addr| Bound::inclusive(deps.api.addr_validate(&addr).unwrap()));
+
+            let configs = CONFIGS
+                .range(
+                    deps.storage,
+                    start_after,
+                    None,
+                    cosmwasm_std::Order::Ascending,
+                )
+                .take(limit.unwrap_or(50) as usize)
+                .collect::<Result<Vec<_>, StdError>>()?;
+
+            to_json_binary(&configs)
+        }
     }
 }
 
@@ -642,5 +658,14 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
             Event::new("fail-rebalance").add_attribute("error", msg.result.unwrap_err()),
         )),
         _ => Err(ContractError::UnexpectedReplyId(msg.id)),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

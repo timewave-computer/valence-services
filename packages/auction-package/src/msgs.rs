@@ -1,8 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Addr;
 
 use crate::{
     helpers::{AuctionConfig, GetPriceResponse},
+    states::MinAmount,
     Pair,
 };
 
@@ -25,7 +26,7 @@ pub enum AuctionsManagerQueryMsg {
     #[returns(Addr)]
     GetOracleAddr,
 
-    #[returns(Uint128)]
+    #[returns(MinAmount)]
     GetMinLimit { denom: String },
 
     #[returns(Addr)]

@@ -172,8 +172,10 @@ pub fn execute(
         AccountBaseExecuteMsg::StartAdminChange { addr, expiration } => {
             Ok(start_admin_change(deps, &info, &addr, expiration)?)
         }
-        AccountBaseExecuteMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
-        AccountBaseExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
+        AccountBaseExecuteMsg::CancelAdminChange {} => Ok(cancel_admin_change(deps, &info)?),
+        AccountBaseExecuteMsg::ApproveAdminChange {} => {
+            Ok(approve_admin_change(deps, &env, &info)?)
+        }
     }
 }
 
@@ -259,6 +261,6 @@ pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, Contract
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     match msg {
-        MigrateMsg::NoStateChange => Ok(Response::default()),
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

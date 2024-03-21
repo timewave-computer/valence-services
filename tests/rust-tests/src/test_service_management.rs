@@ -514,7 +514,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.manager_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -539,7 +539,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap();
@@ -586,7 +586,7 @@ fn test_update_admin_cancel() {
         .execute_contract(
             new_admin,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -619,7 +619,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             random_addr,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -632,7 +632,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             new_admin,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();

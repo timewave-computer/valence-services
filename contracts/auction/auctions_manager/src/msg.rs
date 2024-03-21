@@ -1,13 +1,14 @@
 use auction::msg::NewAuctionParams;
-use auction_package::{helpers::ChainHaltConfig, AuctionStrategy, Pair, PriceFreshnessStrategy};
+use auction_package::{
+    helpers::ChainHaltConfig, states::MinAmount, AuctionStrategy, Pair, PriceFreshnessStrategy,
+};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
 use cw_utils::Expiration;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub auction_code_id: u64,
-    pub min_auction_amount: Vec<(String, Uint128)>,
+    pub min_auction_amount: Vec<(String, MinAmount)>,
 }
 
 #[cw_serde]
@@ -15,20 +16,20 @@ pub enum ExecuteMsg {
     AuctionFunds { pair: Pair },
     WithdrawFunds { pair: Pair },
     FinishAuction { pair: Pair, limit: u64 },
-    ApproveAdminChange,
+    ApproveAdminChange {},
     Admin(Box<AdminMsgs>),
 }
 
 #[cw_serde]
 pub enum MigrateMsg {
-    NoStateChange,
+    NoStateChange {},
 }
 
 #[cw_serde]
 pub enum AdminMsgs {
     NewAuction {
         msg: auction::msg::InstantiateMsg,
-        min_amount: Option<Uint128>,
+        min_amount: Option<MinAmount>,
     },
     OpenAuction {
         pair: Pair,
@@ -46,6 +47,10 @@ pub enum AdminMsgs {
     UpdateOracle {
         oracle_addr: String,
     },
+    UpdateMinAmount {
+        denom: String,
+        min_amount: MinAmount,
+    },
     UpdateStrategy {
         pair: Pair,
         strategy: AuctionStrategy,
@@ -57,10 +62,6 @@ pub enum AdminMsgs {
     UpdatePriceFreshnessStrategy {
         pair: Pair,
         strategy: PriceFreshnessStrategy,
-    },
-    UpdateActiveAuction {
-        pair: Pair,
-        params: auction::state::ActiveAuction,
     },
     MigrateAuction {
         pair: Pair,

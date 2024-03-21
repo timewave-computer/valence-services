@@ -43,7 +43,7 @@ pub fn valence_service_manager_execute_msgs(
               resume_for: String
           },
           /// Message to aprprove the admin change if you are the new admin
-          ApproveAdminChange,
+          ApproveAdminChange {},
       }
     };
 
@@ -98,8 +98,8 @@ pub fn valence_account_execute_msgs(metadata: TokenStream, input: TokenStream) -
           addr: String,
           expiration: Expiration,
         },
-        CancelAdminChange,
-        ApproveAdminChange,
+        CancelAdminChange {},
+        ApproveAdminChange {},
       }
     };
 

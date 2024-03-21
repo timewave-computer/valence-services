@@ -20,8 +20,8 @@ pub enum ExecuteMsg {
         addr: String,
         expiration: Expiration,
     },
-    CancelAdminChange,
-    ApproveAdminChange,
+    CancelAdminChange {},
+    ApproveAdminChange {},
 }
 
 #[cw_serde]
@@ -37,4 +37,6 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub enum MigrateMsg {}
+pub enum MigrateMsg {
+    NoStateChange {},
+}

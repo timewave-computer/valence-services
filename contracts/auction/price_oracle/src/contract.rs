@@ -11,7 +11,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, CONFIG};
 
 const CONTRACT_NAME: &str = "crates.io:oracle";
@@ -107,8 +107,8 @@ pub fn execute(
         ExecuteMsg::StartAdminChange { addr, expiration } => {
             Ok(start_admin_change(deps, &info, &addr, expiration)?)
         }
-        ExecuteMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
-        ExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
+        ExecuteMsg::CancelAdminChange {} => Ok(cancel_admin_change(deps, &info)?),
+        ExecuteMsg::ApproveAdminChange {} => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
@@ -125,5 +125,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             Ok(to_json_binary(&config)?)
         }
         QueryMsg::GetAdmin => Ok(to_json_binary(&ADMIN.load(deps.storage)?)?),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

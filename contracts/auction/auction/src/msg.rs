@@ -20,19 +20,19 @@ pub enum ExecuteMsg {
     /// Send funds to be auctioned on the next auction, can only be called by the admin/auctions manager
     AuctionFundsManager { sender: Addr },
     /// Send funds to be auctioned on the next auction
-    AuctionFunds,
+    AuctionFunds {},
     /// Withdraw funds from future auction, can only be called by the admin/auctions manager
     WithdrawFundsManager { sender: Addr },
     /// Withdraw funds from future auction
-    WithdrawFunds,
+    WithdrawFunds {},
     /// Bid on the current auction
-    Bid,
+    Bid {},
     /// Finish the current auction and send funds to the funds provider
     /// Send pair.1 according to the weight of the funds provider from the total amount
     /// If we have unsold pair.0, send to funds provider according to provided weight
     FinishAuction { limit: u64 },
     /// Message to clean finished auction unneeded storage
-    CleanAfterAuction,
+    CleanAfterAuction {},
     /// Admin messages that can only be called by the auctions manager
     Admin(Box<AdminMsgs>),
 }
@@ -60,8 +60,6 @@ pub enum AdminMsgs {
     UpdateChainHaltConfig(ChainHaltConfig),
     /// Update the price freshness strategy
     UpdatePriceFreshnessStrategy(PriceFreshnessStrategy),
-    /// update active auction values
-    UpdateActiveAuction(ActiveAuction),
 }
 
 #[cw_serde]
@@ -96,7 +94,8 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub enum MigrateMsg {
-    NoStateChange,
+    NoStateChange {},
+    ToV1 {},
 }
 
 #[cw_serde]

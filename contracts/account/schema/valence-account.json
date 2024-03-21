@@ -23,13 +23,6 @@
     "description": "This is base account execute msgs, it implements messages to be called on the service manager as well as messages to be called by services (valence_account_execute)",
     "oneOf": [
       {
-        "type": "string",
-        "enum": [
-          "cancel_admin_change",
-          "approve_admin_change"
-        ]
-      },
-      {
         "description": "Register account to a service.",
         "type": "object",
         "required": [
@@ -262,6 +255,32 @@
                 "$ref": "#/definitions/Expiration"
               }
             },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "cancel_admin_change"
+        ],
+        "properties": {
+          "cancel_admin_change": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "approve_admin_change"
+        ],
+        "properties": {
+          "approve_admin_change": {
+            "type": "object",
             "additionalProperties": false
           }
         },
