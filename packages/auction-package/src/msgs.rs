@@ -11,6 +11,13 @@ use crate::{
 #[derive(QueryResponses)]
 pub enum AuctionsManagerQueryMsg {
     /// Get the price of a specific pair
+    #[returns(Vec<(Pair, Addr)>)]
+    GetPairs {
+        start_after: Option<Pair>,
+        limit: Option<u32>,
+    },
+
+    /// Get the price of a specific pair
     #[returns(GetPriceResponse)]
     GetPrice { pair: Pair },
 

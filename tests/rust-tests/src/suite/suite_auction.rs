@@ -4,6 +4,7 @@ use auction::{
 };
 use auction_package::{
     helpers::{ChainHaltConfig, GetPriceResponse},
+    msgs::AuctionsManagerQueryMsg,
     states::MinAmount,
     AuctionStrategy, Pair, PriceFreshnessStrategy,
 };
@@ -637,6 +638,19 @@ impl Suite {
             .query_wasm_smart(
                 self.oracle_addr.clone(),
                 &price_oracle::msg::QueryMsg::GetConfig,
+            )
+            .unwrap()
+    }
+
+    pub fn query_auctions_manager_all_pairs(&self) -> Vec<(Pair, Addr)> {
+        self.app
+            .wrap()
+            .query_wasm_smart(
+                self.auctions_manager_addr.clone(),
+                &AuctionsManagerQueryMsg::GetPairs {
+                    start_after: None,
+                    limit: None,
+                },
             )
             .unwrap()
     }

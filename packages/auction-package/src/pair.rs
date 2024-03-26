@@ -1,6 +1,7 @@
 use std::fmt;
 
-use cw_storage_plus::PrimaryKey;
+use cosmwasm_std::{from_json, StdError, StdResult};
+use cw_storage_plus::{KeyDeserialize, PrimaryKey};
 use serde::{
     de,
     ser::{self, SerializeSeq},
@@ -52,6 +53,12 @@ impl From<Pair> for (String, String) {
     }
 }
 
+impl From<Vec<u8>> for Pair {
+    fn from(value: Vec<u8>) -> Self {
+        from_json(value).expect("couldn't parse Pair from Vec<u8>")
+    }
+}
+
 /// Serializes as a decimal string
 impl Serialize for Pair {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -95,6 +102,27 @@ impl<'de> de::Visitor<'de> for PairVisitor {
             .next_element()?
             .ok_or_else(|| de::Error::invalid_length(0, &self))?;
         Ok(Pair(first, second))
+    }
+}
+
+fn parse_length(value: &[u8]) -> StdResult<usize> {
+    Ok(u16::from_be_bytes(
+        value
+            .try_into()
+            .map_err(|_| StdError::generic_err("Could not read 2 byte length"))?,
+    )
+    .into())
+}
+
+impl KeyDeserialize for Pair {
+    type Output = Pair;
+
+    fn from_vec(mut value: Vec<u8>) -> cosmwasm_std::StdResult<Self::Output> {
+        let mut tu = value.split_off(2);
+        let t_len = parse_length(&value)?;
+        let u = tu.split_off(t_len);
+
+        Ok((String::from_vec(tu)?, String::from_vec(u)?).into())
     }
 }
 

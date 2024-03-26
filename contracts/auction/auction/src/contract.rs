@@ -288,8 +288,6 @@ mod admin {
             })
             .collect::<StdResult<Vec<BankMsg>>>()?;
 
-        deps.api.debug(format!("Refunding {bank_msgs:?}").as_str());
-
         AUCTION_FUNDS_SUM.save(deps.storage, auction_id, &Uint128::zero())?;
         AUCTION_FUNDS.clear(deps.storage);
 

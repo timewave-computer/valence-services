@@ -16,7 +16,7 @@ use valence_package::services::{
 use super::{instantiates::AccountInstantiate, suite_builder::SuiteBuilder};
 
 pub const ATOM: &str = "uatom";
-pub const NTRN: &str = "untrn";
+pub const NTRN: &str = "ibc/untrn";
 pub const OSMO: &str = "uosmo";
 
 pub const ADMIN: &str = "admin";

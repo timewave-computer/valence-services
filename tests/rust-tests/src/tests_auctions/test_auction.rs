@@ -952,3 +952,12 @@ fn test_minimum_amounts() {
     assert_eq!(active_auction.status, ActiveAuctionStatus::Started);
     assert_eq!(active_auction.available_amount, Uint128::new(10));
 }
+
+#[test]
+fn test_all_pairs_query() {
+    let suite = Suite::default();
+
+    // Should be successful query and not empty
+    let pairs = suite.query_auctions_manager_all_pairs();
+    assert!(!pairs.is_empty())
+}

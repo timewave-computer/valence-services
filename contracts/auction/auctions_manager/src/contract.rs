@@ -4,9 +4,11 @@ use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, ORACLE_ADDR, PAIRS};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdResult,
+    WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use cw_utils::{nonpayable, parse_reply_instantiate_data};
 
 use crate::error::ContractError;
@@ -251,6 +253,15 @@ mod admin {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: AuctionsManagerQueryMsg) -> StdResult<Binary> {
     match msg {
+        AuctionsManagerQueryMsg::GetPairs { start_after, limit } => {
+            let start_after = start_after.map(Bound::exclusive);
+            let pairs = PAIRS
+                .range(deps.storage, start_after, None, Order::Ascending)
+                .take(limit.unwrap_or(50) as usize)
+                .collect::<StdResult<Vec<_>>>()?;
+
+            to_json_binary(&pairs)
+        }
         AuctionsManagerQueryMsg::GetPairAddr { pair } => {
             to_json_binary(&PAIRS.load(deps.storage, pair)?)
         }
