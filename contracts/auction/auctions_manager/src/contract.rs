@@ -1,6 +1,8 @@
 use auction_package::helpers::{approve_admin_change, GetPriceResponse};
 use auction_package::msgs::AuctionsManagerQueryMsg;
-use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, ORACLE_ADDR, PAIRS};
+use auction_package::states::{
+    MinAmount, ADMIN, MIN_AUCTION_AMOUNT, MIN_AUCTION_AMOUNT_V0, ORACLE_ADDR, PAIRS,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -313,5 +315,25 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     match msg {
         MigrateMsg::NoStateChange {} => Ok(Response::default()),
+        MigrateMsg::ToV1 {} => {
+            let mins = MIN_AUCTION_AMOUNT_V0
+                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .collect::<StdResult<Vec<_>>>()?;
+
+            mins.iter().for_each(|(denom, amount)| {
+                MIN_AUCTION_AMOUNT
+                    .save(
+                        deps.storage,
+                        denom.to_string(),
+                        &MinAmount {
+                            send: *amount,
+                            start_auction: *amount,
+                        },
+                    )
+                    .unwrap();
+            });
+
+            Ok(Response::default())
+        }
     }
 }

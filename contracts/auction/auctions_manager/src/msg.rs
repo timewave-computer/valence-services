@@ -23,6 +23,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     NoStateChange {},
+    ToV1 {},
 }
 
 #[cw_serde]
