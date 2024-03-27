@@ -30,6 +30,7 @@ pub enum MigrateMsg {
 pub enum AdminMsgs {
     NewAuction {
         msg: auction::msg::InstantiateMsg,
+        label: String,
         min_amount: Option<MinAmount>,
     },
     OpenAuction {

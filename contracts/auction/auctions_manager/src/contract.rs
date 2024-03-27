@@ -114,7 +114,11 @@ mod admin {
         verify_admin(deps.as_ref(), &info)?;
 
         match msg {
-            AdminMsgs::NewAuction { msg, min_amount } => {
+            AdminMsgs::NewAuction {
+                msg,
+                label,
+                min_amount,
+            } => {
                 msg.pair.verify()?;
 
                 // Make sure we either set min_amount, or have it in storage
@@ -139,7 +143,7 @@ mod admin {
                         code_id: AUCTION_CODE_ID.load(deps.storage)?,
                         msg: to_json_binary(&msg)?,
                         funds: vec![],
-                        label: format!("auction-{}-{}", msg.pair.0, msg.pair.1),
+                        label,
                     },
                     INSTANTIATE_AUCTION_REPLY_ID,
                 );

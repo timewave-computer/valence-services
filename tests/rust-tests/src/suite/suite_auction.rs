@@ -29,6 +29,7 @@ impl Suite {
                 &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg.clone(),
+                        label: "label".to_string(),
                         min_amount,
                     },
                 )),
@@ -63,6 +64,7 @@ impl Suite {
                 &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg,
+                        label: "label".to_string(),
                         min_amount,
                     },
                 )),

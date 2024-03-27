@@ -243,6 +243,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_ntrn().into(),
+                    label: "atom-ntrn".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
@@ -260,6 +261,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::atom_osmo().into(),
+                    label: "atom-osmo".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
@@ -277,6 +279,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_atom().into(),
+                    label: "ntrn-atom".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
@@ -294,6 +297,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::ntrn_osmo().into(),
+                    label: "ntrn-osmo".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
@@ -311,6 +315,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_atom().into(),
+                    label: "osmo-atom".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
@@ -328,6 +333,7 @@ impl SuiteBuilder {
             &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::NewAuction {
                     msg: AuctionInstantiate::osmo_ntrn().into(),
+                    label: "osmo_ntrn".to_string(),
                     min_amount: Some(MinAmount {
                         send: Uint128::new(5),
                         start_auction: Uint128::new(10),
