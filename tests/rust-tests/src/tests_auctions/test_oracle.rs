@@ -293,3 +293,33 @@ fn test_manual_price_update() {
         price_oracle::error::ContractError::NoTermsForManualUpdate
     );
 }
+
+#[test]
+fn test_update_config() {
+    let mut suite = Suite::default();
+
+    let oracle_config = suite.query_oracle_config();
+
+    let new_addr = "some_addr";
+
+    suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.oracle_addr.clone(),
+            &price_oracle::msg::ExecuteMsg::UpdateConfig {
+                auction_manager_addr: Some(new_addr.to_string()),
+                seconds_allow_manual_change: Some(12),
+                seconds_auction_prices_fresh: Some(455),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let new_oracle_config = suite.query_oracle_config();
+
+    assert_ne!(new_oracle_config, oracle_config);
+    assert_eq!(new_oracle_config.auction_manager_addr, new_addr.to_string());
+    assert_eq!(new_oracle_config.seconds_allow_manual_change, 12);
+    assert_eq!(new_oracle_config.seconds_auction_prices_fresh, 455);
+}

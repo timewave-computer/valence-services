@@ -1,6 +1,6 @@
 {
   "contract_name": "price-oracle",
-  "contract_version": "1.1.0",
+  "contract_version": "1.2.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -127,6 +127,43 @@
                 "items": {
                   "$ref": "#/definitions/PriceStep"
                 }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "update_config"
+        ],
+        "properties": {
+          "update_config": {
+            "type": "object",
+            "properties": {
+              "auction_manager_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "seconds_allow_manual_change": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "seconds_auction_prices_fresh": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
