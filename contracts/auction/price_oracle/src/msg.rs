@@ -52,4 +52,5 @@ pub enum QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     NoStateChange {},
+    ToV1 {},
 }

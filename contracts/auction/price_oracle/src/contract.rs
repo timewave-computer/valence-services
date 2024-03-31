@@ -12,7 +12,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, PriceStep, ASTRO_PRICE_PATHS, CONFIG};
+use crate::state::{Config, PriceStep, ASTRO_PRICE_PATHS, CONFIG, CONFIG_V0};
 
 const CONTRACT_NAME: &str = "crates.io:oracle";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -268,5 +268,16 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     match msg {
         MigrateMsg::NoStateChange {} => Ok(Response::default()),
+        MigrateMsg::ToV1 {} => {
+            let config_v0 = CONFIG_V0.load(deps.storage)?;
+            let config = Config {
+                auction_manager_addr: config_v0.auction_manager_addr,
+                seconds_allow_manual_change: 60 * 60 * 24 * 2, // 2 days
+                seconds_auction_prices_fresh: 60 * 60 * 24 * 3, // 3 days
+            };
+
+            CONFIG.save(deps.storage, &config)?;
+            Ok(Response::default())
+        }
     }
 }
