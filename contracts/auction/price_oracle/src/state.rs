@@ -3,14 +3,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 
-pub const CONFIG_V0: Item<ConfigV0> = Item::new("config");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const ASTRO_PRICE_PATHS: Map<Pair, Vec<PriceStep>> = Map::new("astro_price_paths");
-
-#[cw_serde]
-pub struct ConfigV0 {
-    pub auction_manager_addr: Addr,
-}
 
 #[cw_serde]
 pub struct Config {

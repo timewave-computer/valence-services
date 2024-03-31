@@ -12,7 +12,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, PriceStep, ASTRO_PRICE_PATHS, CONFIG, CONFIG_V0};
+use crate::state::{Config, PriceStep, ASTRO_PRICE_PATHS, CONFIG};
 
 const CONTRACT_NAME: &str = "crates.io:oracle";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -160,6 +160,31 @@ pub fn execute(
 
             Ok(Response::default())
         }
+        ExecuteMsg::UpdateConfig {
+            auction_manager_addr,
+            seconds_allow_manual_change,
+            seconds_auction_prices_fresh,
+        } => {
+            verify_admin(deps.as_ref(), &info)?;
+
+            let mut config = CONFIG.load(deps.storage)?;
+
+            if let Some(auction_manager_addr) = auction_manager_addr {
+                config.auction_manager_addr = deps.api.addr_validate(&auction_manager_addr)?;
+            }
+
+            if let Some(seconds_allow_manual_change) = seconds_allow_manual_change {
+                config.seconds_allow_manual_change = seconds_allow_manual_change;
+            }
+
+            if let Some(seconds_auction_prices_fresh) = seconds_auction_prices_fresh {
+                config.seconds_auction_prices_fresh = seconds_auction_prices_fresh;
+            }
+
+            CONFIG.save(deps.storage, &config)?;
+
+            Ok(Response::default())
+        }
         ExecuteMsg::StartAdminChange { addr, expiration } => {
             Ok(start_admin_change(deps, &info, &addr, expiration)?)
         }
@@ -268,16 +293,5 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     match msg {
         MigrateMsg::NoStateChange {} => Ok(Response::default()),
-        MigrateMsg::ToV1 {} => {
-            let config_v0 = CONFIG_V0.load(deps.storage)?;
-            let config = Config {
-                auction_manager_addr: config_v0.auction_manager_addr,
-                seconds_allow_manual_change: 60 * 60 * 24 * 2, // 2 days
-                seconds_auction_prices_fresh: 60 * 60 * 24 * 3, // 3 days
-            };
-
-            CONFIG.save(deps.storage, &config)?;
-            Ok(Response::default())
-        }
     }
 }

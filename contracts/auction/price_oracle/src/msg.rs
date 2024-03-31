@@ -29,6 +29,11 @@ pub enum ExecuteMsg {
         pair: Pair,
         path: Vec<PriceStep>,
     },
+    UpdateConfig {
+        auction_manager_addr: Option<String>,
+        seconds_allow_manual_change: Option<u64>,
+        seconds_auction_prices_fresh: Option<u64>,
+    },
     StartAdminChange {
         addr: String,
         expiration: Expiration,
@@ -52,5 +57,4 @@ pub enum QueryMsg {
 #[cw_serde]
 pub enum MigrateMsg {
     NoStateChange {},
-    ToV1 {},
 }
