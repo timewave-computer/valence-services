@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Timestamp};
 
@@ -51,4 +53,10 @@ pub struct PriceFreshnessStrategy {
 pub struct Price {
     pub price: Decimal,
     pub time: Timestamp,
+}
+
+impl Display for Price {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Price: {}, Time: {}", self.price, self.time)
+    }
 }

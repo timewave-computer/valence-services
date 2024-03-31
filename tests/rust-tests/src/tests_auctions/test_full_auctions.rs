@@ -1,7 +1,10 @@
 use auction::state::ActiveAuctionStatus;
 use cosmwasm_std::{coins, testing::mock_env, Uint128};
 
-use crate::suite::{suite::Suite, suite_builder::SuiteBuilder};
+use crate::suite::{
+    suite::{Suite, DEFAULT_BALANCE_AMOUNT},
+    suite_builder::SuiteBuilder,
+};
 
 #[test]
 fn test_close_auction() {
@@ -41,7 +44,10 @@ fn test_close_auction() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.0.clone())
         .unwrap();
-    assert_eq!(mm_balance.amount, Uint128::from(1000001000_u128));
+    assert_eq!(
+        mm_balance.amount,
+        DEFAULT_BALANCE_AMOUNT + Uint128::from(1000_u128)
+    );
 }
 
 #[test]
@@ -81,7 +87,10 @@ fn test_close_auction_time() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.0.clone())
         .unwrap();
-    assert_eq!(mm_balance.amount, Uint128::from(1000000500_u128));
+    assert_eq!(
+        mm_balance.amount,
+        DEFAULT_BALANCE_AMOUNT + Uint128::from(500_u128)
+    );
 }
 
 #[test]
@@ -118,7 +127,7 @@ fn test_close_auction_no_bids() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.0.clone())
         .unwrap();
-    assert_eq!(mm_balance.amount, Uint128::from(1000000000_u128));
+    assert_eq!(mm_balance.amount, DEFAULT_BALANCE_AMOUNT);
 }
 
 #[test]
@@ -195,7 +204,10 @@ fn test_auction_multiple_providers() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.0.clone())
         .unwrap();
-    assert_eq!(mm_balance.amount.u128(), 1000003000_u128);
+    assert_eq!(
+        mm_balance.amount.u128(),
+        DEFAULT_BALANCE_AMOUNT.u128() + 3000_u128
+    );
 }
 
 #[test]
@@ -263,7 +275,10 @@ fn test_auction_multiple_providers_rounding() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.0.clone())
         .unwrap();
-    assert_eq!(mm_balance.amount.u128(), 1000001269_u128);
+    assert_eq!(
+        mm_balance.amount.u128(),
+        DEFAULT_BALANCE_AMOUNT.u128() + 1269_u128
+    );
 }
 
 #[test]

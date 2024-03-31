@@ -29,3 +29,13 @@ auction-package  = { workspace = true }
 auctions-manager = { workspace = true }
 auction          = { workspace = true }
 price-oracle     = { workspace = true }
+
+# Astro
+astroport                      = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-token                = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-whitelist            = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-factory              = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-native-coin-registry = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-pair-stable          = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+astroport-pair                 = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }
+rand                           = "0.8.5"

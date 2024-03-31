@@ -15,16 +15,17 @@ use valence_package::services::{
 
 use super::{
     contracts::{
-        account_contract, auction_contract, auctions_manager_contract, oracle_contract,
-        rebalancer_contract, services_manager_contract,
+        account_contract, astro_coin_registry_contract, astro_factory_contract,
+        astro_pair_contract, astro_pair_stable_contract, astro_token_contract, auction_contract,
+        auctions_manager_contract, oracle_contract, rebalancer_contract, services_manager_contract,
     },
     instantiates::{
         AccountInstantiate, AuctionInstantiate, AuctionsManagerInstantiate, OracleInstantiate,
         RebalancerInstantiate, ServicesManagerInstantiate,
     },
     suite::{
-        Suite, ACC_OWNER, ADMIN, ATOM, DEFAULT_D, DEFAULT_I, DEFAULT_NTRN_PRICE_BPS,
-        DEFAULT_OSMO_PRICE_BPS, DEFAULT_P, MM, NTRN, OSMO, TRUSTEE,
+        Suite, ACC_OWNER, ADMIN, ATOM, DEFAULT_BALANCE_AMOUNT, DEFAULT_D, DEFAULT_I,
+        DEFAULT_NTRN_PRICE_BPS, DEFAULT_OSMO_PRICE_BPS, DEFAULT_P, MM, NTRN, OSMO, TRUSTEE,
     },
 };
 
@@ -52,6 +53,13 @@ pub(crate) struct SuiteBuilder {
 
     // Flags for adding stuff to builds for tests
     pub add_oracle_addr: bool,
+
+    // astro code id
+    pub astro_factory_code_id: u64,
+    pub astro_registery_code_id: u64,
+    pub astro_token_code_id: u64,
+    pub astro_pair_code_id: u64,
+    pub astro_stable_pair_code_id: u64,
 }
 
 impl Default for SuiteBuilder {
@@ -76,6 +84,11 @@ impl Default for SuiteBuilder {
             oracle_code_id: 100000,
             custom_rebalancer_init: None,
             add_oracle_addr: true,
+            astro_factory_code_id: 100000,
+            astro_registery_code_id: 100000,
+            astro_token_code_id: 100000,
+            astro_pair_code_id: 100000,
+            astro_stable_pair_code_id: 100000,
         }
     }
 }
@@ -172,6 +185,11 @@ impl SuiteBuilder {
         self.auction_code_id = app.store_code(auction_contract());
         self.auctions_manager_code_id = app.store_code(auctions_manager_contract());
         self.oracle_code_id = app.store_code(oracle_contract());
+        self.astro_factory_code_id = app.store_code(astro_factory_contract());
+        self.astro_registery_code_id = app.store_code(astro_coin_registry_contract());
+        self.astro_token_code_id = app.store_code(astro_token_contract());
+        self.astro_pair_code_id = app.store_code(astro_pair_contract());
+        self.astro_stable_pair_code_id = app.store_code(astro_pair_stable_contract());
     }
 
     pub fn init_auctions_manager(
@@ -206,7 +224,11 @@ impl SuiteBuilder {
         .unwrap()
     }
 
-    fn init_auctions(&mut self, app: &mut App) -> (Addr, Addr, HashMap<(String, String), Addr>) {
+    fn init_auctions(
+        &mut self,
+        app: &mut App,
+        with_prices: bool,
+    ) -> (Addr, Addr, HashMap<(String, String), Addr>) {
         // init Auctions manager contract
         let auctions_manager_addr = self.init_auctions_manager(
             app,
@@ -374,17 +396,19 @@ impl SuiteBuilder {
         let mut auctions = HashMap::<(String, String), Addr>::new();
 
         for (pair, price) in pairs {
-            // update price
-            app.execute_contract(
-                self.admin.clone(),
-                price_oracle_addr.clone(),
-                &price_oracle::msg::ExecuteMsg::UpdatePrice {
-                    pair: pair.clone(),
-                    price: Some(price),
-                },
-                &[],
-            )
-            .unwrap();
+            if with_prices {
+                // update price
+                app.execute_contract(
+                    self.admin.clone(),
+                    price_oracle_addr.clone(),
+                    &price_oracle::msg::ExecuteMsg::ManualPriceUpdate {
+                        pair: pair.clone(),
+                        price,
+                    },
+                    &[],
+                )
+                .unwrap();
+            }
 
             let auction_addr: Addr = app
                 .wrap()
@@ -475,9 +499,9 @@ impl SuiteBuilder {
 impl SuiteBuilder {
     pub fn set_app(&mut self) -> App {
         let balances = vec![
-            coin(1000000000_u128, ATOM.to_string()),
-            coin(1000000000_u128, NTRN.to_string()),
-            coin(1000000000_u128, OSMO.to_string()),
+            coin(DEFAULT_BALANCE_AMOUNT.u128(), ATOM.to_string()),
+            coin(DEFAULT_BALANCE_AMOUNT.u128(), NTRN.to_string()),
+            coin(DEFAULT_BALANCE_AMOUNT.u128(), OSMO.to_string()),
         ];
 
         AppBuilder::new().build(|router, _, storage| {
@@ -500,7 +524,7 @@ impl SuiteBuilder {
         })
     }
     /// build a basic suite that upload all contracts and init contracts
-    pub fn build_basic(&mut self) -> Suite {
+    pub fn build_basic(&mut self, with_price: bool) -> Suite {
         let mut app = self.set_app();
 
         // upload contracts
@@ -508,7 +532,7 @@ impl SuiteBuilder {
 
         // Init auction
         let (auctions_manager_addr, oracle_addr, auction_addrs) =
-            self.init_auctions(app.borrow_mut());
+            self.init_auctions(app.borrow_mut(), with_price);
 
         // Init services manager
         let manager_addr = self.init_manager(app.borrow_mut());
@@ -522,6 +546,8 @@ impl SuiteBuilder {
 
         // Init accounts based on the amount is set
         let account_addrs = self.init_accounts(app.borrow_mut(), manager_addr.clone());
+
+        let pools = self.init_astro(app.borrow_mut());
 
         Suite {
             app,
@@ -537,12 +563,13 @@ impl SuiteBuilder {
             auction_addrs,
             account_code_id: self.account_code_id,
             pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
+            astro_pools: pools,
         }
     }
 
     /// Does a basic build but also add service to manager and register accounts to the services
     pub fn build_default(&mut self) -> Suite {
-        let mut suite = self.build_basic();
+        let mut suite = self.build_basic(true);
 
         // Add the rebalancer to the services manager
         suite

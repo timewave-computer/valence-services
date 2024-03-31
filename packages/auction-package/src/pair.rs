@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Display};
 
 use cosmwasm_std::{from_json, StdError, StdResult};
 use cw_storage_plus::{KeyDeserialize, PrimaryKey};
@@ -18,6 +18,12 @@ use crate::error::AuctionError;
 )]
 #[schemars(crate = "::cosmwasm_schema::schemars")]
 pub struct Pair(pub String, pub String);
+
+impl Display for Pair {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}/{}", self.0, self.1)
+    }
+}
 
 impl<'a> PrimaryKey<'a> for Pair {
     type Prefix = <String as PrimaryKey<'a>>::Prefix;

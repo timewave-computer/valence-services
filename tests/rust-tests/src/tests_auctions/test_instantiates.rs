@@ -52,13 +52,15 @@ fn test_instantiate_oracle() {
         config,
         price_oracle::state::Config {
             auction_manager_addr: manager_addr,
+            seconds_allow_manual_change: 60 * 60 * 24 * 2,
+            seconds_auction_prices_fresh: 60 * 60 * 24 * 3,
         }
     )
 }
 
 #[test]
 fn test_instantiate_auction() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     let init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();
     suite.init_auction(suite.pair.clone(), init_msg.clone(), None);
@@ -92,7 +94,7 @@ fn test_instantiate_auction() {
 
 #[test]
 fn test_instantiate_auction_err() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     let mut init_msg = AuctionInstantiate::default();
 
@@ -129,7 +131,7 @@ fn test_instantiate_auction_err() {
 
 #[test]
 fn test_auction_strategy() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     // Try with start price 0
     let mut init_msg: auction::msg::InstantiateMsg = AuctionInstantiate::default().into();

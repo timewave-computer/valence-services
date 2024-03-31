@@ -82,7 +82,9 @@ fn test_not_admin() {
 
 #[test]
 fn test_no_oracle_addr() {
-    let mut suite = SuiteBuilder::default().without_oracle_addr().build_basic();
+    let mut suite = SuiteBuilder::default()
+        .without_oracle_addr()
+        .build_basic(true);
     let pair = Pair::from(("random".to_string(), "random2".to_string()));
 
     suite.init_auction(pair.clone(), AuctionInstantiate::default().into(), None);

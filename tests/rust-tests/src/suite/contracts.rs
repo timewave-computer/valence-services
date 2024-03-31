@@ -57,3 +57,61 @@ pub fn oracle_contract() -> Box<dyn Contract<Empty>> {
     );
     Box::new(contract)
 }
+
+pub fn astro_token_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            astroport_token::contract::execute,
+            astroport_token::contract::instantiate,
+            astroport_token::contract::query,
+        )
+        .with_migrate(astroport_token::contract::migrate),
+    )
+}
+
+pub fn astro_factory_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            astroport_factory::contract::execute,
+            astroport_factory::contract::instantiate,
+            astroport_factory::contract::query,
+        )
+        .with_migrate(astroport_factory::contract::migrate)
+        .with_reply(astroport_factory::contract::reply),
+    )
+}
+
+pub fn astro_pair_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            astroport_pair::contract::execute,
+            astroport_pair::contract::instantiate,
+            astroport_pair::contract::query,
+        )
+        .with_reply(astroport_pair::contract::reply)
+        .with_migrate(astroport_pair::contract::migrate),
+    )
+}
+
+pub fn astro_pair_stable_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new(
+            astroport_pair_stable::contract::execute,
+            astroport_pair_stable::contract::instantiate,
+            astroport_pair_stable::contract::query,
+        )
+        .with_reply(astroport_pair_stable::contract::reply)
+        .with_migrate(astroport_pair_stable::contract::migrate),
+    )
+}
+
+pub fn astro_coin_registry_contract() -> Box<dyn Contract<Empty>> {
+    let registry_contract = ContractWrapper::new(
+        astroport_native_coin_registry::contract::execute,
+        astroport_native_coin_registry::contract::instantiate,
+        astroport_native_coin_registry::contract::query,
+    )
+    .with_migrate(astroport_native_coin_registry::contract::migrate);
+
+    Box::new(registry_contract)
+}

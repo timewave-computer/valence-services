@@ -10,6 +10,8 @@ use auction_package::{
 };
 use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, Uint128};
 use cw_multi_test::{AppResponse, Executor};
+use price_oracle::state::PriceStep;
+use rand::{rngs::ThreadRng, Rng};
 use valence_package::signed_decimal::SignedDecimal;
 
 use super::suite::{Suite, ATOM, DAY, DEFAULT_BLOCK_TIME, HALF_DAY, NTRN};
@@ -236,8 +238,8 @@ impl Suite {
         self.rebalance(None).unwrap();
 
         // Its fine if we can't update price yet
-        let _ = self.update_price(pair1.clone(), None);
-        let _ = self.update_price(pair2.clone(), None);
+        let _ = self.update_price(pair1.clone());
+        let _ = self.update_price(pair2.clone());
 
         let _ = self.start_auction(
             pair1.clone(),
@@ -321,28 +323,42 @@ impl Suite {
             price - price * price_change.value()
         };
 
-        self.update_price(pair, Some(new_price)).unwrap();
+        self.manual_update_price(pair, new_price).unwrap();
     }
 
-    pub fn update_price(
-        &mut self,
-        pair: Pair,
-        price: Option<Decimal>,
-    ) -> Result<AppResponse, anyhow::Error> {
+    // Permissionless price udpate method
+    pub fn update_price(&mut self, pair: Pair) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
             self.admin.clone(),
             self.oracle_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::UpdatePrice { pair, price },
+            &price_oracle::msg::ExecuteMsg::UpdatePrice { pair },
             &[],
         )
     }
 
-    pub fn update_price_err(
+    pub fn manual_update_price(
         &mut self,
         pair: Pair,
-        price: Option<Decimal>,
+        price: Decimal,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.oracle_addr.clone(),
+            &price_oracle::msg::ExecuteMsg::ManualPriceUpdate { pair, price },
+            &[],
+        )
+    }
+
+    pub fn update_price_err(&mut self, pair: Pair) -> price_oracle::error::ContractError {
+        self.update_price(pair).unwrap_err().downcast().unwrap()
+    }
+
+    pub fn manual_update_price_err(
+        &mut self,
+        pair: Pair,
+        price: Decimal,
     ) -> price_oracle::error::ContractError {
-        self.update_price(pair, price)
+        self.manual_update_price(pair, price)
             .unwrap_err()
             .downcast()
             .unwrap()
@@ -536,6 +552,80 @@ impl Suite {
 
         self
     }
+
+    pub fn add_astro_path_to_oracle(
+        &mut self,
+        pair: Pair,
+        path: Vec<PriceStep>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.oracle_addr.clone(),
+            &price_oracle::msg::ExecuteMsg::AddAstroPath { pair, path },
+            &[],
+        )
+    }
+
+    pub fn add_astro_path_to_oracle_err(
+        &mut self,
+        pair: Pair,
+        path: Vec<PriceStep>,
+    ) -> price_oracle::error::ContractError {
+        self.add_astro_path_to_oracle(pair, path)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
+    }
+
+    pub fn astro_swap(&mut self, pool_addr: Addr, coin: Coin) -> &mut Self {
+        let offer_asset = astroport::asset::Asset {
+            info: astroport::asset::AssetInfo::NativeToken {
+                denom: coin.denom.clone(),
+            },
+            amount: coin.amount,
+        };
+
+        let swap_msg = astroport::pair::ExecuteMsg::Swap {
+            offer_asset,
+            ask_asset_info: None,
+            belief_price: None,
+            max_spread: Some(Decimal::bps(5000)),
+            to: None,
+        };
+
+        self.app
+            .execute_contract(self.admin.clone(), pool_addr, &swap_msg, &[coin])
+            .unwrap();
+
+        self
+    }
+
+    pub fn do_random_swap(
+        &mut self,
+        rng: &mut ThreadRng,
+        pair: Pair,
+        min_limit: u128,
+        max_limit: u128,
+    ) -> &mut Self {
+        let pool_addr = self.astro_pools.get(&pair.clone().into()).unwrap().clone();
+        let swap_amount = rng.gen_range(min_limit..max_limit);
+        let denom_index = rng.gen_range(0..2);
+
+        let coin = match denom_index {
+            0 => Coin {
+                denom: pair.0,
+                amount: Uint128::from(swap_amount),
+            },
+            _ => Coin {
+                denom: pair.1,
+                amount: Uint128::from(swap_amount),
+            },
+        };
+        self.update_block_cycle();
+        // println!("Swap amount: {}", coin);
+
+        self.astro_swap(pool_addr, coin)
+    }
 }
 
 // Queries
@@ -655,6 +745,31 @@ impl Suite {
                 },
             )
             .unwrap()
+    }
+
+    pub fn query_astro_pool_price(&self, pool_addr: Addr, pair: Pair) -> Decimal {
+        let multiply = 1_000_000_u128;
+        let res: astroport::pair::SimulationResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                pool_addr,
+                &astroport::pair::QueryMsg::Simulation {
+                    offer_asset: astroport::asset::Asset {
+                        info: astroport::asset::AssetInfo::NativeToken { denom: pair.0 },
+                        amount: multiply.into(),
+                    },
+                    ask_asset_info: None,
+                },
+            )
+            .unwrap();
+
+        let total_got = Decimal::from_atomics(
+            res.return_amount + res.commission_amount + res.spread_amount,
+            0,
+        )
+        .unwrap();
+        total_got / Decimal::from_atomics(multiply, 0).unwrap()
     }
 }
 

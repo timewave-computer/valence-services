@@ -20,36 +20,153 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
+name = "astroport"
+version = "2.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d102b618016b3c1f1ebb5750617a73dbd294a3c941e54b12deabc931d771bc6e"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 0.15.1",
+ "cw20",
+ "itertools",
+ "uint",
+]
+
+[[package]]
+name = "astroport"
+version = "2.9.5"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 0.15.1",
+ "cw20",
+ "itertools",
+ "uint",
+]
+
+[[package]]
+name = "astroport-factory"
+version = "1.5.1"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw2 0.15.1",
+ "itertools",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-native-coin-registry"
+version = "1.0.1"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.15.1",
+ "cw2 0.15.1",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-pair"
+version = "1.3.3"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw2 0.15.1",
+ "cw20",
+ "integer-sqrt",
+ "protobuf",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-pair-stable"
+version = "2.1.4"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 1.0.3",
+ "cw2 0.15.1",
+ "cw20",
+ "itertools",
+ "thiserror",
+]
+
+[[package]]
+name = "astroport-token"
+version = "1.1.1"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw2 0.15.1",
+ "cw20",
+ "cw20-base",
+ "snafu",
+]
+
+[[package]]
+name = "astroport-whitelist"
+version = "1.0.1"
+source = "git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5#700f66d677a173686cb15cb9cb8c7a4d20c84ad8"
+dependencies = [
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw1-whitelist",
+ "cw2 0.15.1",
+ "thiserror",
+]
+
+[[package]]
 name = "auction"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
  "serde",
  "thiserror",
 ]
 
 [[package]]
 name = "auction-package"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
  "serde",
  "thiserror",
 ]
 
 [[package]]
 name = "auctions-manager"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "auction",
@@ -57,13 +174,19 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
  "price-oracle",
  "serde",
  "thiserror",
 ]
+
+[[package]]
+name = "autocfg"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
 name = "base16ct"
@@ -236,6 +359,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-storage"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd2b4ae72a03e8f56c85df59d172d51d2d7dc9cec6e2bc811e3fb60c588032a4"
+dependencies = [
+ "cosmwasm-std",
+ "serde",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -243,6 +376,12 @@ checksum = "a17b76ff3a4162b0b27f354a0c87015ddad39d35f9c0c36607a3bdd175dde1f1"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "crunchy"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
 name = "crypto-bigint"
@@ -299,8 +438,8 @@ checksum = "127c7bb95853b8e828bdab97065c81cb5ddc20f7339180b61b2300565aaa99d1"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
  "derivative",
  "itertools",
  "k256 0.11.6",
@@ -308,6 +447,17 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw-storage-plus"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc6cf70ef7686e2da9ad7b067c5942cd3e88dd9453f7af42f54557f8af300fb0"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -323,17 +473,74 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ae0b69fa7679de78825b4edeeec045066aa2b2c4b6e063d80042e565bb4da5c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw2 0.15.1",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-utils"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c4a657e5caacc3a0d00ee96ca8618745d050b8f757c709babafb81208d4239c"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw2",
+ "cw2 1.1.2",
  "schemars",
  "semver",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "cw1"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbe0783ec4210ba4e0cdfed9874802f469c6db0880f742ad427cb950e940b21c"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw1-whitelist"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "233dd13f61495f1336da57c8bdca0536fa9f8dd59c12d2bbfc59928ea580e478"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 0.15.1",
+ "cw1",
+ "cw2 0.15.1",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw2"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5abb8ecea72e09afff830252963cb60faf945ce6cef2c20a43814516082653da"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -344,7 +551,38 @@ checksum = "c6c120b24fbbf5c3bedebb97f2cc85fbfa1c3287e09223428e7e597b5293c1fa"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
+ "cw-storage-plus 1.2.0",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw20"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6025276fb6e603e974c21f3e4606982cdc646080e8fba3198816605505e1d9a"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-utils 0.15.1",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw20-base"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0909c56d0c14601fbdc69382189799482799dcad87587926aec1f3aa321abc41"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw-utils 0.15.1",
+ "cw2 0.15.1",
+ "cw20",
  "schemars",
  "semver",
  "serde",
@@ -402,6 +640,12 @@ dependencies = [
  "crypto-common",
  "subtle",
 ]
+
+[[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "drawille"
@@ -622,6 +866,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer-sqrt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "is-terminal"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -692,6 +945,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da2479e8c062e40bf0066ffa0bc823de0a9368974af99c9f6df941d2c231e03f"
 
 [[package]]
+name = "num-traits"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -724,17 +986,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "ppv-lite86"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
 name = "price-oracle"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
+ "astroport 2.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
  "serde",
  "thiserror",
 ]
@@ -772,12 +1041,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "protobuf"
+version = "2.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
+dependencies = [
+ "bytes",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "rand"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
+dependencies = [
+ "libc",
+ "rand_chacha",
+ "rand_core 0.6.4",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.6.4",
 ]
 
 [[package]]
@@ -797,7 +1096,7 @@ dependencies = [
 
 [[package]]
 name = "rebalancer"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "auction-package",
@@ -805,9 +1104,9 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
+ "cw2 1.1.2",
  "serde",
  "thiserror",
  "valence-macros",
@@ -974,14 +1273,14 @@ dependencies = [
 
 [[package]]
 name = "services-manager"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "rebalancer",
  "serde",
  "thiserror",
@@ -1031,6 +1330,27 @@ checksum = "5e1788eed21689f9cf370582dfc467ef36ed9c707f073528ddafa8d83e3b8500"
 dependencies = [
  "digest 0.10.7",
  "rand_core 0.6.4",
+]
+
+[[package]]
+name = "snafu"
+version = "0.6.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eab12d3c261b2308b0d80c26fffb58d17eba81a4be97890101f416b478c79ca7"
+dependencies = [
+ "doc-comment",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.6.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1508efa03c362e23817f96cde18abed596a25219a8b2c66e8db33c03543d315b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -1124,6 +1444,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
+name = "uint"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76f64bba2c53b04fcab63c01a7d7427eadc821e3bc48c34dc9ba29c501164b52"
+dependencies = [
+ "byteorder",
+ "crunchy",
+ "hex",
+ "static_assertions",
+]
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1131,14 +1463,14 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "valence-account"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw2",
+ "cw-storage-plus 1.2.0",
+ "cw2 1.1.2",
  "serde",
  "thiserror",
  "valence-macros",
@@ -1147,7 +1479,7 @@ dependencies = [
 
 [[package]]
 name = "valence-macros"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1158,13 +1490,13 @@ dependencies = [
 
 [[package]]
 name = "valence-package"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "auction-package",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
  "serde",
  "thiserror",
  "valence-macros",
@@ -1175,6 +1507,13 @@ name = "valence-tests"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "astroport 2.9.5 (git+https://github.com/astroport-fi/astroport-core.git?tag=v2.9.5)",
+ "astroport-factory",
+ "astroport-native-coin-registry",
+ "astroport-pair",
+ "astroport-pair-stable",
+ "astroport-token",
+ "astroport-whitelist",
  "auction",
  "auction-package",
  "auctions-manager",
@@ -1182,9 +1521,10 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
+ "cw-storage-plus 1.2.0",
+ "cw-utils 1.0.3",
  "price-oracle",
+ "rand",
  "rebalancer",
  "rgb",
  "services-manager",

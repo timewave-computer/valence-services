@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use auction_package::Pair;
 use cosmwasm_schema::{cw_serde, serde, QueryResponses};
-use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError, Uint128};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
     contract::DEFAULT_CYCLE_PERIOD,
@@ -23,6 +23,7 @@ pub const ADMIN: &str = "admin";
 pub const ACC_OWNER: &str = "owner";
 pub const TRUSTEE: &str = "trustee";
 pub const MM: &str = "market_maker";
+pub const FEE: &str = "fee_addr";
 
 // PID defaults
 pub const DEFAULT_P: &str = "0.5";
@@ -35,6 +36,8 @@ pub const HALF_DAY: u64 = DAY / 2;
 
 pub const DEFAULT_NTRN_PRICE_BPS: u64 = 15000;
 pub const DEFAULT_OSMO_PRICE_BPS: u64 = 25000;
+
+pub const DEFAULT_BALANCE_AMOUNT: Uint128 = Uint128::new(1_000_000_000_000);
 
 pub(crate) struct Suite {
     pub app: App,
@@ -53,6 +56,9 @@ pub(crate) struct Suite {
 
     // code ids for future use
     pub account_code_id: u64,
+
+    // astro
+    pub astro_pools: HashMap<(String, String), Addr>,
 }
 
 impl Default for Suite {
@@ -71,6 +77,7 @@ impl Suite {
         self
     }
 
+    /// Updates block by 1 cycle (24 hours)
     pub fn update_block_cycle(&mut self) -> &mut Self {
         self.update_block(DEFAULT_CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
     }

@@ -21,7 +21,7 @@ use crate::suite::{
 
 #[test]
 fn test_add_service() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -73,7 +73,7 @@ fn test_add_service() {
 
 #[test]
 fn test_register() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite

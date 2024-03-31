@@ -134,7 +134,7 @@ fn test_rebalancer_system() {
 
 #[test]
 fn test_register() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite
@@ -229,7 +229,7 @@ fn test_register() {
 
 #[test]
 fn test_dup_targets() {
-    let mut suite = SuiteBuilder::default().with_accounts(1).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(1).build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -267,7 +267,7 @@ fn test_dup_targets() {
 
 #[test]
 fn test_set_2_min_balance() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -356,7 +356,7 @@ fn test_rebalancer_cycle_next_day_while_processing() {
 
 #[test]
 fn test_invalid_max_limit_range() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite
