@@ -108,8 +108,8 @@ pub fn execute_system_rebalance(
 
     for res in configs {
         let Ok((account, config)) = res else {
-                  continue;
-                };
+            continue;
+        };
 
         last_addr = Some(account.clone());
 
@@ -131,7 +131,7 @@ pub fn execute_system_rebalance(
             cycle_period,
         );
         let Ok((config, msg)) = rebalance_res else {
-          continue
+            continue;
         };
 
         // Rebalacing does edit some config fields that are needed for future rebalancing
@@ -673,7 +673,7 @@ fn generate_trades_msgs(
                 token_buy.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager, pair, coin) else {
-                    return
+                    return;
                 };
                 msgs.push(msg);
             } else {
@@ -689,7 +689,7 @@ fn generate_trades_msgs(
                 token_sell.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager, pair, coin) else {
-                  return
+                    return;
                 };
 
                 msgs.push(msg);
