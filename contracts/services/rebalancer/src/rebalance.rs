@@ -264,7 +264,7 @@ pub(crate) fn set_auction_min_amounts(
     to_sell: &mut Vec<TargetHelper>,
     min_amount_limits: &mut Vec<(String, Uint128)>,
 ) -> Result<(), ContractError> {
-    for mut sell_token in to_sell {
+    for sell_token in to_sell {
         match min_amount_limits
             .iter()
             .find(|min_amount| min_amount.0 == sell_token.target.denom)
@@ -606,7 +606,7 @@ fn generate_trades_msgs(
 
     // This is the main loop where we match to_sell tokens with to_buy tokens
     to_sell.into_iter().for_each(|mut token_sell| {
-        to_buy.iter_mut().for_each(|mut token_buy| {
+        to_buy.iter_mut().for_each(|token_buy| {
             // If we already bought all we need for this token we continue to next buy token
             if token_buy.value_to_trade.is_zero() {
                 return;

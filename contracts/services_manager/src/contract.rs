@@ -217,7 +217,6 @@ pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<B
                     cosmwasm_std::Order::Ascending,
                 )
                 .take(limit)
-                .map(|item| item.map(|(name, addr)| (name, addr)))
                 .collect::<StdResult<Vec<(String, Addr)>>>()?;
 
             to_json_binary(&services)

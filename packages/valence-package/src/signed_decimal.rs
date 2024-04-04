@@ -275,7 +275,7 @@ impl<'de> de::Visitor<'de> for SignedDecimalVisitor {
         match SignedDecimal::from_str(v) {
             Ok(d) => Ok(d),
             Err(e) => {
-                return Err(E::custom(format!(
+                Err(E::custom(format!(
                     "Error parsing signed decimal '{v}': {e}"
                 )))
             }
