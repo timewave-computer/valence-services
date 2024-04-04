@@ -1,5 +1,7 @@
 # Neutron MAINNET Contracts
 
+[![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
+
 ## Code ids
 
 - auctions manager = `874`
