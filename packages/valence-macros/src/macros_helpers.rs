@@ -28,7 +28,7 @@ pub(crate) fn merge_variants(
         }),
     ) = (&mut left.data, right.data)
     {
-        variants.extend(to_add.into_iter());
+        variants.extend(to_add);
 
         quote! { #left }.into()
     } else {
