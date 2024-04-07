@@ -15,3 +15,13 @@ neutrond tx wasm execute neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4
 
 // update auction code id in auctions manager
 neutrond tx wasm execute neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz '{"admin": {"update_auction_id":"869"}}' --from ntrn-main-tester --gas-prices 0.075untrn --gas auto --gas-adjustment 1.4 --output json -y
+
+// Send funds to the auction manually (outside of the rebalancer)
+neutrond tx wasm execute neutron13jppm4n77u8ud5wma9xe0dqnaz85ne9jem3r0scc009uemvh49qqxuuggf '{"auction_funds": {}}' --amount 1500000untrn --from ntrn-main-tester --gas-prices 0.075untrn --gas auto --gas-adjustment 1.4 --output json -y
+
+// Open auction manually (start_block doesn't needed because it takes current block by default)
+neutrond tx wasm execute neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz '{"admin": {"open_auction": {"pair": ["untrn", "ibc/B559A80D62249C8AA07A380E2A2BEA6E5CA9A6F079C912C3A9E9B494105E4F81"], "params": {"end_block": 8796000}}}}' --from ntrn-main-tester --gas-prices 0.075untrn --gas auto --gas-adjustment 1.4 --output json -y
+
+// Update price in the oracle for a pair
+neutrond tx wasm execute neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf '{"update_price": {"pair": ["ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9", "factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt"]}}' --from ntrn-main-tester --gas-prices 0.075untrn --gas auto --gas-adjustment 1.4 --output json -y
+

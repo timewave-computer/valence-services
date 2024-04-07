@@ -83,9 +83,9 @@ pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<Addr, V
     Ok(manager_addr)
 }
 
-/// Get the timestomt of the start of the day (00:00 midnight)
+/// Get the timestamp of the start of the cycle (if cycle is a day - 00:00 midnight)
 pub fn start_of_cycle(time: Timestamp, cycle: u64) -> Timestamp {
-    let leftover = time.seconds() % cycle; // How much leftover from the start of the day (mid night UTC)
+    let leftover = time.seconds() % cycle; // How much leftover from the start of the cycle (if cycle is a day - mid night UTC)
     time.minus_seconds(leftover)
 }
 

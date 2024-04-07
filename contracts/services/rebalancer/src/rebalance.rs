@@ -231,6 +231,8 @@ pub fn do_rebalance(
         .unwrap_or(&Uint128::zero());
 
     if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
+        event = event.add_attribute("pausing", true.to_string());
+
         // We pause the account if the account balance doesn't meet the minimum requirements
         return Ok(RebalanceResponse::new(config, None, event, true));
     };
@@ -395,7 +397,7 @@ fn get_inputs(
             } else {
                 prices
                     .iter()
-                    .find(|(pair, _)| pair.1 == target.denom)
+                    .find(|(pair, _)| pair.0 == config.base_denom && pair.1 == target.denom)
                     // we can safely unwrap here as we are 100% sure we have all prices for the whitelisted targets
                     .unwrap()
                     .1
