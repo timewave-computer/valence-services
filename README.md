@@ -7,7 +7,7 @@
 - auctions manager = `874`
 - auction = `869`
 - oracle = `883`
-- rebalancer = `871`
+- rebalancer = `898`
 - services manager = `872`
 - account = `867`
 
