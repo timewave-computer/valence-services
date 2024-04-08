@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
+    WasmMsg,
 };
 use cw_utils::Expiration;
 
@@ -30,10 +31,19 @@ pub fn forward_to_services_manager(
     manager_addr: String,
     msg: ServicesManagerExecuteMsg,
 ) -> Result<Response, ValenceError> {
+    forward_to_services_manager_with_funds(manager_addr, msg, vec![])
+}
+
+/// Forward the message to the services manager contract with funds
+pub fn forward_to_services_manager_with_funds(
+    manager_addr: String,
+    msg: ServicesManagerExecuteMsg,
+    funds: Vec<Coin>,
+) -> Result<Response, ValenceError> {
     let msg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: manager_addr,
         msg: to_json_binary(&msg)?,
-        funds: vec![],
+        funds,
     });
     Ok(Response::default().add_message(msg))
 }
@@ -65,16 +75,17 @@ pub fn verify_admin(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> 
 }
 
 /// Verify the sender is the services manager
-pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<(), ValenceError> {
-    if SERVICES_MANAGER.load(deps.storage)? != info.sender {
+pub fn verify_services_manager(deps: Deps, info: &MessageInfo) -> Result<Addr, ValenceError> {
+    let manager_addr = SERVICES_MANAGER.load(deps.storage)?;
+    if manager_addr != info.sender {
         return Err(ValenceError::NotServicesManager {});
     }
-    Ok(())
+    Ok(manager_addr)
 }
 
-/// Get the timestomt of the start of the day (00:00 midnight)
+/// Get the timestamp of the start of the cycle (if cycle is a day - 00:00 midnight)
 pub fn start_of_cycle(time: Timestamp, cycle: u64) -> Timestamp {
-    let leftover = time.seconds() % cycle; // How much leftover from the start of the day (mid night UTC)
+    let leftover = time.seconds() % cycle; // How much leftover from the start of the cycle (if cycle is a day - mid night UTC)
     time.minus_seconds(leftover)
 }
 

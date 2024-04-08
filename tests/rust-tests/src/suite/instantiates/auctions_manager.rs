@@ -1,3 +1,4 @@
+use auction_package::states::MinAmount;
 use cosmwasm_std::Uint128;
 
 use crate::suite::suite::{ATOM, NTRN, OSMO};
@@ -19,9 +20,27 @@ impl AuctionsManagerInstantiate {
 
     pub fn new(auction_code_id: u64) -> Self {
         let min_auction_amount = vec![
-            (ATOM.to_string(), Uint128::new(5)),
-            (NTRN.to_string(), Uint128::new(10)),
-            (OSMO.to_string(), Uint128::new(10)),
+            (
+                ATOM.to_string(),
+                MinAmount {
+                    send: Uint128::new(5),
+                    start_auction: Uint128::new(5),
+                },
+            ),
+            (
+                NTRN.to_string(),
+                MinAmount {
+                    send: Uint128::new(10),
+                    start_auction: Uint128::new(10),
+                },
+            ),
+            (
+                OSMO.to_string(),
+                MinAmount {
+                    send: Uint128::new(10),
+                    start_auction: Uint128::new(10),
+                },
+            ),
         ];
 
         Self {

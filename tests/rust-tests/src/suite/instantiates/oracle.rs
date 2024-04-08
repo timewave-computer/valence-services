@@ -19,6 +19,8 @@ impl OracleInstantiate {
         Self {
             msg: price_oracle::msg::InstantiateMsg {
                 auctions_manager_addr: auctions_manager_addr.to_string(),
+                seconds_allow_manual_change: 60 * 60 * 24 * 2, // 2 days
+                seconds_auction_prices_fresh: 60 * 60 * 24 * 3, // 3 days
             },
         }
     }

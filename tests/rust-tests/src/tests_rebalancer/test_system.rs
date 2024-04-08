@@ -39,32 +39,35 @@ fn test_rebalancer_system() {
     suite.rebalance_with_update_block(Some(1)).unwrap();
 
     // check status matches what we expect
-    let status = suite.query_rebalancer_system_status().unwrap();
+    let SystemRebalanceStatus::Processing {
+        cycle_started,
+        start_from,
+        prices,
+    } = suite.query_rebalancer_system_status().unwrap()
+    else {
+        panic!("System status is not processing but something else")
+    };
     assert_eq!(
-        status,
-        SystemRebalanceStatus::Processing {
-            cycle_started: start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD),
-            start_from: suite.get_account_addr(0),
-            prices: vec![
-                (
-                    Pair::from((ATOM.to_string(), NTRN.to_string())),
-                    Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
-                ),
-                (
-                    Pair::from((ATOM.to_string(), OSMO.to_string())),
-                    Decimal::bps(DEFAULT_OSMO_PRICE_BPS)
-                ),
-                (
-                    Pair::from((NTRN.to_string(), ATOM.to_string())),
-                    Decimal::one() / Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
-                ),
-                (
-                    Pair::from((NTRN.to_string(), OSMO.to_string())),
-                    Decimal::bps(DEFAULT_OSMO_PRICE_BPS) / Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
-                )
-            ]
-        }
+        cycle_started,
+        start_of_cycle(suite.app.block_info().time, DEFAULT_CYCLE_PERIOD)
     );
+    assert_eq!(start_from, suite.get_account_addr(0));
+    assert!(prices.contains(&(
+        Pair::from((ATOM.to_string(), NTRN.to_string())),
+        Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
+    )));
+    assert!(prices.contains(&(
+        Pair::from((ATOM.to_string(), OSMO.to_string())),
+        Decimal::bps(DEFAULT_OSMO_PRICE_BPS)
+    )));
+    assert!(prices.contains(&(
+        Pair::from((NTRN.to_string(), ATOM.to_string())),
+        Decimal::one() / Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
+    )));
+    assert!(prices.contains(&(
+        Pair::from((NTRN.to_string(), OSMO.to_string())),
+        Decimal::bps(DEFAULT_OSMO_PRICE_BPS) / Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
+    )));
 
     // confirm our rebalancer ran over the first account only
     let config_1 = suite
@@ -131,7 +134,7 @@ fn test_rebalancer_system() {
 
 #[test]
 fn test_register() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite
@@ -226,7 +229,7 @@ fn test_register() {
 
 #[test]
 fn test_dup_targets() {
-    let mut suite = SuiteBuilder::default().with_accounts(1).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(1).build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -264,7 +267,7 @@ fn test_dup_targets() {
 
 #[test]
 fn test_set_2_min_balance() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -353,7 +356,7 @@ fn test_rebalancer_cycle_next_day_while_processing() {
 
 #[test]
 fn test_invalid_max_limit_range() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite

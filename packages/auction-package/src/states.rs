@@ -21,7 +21,9 @@ pub const TWAP_PRICES: Item<VecDeque<Price>> = Item::new("twap_prices");
 /// Chain halt config
 pub const CHAIN_HALT_CONFIG: Item<ChainHaltConfig> = Item::new("ch_config");
 /// The min amount allowed to send to auction per token
-pub const MIN_AUCTION_AMOUNT: Map<String, Uint128> = Map::new("min_auction_amount");
+/// Denom -> MinAmount
+pub const MIN_AUCTION_AMOUNT_V0: Map<String, Uint128> = Map::new("min_auction_amount");
+pub const MIN_AUCTION_AMOUNT: Map<String, MinAmount> = Map::new("min_auction_amount_v1");
 
 pub const ADMIN_CHANGE: Item<AdminChange> = Item::new("admin_change");
 
@@ -29,4 +31,24 @@ pub const ADMIN_CHANGE: Item<AdminChange> = Item::new("admin_change");
 pub struct AdminChange {
     pub addr: Addr,
     pub expiration: Expiration,
+}
+
+#[cw_serde]
+pub struct MinAmount {
+    /// Minimum amount that is allowed to send to the auction
+    pub send: Uint128,
+    /// Minimum amount that auction can start from
+    ///
+    /// If auction amount is below this amount, it will not start the auction
+    /// and will refund sent funds back to the sender
+    pub start_auction: Uint128,
+}
+
+impl Default for MinAmount {
+    fn default() -> Self {
+        Self {
+            send: Uint128::zero(),
+            start_auction: Uint128::zero(),
+        }
+    }
 }

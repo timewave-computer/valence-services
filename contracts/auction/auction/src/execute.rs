@@ -3,7 +3,8 @@ use auction_package::{
     Price, CLOSEST_TO_ONE_POSSIBLE,
 };
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
+    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, Event, MessageInfo, Response,
+    Uint128,
 };
 use cw_storage_plus::Bound;
 use cw_utils::must_pay;
@@ -32,7 +33,7 @@ pub(crate) fn auction_funds(
 
     let funds = must_pay(info, &config.pair.0)?;
     let min_amount = match MIN_AUCTION_AMOUNT.query(&deps.querier, admin, config.pair.0)? {
-        Some(amount) => Ok(amount),
+        Some(amount) => Ok(amount.send),
         None => Err(ContractError::NoTokenMinAmount),
     }?;
 
@@ -97,10 +98,12 @@ pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractE
 
     let bank_msg = BankMsg::Send {
         to_address: sender.to_string(),
-        amount: vec![send_funds],
+        amount: vec![send_funds.clone()],
     };
 
-    Ok(Response::default().add_message(bank_msg))
+    Ok(Response::default()
+        .add_message(bank_msg)
+        .add_event(Event::new("withdraw-funds").add_attribute("amount", send_funds.to_string())))
 }
 
 pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, ContractError> {
@@ -220,10 +223,10 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         ActiveAuctionStatus::CloseAuction(addr, total_sent_sold_token, total_sent_bought_token) => {
             Ok((addr, total_sent_sold_token, total_sent_bought_token))
         }
-        ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
         ActiveAuctionStatus::Finished | ActiveAuctionStatus::Started => {
             Ok((None, Uint128::zero(), Uint128::zero()))
         }
+        ActiveAuctionStatus::AuctionClosed => Err(ContractError::AuctionClosed),
     }?;
 
     let config = AUCTION_CONFIG.load(deps.storage)?;
@@ -293,7 +296,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         })?;
 
     // If we looped over less than our limit, it means we resolved everything
-    let status = if total_resolved < limit {
+    let (status, price, is_closed) = if total_resolved < limit {
         // calculate if we have leftover from rounding and add it to the next auction
         let leftover_sold_token = active_auction
             .available_amount
@@ -309,7 +312,8 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
         let sold_amount = active_auction
             .total_amount
             .checked_sub(active_auction.available_amount)?;
-        if !active_auction.total_amount.is_zero() && !sold_amount.is_zero() {
+
+        let price = if !active_auction.total_amount.is_zero() && !sold_amount.is_zero() {
             let avg_price = Decimal::from_atomics(active_auction.resolved_amount, 0)?
                 .checked_div(Decimal::from_atomics(sold_amount, 0)?)?;
 
@@ -326,21 +330,32 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
             });
 
             TWAP_PRICES.save(deps.storage, &prices)?;
-        }
+            avg_price.to_string()
+        } else {
+            "0".to_string()
+        };
 
-        ActiveAuctionStatus::AuctionClosed
+        (ActiveAuctionStatus::AuctionClosed, price, true)
     } else {
-        ActiveAuctionStatus::CloseAuction(
-            last_resolved,
-            total_sent_sold_token,
-            total_sent_bought_token,
+        (
+            ActiveAuctionStatus::CloseAuction(
+                last_resolved,
+                total_sent_sold_token,
+                total_sent_bought_token,
+            ),
+            "0".to_string(),
+            false,
         )
     };
 
     active_auction.status = status;
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    Ok(Response::default().add_messages(bank_msgs))
+    Ok(Response::default().add_messages(bank_msgs).add_event(
+        Event::new("close-auction")
+            .add_attribute("is_closed", is_closed.to_string())
+            .add_attribute("price", price),
+    ))
 }
 
 pub fn clean_auction(deps: DepsMut) -> Result<Response, ContractError> {

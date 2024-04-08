@@ -1,5 +1,5 @@
-use auction_package::error::AuctionError;
-use cosmwasm_std::StdError;
+use auction_package::{error::AuctionError, Pair};
+use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -9,6 +9,15 @@ pub enum ContractError {
 
     #[error(transparent)]
     AuctionError(#[from] AuctionError),
+
+    #[error(transparent)]
+    DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error(transparent)]
+    OverflowError(#[from] OverflowError),
+
+    #[error(transparent)]
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
 
     #[error("Sender is not admin")]
     NotAdmin,
@@ -25,6 +34,21 @@ pub enum ContractError {
     #[error("Set price cannot be zero")]
     PriceIsZero,
 
-    #[error("Can't manually update price")]
+    #[error("Can't manually update price, terms are not met for manual update")]
     NoTermsForManualUpdate,
+
+    #[error("Path for this pair already exists")]
+    PricePathAlreadyExists,
+
+    #[error("Path for this pair doesn't exists yet")]
+    PricePathNotFound,
+
+    #[error("Path must not be empty")]
+    PricePathIsEmpty,
+
+    #[error("Path doesn't match pair, denom1 in first step must be the same as pair.0, and last step denom2 must match pair.1")]
+    PricePathIsWrong,
+
+    #[error("No astroport path found for pair: {0}")]
+    NoAstroPath(Pair),
 }

@@ -1,7 +1,9 @@
 use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
-use cw_utils::Expiration;
+use cosmwasm_std::{
+    coins, Addr, Api, BankMsg, CosmosMsg, Decimal, Env, MessageInfo, Timestamp, Uint128,
+};
+use cw_utils::{must_pay, Expiration};
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::{collections::HashSet, hash::Hasher, str::FromStr};
@@ -40,6 +42,9 @@ pub enum RebalancerAdminMsg {
     UpdateCyclePeriod {
         period: u64,
     },
+    UpdateFess {
+        fees: ServiceFeeConfig,
+    },
     StartAdminChange {
         addr: String,
         expiration: Expiration,
@@ -69,12 +74,12 @@ pub struct RebalancerUpdateData {
     pub base_denom: Option<String>,
     pub targets: HashSet<Target>,
     pub pid: Option<PID>,
-    pub max_limit: Option<u64>, // BPS
+    pub max_limit_bps: Option<OptionalField<u64>>, // BPS
     pub target_override_strategy: Option<TargetOverrideStrategy>,
 }
 
 impl RebalancerData {
-    pub fn to_config(self) -> Result<RebalancerConfig, ValenceError> {
+    pub fn to_config(self, api: &dyn Api) -> Result<RebalancerConfig, ValenceError> {
         let max_limit = if let Some(max_limit) = self.max_limit_bps {
             // Suggested by clippy to check for a range of 1-10000
             if !(1..=10000).contains(&max_limit) {
@@ -87,10 +92,10 @@ impl RebalancerData {
         };
 
         let has_min_balance = self.targets.iter().any(|t| t.min_balance.is_some());
+        let trustee = self.trustee.map(|a| api.addr_validate(&a)).transpose()?;
 
         Ok(RebalancerConfig {
-            is_paused: None,
-            trustee: self.trustee,
+            trustee,
             base_denom: self.base_denom,
             targets: self.targets.into_iter().map(|t| t.into()).collect(),
             pid: self.pid.into_parsed()?,
@@ -104,10 +109,8 @@ impl RebalancerData {
 
 #[cw_serde]
 pub struct RebalancerConfig {
-    /// Is_paused holds the pauser if it is paused, None if its not paused
-    pub is_paused: Option<Addr>,
     /// the address that can pause and resume the service
-    pub trustee: Option<String>,
+    pub trustee: Option<Addr>,
     /// The base denom we will be calculating everything based on
     pub base_denom: String,
     /// A vector of targets to rebalance for this account
@@ -120,6 +123,47 @@ pub struct RebalancerConfig {
     pub last_rebalance: Timestamp,
     pub has_min_balance: bool,
     pub target_override_strategy: TargetOverrideStrategy,
+}
+
+#[cw_serde]
+pub struct PauseData {
+    pub pauser: Addr,
+    pub reason: PauseReason,
+    pub config: RebalancerConfig,
+}
+
+impl PauseData {
+    pub fn new(pauser: Addr, reason: String, config: &RebalancerConfig) -> Self {
+        Self {
+            pauser,
+            reason: PauseReason::AccountReason(reason),
+            config: config.clone(),
+        }
+    }
+
+    pub fn new_empty_balance(env: &Env, config: &RebalancerConfig) -> Self {
+        Self {
+            pauser: env.contract.address.clone(),
+            reason: PauseReason::EmptyBalance,
+            config: config.clone(),
+        }
+    }
+}
+
+#[cw_serde]
+pub enum PauseReason {
+    /// This reason can only be called if the rebalancer is pausing the account because it
+    /// has an empty balance.
+    EmptyBalance,
+    /// This reason is given by the user/account, he might forget why he paused the account
+    /// this will remind him of it.
+    AccountReason(String),
+}
+
+impl PauseReason {
+    pub fn is_empty_balance(&self) -> bool {
+        matches!(self, PauseReason::EmptyBalance)
+    }
 }
 
 /// The strategy we will use when overriding targets
@@ -248,10 +292,126 @@ impl ParsedPID {
     }
 }
 
-#[cw_serde]
+#[derive(
+    ::cosmwasm_schema::serde::Serialize,
+    ::cosmwasm_schema::serde::Deserialize,
+    ::std::clone::Clone,
+    ::std::fmt::Debug,
+    ::cosmwasm_schema::schemars::JsonSchema,
+)]
+#[allow(clippy::derive_partial_eq_without_eq)] // Allow users of `#[cw_serde]` to not implement Eq without clippy complaining
+#[serde(deny_unknown_fields, crate = "::cosmwasm_schema::serde")]
+#[schemars(crate = "::cosmwasm_schema::schemars")]
+#[derive(Eq)]
 pub struct BaseDenom {
     pub denom: String,
     pub min_balance_limit: Uint128,
+}
+
+impl BaseDenom {
+    pub fn new_empty(denom: impl Into<String>) -> Self {
+        Self {
+            denom: denom.into(),
+            min_balance_limit: Uint128::zero(),
+        }
+    }
+}
+
+impl PartialEq for BaseDenom {
+    fn eq(&self, other: &BaseDenom) -> bool {
+        self.denom == other.denom
+    }
+}
+
+impl Hash for BaseDenom {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.denom.hash(state);
+    }
+}
+
+impl Borrow<String> for BaseDenom {
+    fn borrow(&self) -> &String {
+        &self.denom
+    }
+}
+
+#[cw_serde]
+pub struct ServiceFeeConfig {
+    pub denom: String,
+    pub register_fee: Uint128,
+    pub resume_fee: Uint128,
+}
+
+impl ServiceFeeConfig {
+    /// We verify the registration fee is paid and generate msg to send it to the manager
+    pub fn handle_registration_fee(
+        self,
+        info: &MessageInfo,
+        manager_addr: &Addr,
+    ) -> Result<Vec<CosmosMsg>, ValenceError> {
+        let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+
+        if !self.register_fee.is_zero() {
+            let paid = must_pay(info, &self.denom).map_err(|_| {
+                ValenceError::MustPayRegistrationFee(
+                    self.register_fee.to_string(),
+                    self.denom.clone(),
+                )
+            })?;
+
+            if self.register_fee != paid {
+                return Err(ValenceError::MustPayRegistrationFee(
+                    self.register_fee.to_string(),
+                    self.denom.clone(),
+                ));
+            }
+
+            msgs.push(self.generate_transfer_msg(paid, manager_addr).into());
+        }
+
+        Ok(msgs)
+    }
+
+    /// We verify the resume fee is paid if needed and generate msg to send it to the manager
+    pub fn handle_resume_fee(
+        self,
+        info: &MessageInfo,
+        manager_addr: &Addr,
+        reason: PauseReason,
+    ) -> Result<Vec<CosmosMsg>, ValenceError> {
+        let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
+
+        if !self.resume_fee.is_zero() {
+            if !reason.is_empty_balance() {
+                return Ok(msgs);
+            }
+
+            let paid = must_pay(info, &self.denom).map_err(|_| {
+                ValenceError::MustPayRegistrationFee(
+                    self.resume_fee.to_string(),
+                    self.denom.clone(),
+                )
+            })?;
+
+            if self.resume_fee != paid {
+                return Err(ValenceError::MustPayRegistrationFee(
+                    self.resume_fee.to_string(),
+                    self.denom.clone(),
+                ));
+            }
+
+            msgs.push(self.generate_transfer_msg(paid, manager_addr).into());
+        }
+
+        Ok(msgs)
+    }
+
+    fn generate_transfer_msg(self, amount: Uint128, manager_addr: &Addr) -> BankMsg {
+        BankMsg::Send {
+            to_address: manager_addr.to_string(),
+            amount: coins(amount.u128(), self.denom),
+        }
+    }
 }
 
 #[cfg(test)]

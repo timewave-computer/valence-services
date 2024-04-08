@@ -69,9 +69,9 @@ fn test_not_admin() {
         .execute_contract(
             Addr::unchecked("not_admin"),
             suite.auctions_manager_addr,
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::PauseAuction { pair: suite.pair },
-            ),
+            )),
             &[],
         )
         .unwrap_err();
@@ -82,7 +82,9 @@ fn test_not_admin() {
 
 #[test]
 fn test_no_oracle_addr() {
-    let mut suite = SuiteBuilder::default().without_oracle_addr().build_basic();
+    let mut suite = SuiteBuilder::default()
+        .without_oracle_addr()
+        .build_basic(true);
     let pair = Pair::from(("random".to_string(), "random2".to_string()));
 
     suite.init_auction(pair.clone(), AuctionInstantiate::default().into(), None);
@@ -182,7 +184,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -192,12 +194,12 @@ fn test_update_admin_start() {
         .execute_contract(
             suite.admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::StartAdminChange {
                     addr: new_admin.to_string(),
                     expiration: Expiration::Never {},
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -207,7 +209,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap();
@@ -226,12 +228,12 @@ fn test_update_admin_cancel() {
         .execute_contract(
             suite.admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::StartAdminChange {
                     addr: new_admin.to_string(),
                     expiration: Expiration::Never {},
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -241,9 +243,9 @@ fn test_update_admin_cancel() {
         .execute_contract(
             suite.admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::CancelAdminChange,
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -254,7 +256,7 @@ fn test_update_admin_cancel() {
         .execute_contract(
             new_admin,
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange,
+            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -271,12 +273,12 @@ fn test_update_admin_fails() {
         .execute_contract(
             suite.admin.clone(),
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::StartAdminChange {
                     addr: new_admin.to_string(),
                     expiration: Expiration::AtHeight(suite.app.block_info().height + 5),
                 },
-            ),
+            )),
             &[],
         )
         .unwrap();
@@ -287,7 +289,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             random_addr,
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange,
+            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -300,7 +302,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             new_admin,
             suite.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange,
+            &auctions_manager::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();

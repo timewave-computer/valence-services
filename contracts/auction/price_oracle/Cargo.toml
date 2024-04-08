@@ -26,6 +26,8 @@ thiserror       = { workspace = true }
 cw-utils        = { workspace = true }
 auction-package = { workspace = true }
 
+astroport = "2.9.5"
+
 [dev-dependencies]
 cw-multi-test = { workspace = true }
 anyhow        = { workspace = true }

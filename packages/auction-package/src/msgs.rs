@@ -1,14 +1,22 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Addr;
 
 use crate::{
     helpers::{AuctionConfig, GetPriceResponse},
+    states::MinAmount,
     Pair,
 };
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum AuctionsManagerQueryMsg {
+    /// Get the price of a specific pair
+    #[returns(Vec<(Pair, Addr)>)]
+    GetPairs {
+        start_after: Option<Pair>,
+        limit: Option<u32>,
+    },
+
     /// Get the price of a specific pair
     #[returns(GetPriceResponse)]
     GetPrice { pair: Pair },
@@ -25,7 +33,7 @@ pub enum AuctionsManagerQueryMsg {
     #[returns(Addr)]
     GetOracleAddr,
 
-    #[returns(Uint128)]
+    #[returns(MinAmount)]
     GetMinLimit { denom: String },
 
     #[returns(Addr)]

@@ -1,29 +1,33 @@
+use std::collections::HashSet;
+
 use auction_package::helpers::GetPriceResponse;
 use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Uint128,
+    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply,
+    Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use valence_package::error::ValenceError;
 use valence_package::helpers::{approve_admin_change, verify_services_manager, OptionalField};
-use valence_package::services::rebalancer::{RebalancerExecuteMsg, SystemRebalanceStatus};
-use valence_package::states::{ADMIN, SERVICES_MANAGER};
+use valence_package::services::rebalancer::{
+    PauseData, RebalancerExecuteMsg, SystemRebalanceStatus,
+};
+use valence_package::states::{QueryFeeAction, ADMIN, SERVICES_MANAGER, SERVICE_FEE_CONFIG};
 
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg, ManagersAddrsResponse, QueryMsg, WhitelistsResponse};
+use crate::msg::{InstantiateMsg, ManagersAddrsResponse, MigrateMsg, QueryMsg, WhitelistsResponse};
 use crate::rebalance::execute_system_rebalance;
 use crate::state::{
     AUCTIONS_MANAGER_ADDR, BASE_DENOM_WHITELIST, CONFIGS, CYCLE_PERIOD, DENOM_WHITELIST,
-    SYSTEM_REBALANCE_STATUS,
+    PAUSED_CONFIGS, SYSTEM_REBALANCE_STATUS,
 };
 
 const CONTRACT_NAME: &str = "crates.io:rebalancer";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// TODO: Make cycle period configurable
 pub const DEFAULT_CYCLE_PERIOD: u64 = 60 * 60 * 24; // 24 hours
 /// The default limit of how many accounts we loop over in a single message
 /// If wasn't specified in the message
@@ -63,8 +67,8 @@ pub fn instantiate(
     )?;
 
     // Set our whitelist
-    DENOM_WHITELIST.save(deps.storage, &msg.denom_whitelist)?;
-    BASE_DENOM_WHITELIST.save(deps.storage, &msg.base_denom_whitelist)?;
+    DENOM_WHITELIST.save(deps.storage, &HashSet::from_iter(msg.denom_whitelist))?;
+    BASE_DENOM_WHITELIST.save(deps.storage, &HashSet::from_iter(msg.base_denom_whitelist))?;
 
     // save auction addr
     AUCTIONS_MANAGER_ADDR.save(
@@ -77,6 +81,9 @@ pub fn instantiate(
         deps.storage,
         &msg.cycle_period.unwrap_or(DEFAULT_CYCLE_PERIOD),
     )?;
+
+    // store the fees
+    SERVICE_FEE_CONFIG.save(deps.storage, &msg.fees)?;
 
     Ok(Response::default().add_attribute("method", "instantiate"))
 }
@@ -92,14 +99,18 @@ pub fn execute(
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
         RebalancerExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
         RebalancerExecuteMsg::Register { register_for, data } => {
-            verify_services_manager(deps.as_ref(), &info)?;
+            let manager_addr = verify_services_manager(deps.as_ref(), &info)?;
             let data = data.ok_or(ContractError::MustProvideRebalancerData)?;
             let registree = deps.api.addr_validate(&register_for)?;
-            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
 
             if CONFIGS.has(deps.storage, registree.clone()) {
                 return Err(ContractError::AccountAlreadyRegistered);
             }
+
+            // Verify user paid the registration fee
+            let fee_msg = SERVICE_FEE_CONFIG
+                .load(deps.storage)?
+                .handle_registration_fee(&info, &manager_addr)?;
 
             // Find base denom in our whitelist
             let base_denom_whitelist = BASE_DENOM_WHITELIST
@@ -120,6 +131,7 @@ pub fn execute(
                 return Err(ContractError::TwoTargetsMinimum);
             }
 
+            let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
             // check target denoms are whitelisted
             let denom_whitelist = DENOM_WHITELIST.load(deps.storage)?;
             let mut total_bps: u64 = 0;
@@ -198,13 +210,16 @@ pub fn execute(
             }
 
             // save config
-            CONFIGS.save(deps.storage, registree, &data.to_config()?)?;
+            CONFIGS.save(deps.storage, registree, &data.to_config(deps.api)?)?;
 
-            Ok(Response::default())
+            Ok(Response::default().add_messages(fee_msg))
         }
         RebalancerExecuteMsg::Deregister { deregister_for } => {
             verify_services_manager(deps.as_ref(), &info)?;
-            CONFIGS.remove(deps.storage, deps.api.addr_validate(&deregister_for)?);
+            let account = deps.api.addr_validate(&deregister_for)?;
+
+            CONFIGS.remove(deps.storage, account.clone());
+            PAUSED_CONFIGS.remove(deps.storage, account);
 
             Ok(Response::default())
         }
@@ -253,9 +268,7 @@ pub fn execute(
 
             if let Some(trustee) = data.trustee {
                 config.trustee = match trustee {
-                    OptionalField::Set(trustee) => {
-                        Some(deps.api.addr_validate(&trustee)?.to_string())
-                    }
+                    OptionalField::Set(trustee) => Some(deps.api.addr_validate(&trustee)?),
                     OptionalField::Clear => None,
                 };
             }
@@ -275,12 +288,16 @@ pub fn execute(
                 config.pid = pid.into_parsed()?;
             }
 
-            if let Some(max_limit) = data.max_limit {
-                if !(1..=10000).contains(&max_limit) {
-                    return Err(ValenceError::InvalidMaxLimitRange.into());
-                }
-
-                config.max_limit = Decimal::bps(max_limit);
+            if let Some(max_limit_option) = data.max_limit_bps {
+                config.max_limit = match max_limit_option {
+                    OptionalField::Set(max_limit) => {
+                        if !(1..=10000).contains(&max_limit) {
+                            return Err(ValenceError::InvalidMaxLimitRange.into());
+                        }
+                        Decimal::bps(max_limit)
+                    }
+                    OptionalField::Clear => Decimal::one(),
+                };
             }
 
             if let Some(target_override_strategy) = data.target_override_strategy {
@@ -291,77 +308,112 @@ pub fn execute(
 
             Ok(Response::default())
         }
-        RebalancerExecuteMsg::Pause { pause_for, sender } => {
+        RebalancerExecuteMsg::Pause {
+            pause_for,
+            sender,
+            reason,
+        } => {
             verify_services_manager(deps.as_ref(), &info)?;
             let account = deps.api.addr_validate(&pause_for)?;
             let sender = deps.api.addr_validate(&sender)?;
 
-            let mut config = CONFIGS.load(deps.storage, account.clone())?;
-            let trustee = config
-                .trustee
-                .clone()
-                .map(|a| deps.api.addr_validate(&a))
-                .transpose()?;
-
-            if let Some(pauser) = config.is_paused {
-                if let Some(trustee) = trustee {
-                    // If we have trustee, and its the pauser, and the sender is the account, we change the pauser to the account
-                    // else it means that the pauser is the account, so we error because rebalancer already paused.
-                    if pauser == trustee && sender == account {
-                        config.is_paused = Some(account.clone());
-                    } else {
-                        return Err(ContractError::AccountAlreadyPaused);
-                    }
-                } else {
-                    // If we reach here, it means we don't have a trustee, but the rebalancer is paused
-                    // which can only mean that the pauser is the account, so we error because rebalancer already paused.
+            if let Some(mut paused_data) = PAUSED_CONFIGS.may_load(deps.storage, account.clone())? {
+                // If the sender already paused it before, just error out.
+                if sender == paused_data.pauser || account == paused_data.pauser {
                     return Err(ContractError::AccountAlreadyPaused);
                 }
-            } else {
-                // If we reached here it means the rebalancer is not paused so we check if the sender is valid
-                // sender can either be the trustee or the account.
+
+                // If the sender is the account, we set it as the pauser to override other possible pausers
                 if sender == account {
-                    // If we don't have a trustee, and the sender is the account, then we set him as the pauser
-                    config.is_paused = Some(account.clone());
-                } else if let Some(trustee) = trustee {
-                    // If we have a trustee, and its the sender, then we set him as the pauser
-                    if trustee == sender {
-                        config.is_paused = Some(trustee);
-                    } else {
-                        // The sender is not the trustee, so we error
-                        return Err(ContractError::NotAuthorizedToPause);
+                    paused_data.pauser = account.clone();
+
+                    PAUSED_CONFIGS.save(deps.storage, account, &paused_data)?;
+                    return Ok(Response::default());
+                }
+
+                // If we have trustee, and he is the sender we set him as the pauser
+                if let Some(trustee) = paused_data.config.trustee.clone() {
+                    if sender == trustee {
+                        paused_data.pauser = account.clone();
+
+                        PAUSED_CONFIGS.save(deps.storage, account, &paused_data)?;
+                        return Ok(Response::default());
                     }
-                } else {
-                    // If we reach here, it means we don't have a trustee, and the sender is not the account
-                    // so we error because only the account can pause the rebalancer.
-                    return Err(ContractError::NotAuthorizedToPause);
+                }
+
+                return Err(ContractError::NotAuthorizedToPause);
+            }
+
+            let config = CONFIGS.load(deps.storage, account.clone())?;
+
+            let mut move_config_to_paused = |pauser: Addr| -> Result<(), StdError> {
+                CONFIGS.remove(deps.storage, account.clone());
+                PAUSED_CONFIGS.save(
+                    deps.storage,
+                    account.clone(),
+                    &PauseData::new(pauser, reason.clone().unwrap_or_default(), &config),
+                )?;
+                Ok(())
+            };
+
+            if sender == account {
+                move_config_to_paused(account.clone())?;
+                return Ok(Response::default());
+            };
+
+            if let Some(trustee) = config.trustee.clone() {
+                if trustee == sender {
+                    move_config_to_paused(trustee.clone())?;
+                    return Ok(Response::default());
                 }
             }
 
-            CONFIGS.save(deps.storage, account, &config)?;
-
-            Ok(Response::default())
+            Err(ContractError::NotAuthorizedToPause)
         }
         RebalancerExecuteMsg::Resume { resume_for, sender } => {
-            verify_services_manager(deps.as_ref(), &info)?;
+            let manager_addr = verify_services_manager(deps.as_ref(), &info)?;
             let account = deps.api.addr_validate(&resume_for)?;
             let sender = deps.api.addr_validate(&sender)?;
 
-            let mut config = CONFIGS.load(deps.storage, account.clone())?;
+            let paused_data = PAUSED_CONFIGS
+                .load(deps.storage, account.clone())
+                .map_err(|_| ContractError::NotPaused)?;
             let auctions_manager_addr = AUCTIONS_MANAGER_ADDR.load(deps.storage)?;
+
+            // Verify user paid the resume fee if its needed
+            let fee_msg = SERVICE_FEE_CONFIG.load(deps.storage)?.handle_resume_fee(
+                &info,
+                &manager_addr,
+                paused_data.reason,
+            )?;
+
+            // Verify sender is autorized to resume
+            (|| {
+                if sender == account {
+                    return Ok(());
+                }
+
+                if let Some(trustee) = paused_data.config.trustee.clone() {
+                    if sender == trustee && paused_data.pauser != account {
+                        return Ok(());
+                    }
+                }
+
+                Err(ContractError::NotAuthorizedToResume)
+            })()?;
 
             // verify minimum balance is met
             let base_denom = BASE_DENOM_WHITELIST
                 .load(deps.storage)?
                 .iter()
-                .find(|bd| bd.denom == config.base_denom)
+                .find(|bd| bd.denom == paused_data.config.base_denom)
                 .expect("Base denom not found in whitelist")
                 .clone();
 
             let mut total_value = Uint128::zero();
             let mut min_value_met = false;
 
-            for target in &config.targets {
+            for target in &paused_data.config.targets {
                 let target_balance = deps.querier.query_balance(&account, &target.denom)?;
 
                 let value = if target.denom == base_denom.denom {
@@ -405,37 +457,10 @@ pub fn execute(
                 ));
             }
 
-            let trustee = config
-                .trustee
-                .clone()
-                .map(|a| deps.api.addr_validate(&a))
-                .transpose()?;
+            CONFIGS.save(deps.storage, account.clone(), &paused_data.config)?;
+            PAUSED_CONFIGS.remove(deps.storage, account);
 
-            // If config is paused
-            if let Some(resumer) = config.is_paused {
-                // If the sender is the account, we resume
-                if sender == account {
-                    config.is_paused = None;
-                } else if let Some(trustee) = trustee {
-                    // If we have a trustee, and its the sender, we resume
-                    if sender == trustee && resumer == trustee {
-                        config.is_paused = None;
-                    } else {
-                        // We error because only the account or the trustee can resume
-                        return Err(ContractError::NotAuthorizedToResume);
-                    }
-                } else {
-                    // If we don't have a trustee and sender is not account, we error
-                    return Err(ContractError::NotAuthorizedToResume);
-                }
-            } else {
-                // config is not paused, so error out
-                return Err(ContractError::NotPaused);
-            }
-
-            CONFIGS.save(deps.storage, account, &config)?;
-
-            Ok(Response::default())
+            Ok(Response::default().add_messages(fee_msg))
         }
         RebalancerExecuteMsg::SystemRebalance { limit } => {
             execute_system_rebalance(deps, &env, limit)
@@ -447,8 +472,8 @@ mod admin {
     use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
     use valence_package::{
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
-        services::rebalancer::{RebalancerAdminMsg, SystemRebalanceStatus},
-        states::SERVICES_MANAGER,
+        services::rebalancer::{BaseDenom, RebalancerAdminMsg, SystemRebalanceStatus},
+        states::{SERVICES_MANAGER, SERVICE_FEE_CONFIG},
     };
 
     use crate::{
@@ -486,17 +511,13 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = denoms.iter().position(|d| d == &denom) {
-                        denoms.remove(index);
+                    if !denoms.remove(&denom) {
+                        return Err(ContractError::CannotRemoveDenom(denom));
                     }
                 }
 
                 // add new denoms
-                for denom in to_add {
-                    if !denoms.contains(&denom) {
-                        denoms.push(denom);
-                    }
-                }
+                denoms.extend(to_add);
 
                 DENOM_WHITELIST.save(deps.storage, &denoms)?;
 
@@ -507,19 +528,14 @@ mod admin {
 
                 // first remove denoms
                 for denom in to_remove {
-                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom) {
-                        base_denoms.remove(index);
+                    let base_denom = BaseDenom::new_empty(&denom);
+                    if !base_denoms.remove(&base_denom) {
+                        return Err(ContractError::CannotRemoveBaseDenom(denom));
                     }
                 }
 
                 // add new denoms
-                for denom in to_add {
-                    if let Some(index) = base_denoms.iter().position(|d| d.denom == denom.denom) {
-                        base_denoms[index] = denom;
-                    } else {
-                        base_denoms.push(denom);
-                    }
-                }
+                base_denoms.extend(to_add);
 
                 BASE_DENOM_WHITELIST.save(deps.storage, &base_denoms)?;
 
@@ -544,6 +560,11 @@ mod admin {
 
                 Ok(Response::default())
             }
+            RebalancerAdminMsg::UpdateFess { fees } => {
+                SERVICE_FEE_CONFIG.save(deps.storage, &fees)?;
+
+                Ok(Response::default())
+            }
             RebalancerAdminMsg::StartAdminChange { addr, expiration } => {
                 Ok(start_admin_change(deps, &info, &addr, expiration)?)
             }
@@ -557,6 +578,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetConfig { addr } => {
             to_json_binary(&CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
+        }
+        QueryMsg::GetPausedConfig { addr } => {
+            to_json_binary(&PAUSED_CONFIGS.load(deps.storage, deps.api.addr_validate(&addr)?)?)
         }
         QueryMsg::GetSystemStatus {} => {
             to_json_binary(&SYSTEM_REBALANCE_STATUS.load(deps.storage)?)
@@ -577,20 +601,71 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_json_binary(&ManagersAddrsResponse { services, auctions })
         }
         QueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+        QueryMsg::GetServiceFee { account, action } => {
+            let fees = SERVICE_FEE_CONFIG.load(deps.storage)?;
+            let fee_amount = match action {
+                QueryFeeAction::Register => fees.register_fee,
+                QueryFeeAction::Resume => {
+                    let Ok(paused_config) =
+                        PAUSED_CONFIGS.load(deps.storage, deps.api.addr_validate(&account)?)
+                    else {
+                        return to_json_binary::<Option<Coin>>(&None);
+                    };
+
+                    match paused_config.reason {
+                        valence_package::services::rebalancer::PauseReason::EmptyBalance => {
+                            fees.resume_fee
+                        }
+                        valence_package::services::rebalancer::PauseReason::AccountReason(_) => {
+                            Uint128::zero()
+                        }
+                    }
+                }
+            };
+
+            if !fee_amount.is_zero() {
+                return to_json_binary(&Some(Coin {
+                    denom: fees.denom,
+                    amount: fee_amount,
+                }));
+            }
+
+            to_json_binary::<Option<Coin>>(&None)
+        }
+        QueryMsg::GetAllConfigs { start_after, limit } => {
+            let start_after =
+                start_after.map(|addr| Bound::inclusive(deps.api.addr_validate(&addr).unwrap()));
+
+            let configs = CONFIGS
+                .range(
+                    deps.storage,
+                    start_after,
+                    None,
+                    cosmwasm_std::Order::Ascending,
+                )
+                .take(limit.unwrap_or(50) as usize)
+                .collect::<Result<Vec<_>, StdError>>()?;
+
+            to_json_binary(&configs)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    // Tick messages are dispatched with reply ID 0 and reply on
-    // error. If an error occurs, we ignore it but stop the parent
-    // message from failing, so the state change which moved the tick
-    // receiver to the end of the message queue gets committed. This
-    // prevents an erroring tick receiver from locking the clock.
     match msg.id {
-        REPLY_DEFAULT_REBALANCE => Ok(Response::default()
-            .add_attribute("method", "reply_on_error")
-            .add_attribute("error", msg.result.unwrap_err())),
+        REPLY_DEFAULT_REBALANCE => Ok(Response::default().add_event(
+            Event::new("fail-rebalance").add_attribute("error", msg.result.unwrap_err()),
+        )),
         _ => Err(ContractError::UnexpectedReplyId(msg.id)),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }

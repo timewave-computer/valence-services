@@ -4,6 +4,8 @@ CHAIN=$1
 shift
 COMMAND=$1
 shift
+INIT_BY=$1
+shift
 
 if [[ "$CHAIN" == 'juno' ]]; then
   BINARY="junod"
@@ -12,13 +14,21 @@ if [[ "$CHAIN" == 'juno' ]]; then
 
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
+  GAS_PRICES="0.075untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
+
 else
   echo "Unknown chain"
 fi
 
-EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -y"
+if [ -z "$INIT_BY" ]; then
+  ADDRESSES="$OWNER_ADDR"
+else
+  ADDRESSES="$OWNER_ADDR,$INIT_BY"
+fi
+
+EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json --instantiate-anyof-addresses $ADDRESSES -y"
+ACCOUNT_EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json -y"
 ARTIFACTS_PATH="../artifacts"
 
 # File names
@@ -30,8 +40,9 @@ SERVICES_MANAGER_FILE_NAME="$ARTIFACTS_PATH/services_manager.wasm"
 REBALANCER_FILE_NAME="$ARTIFACTS_PATH/rebalancer.wasm"
 
 if [[ "$COMMAND" == 'account' ]]; then
-  $BINARY tx wasm s $ACCOUNT_FILE_NAME --from $OWNER_ADDR $EXECUTE_FLAGS
+  $BINARY tx wasm s $ACCOUNT_FILE_NAME --from $OWNER_ADDR $ACCOUNT_EXECUTE_FLAGS
 elif [[ "$COMMAND" == 'auction' ]]; then
+  # Auction needs to be instantiated by the manager, so need to change the --instantiate-anyof-addresses
   $BINARY tx wasm s $AUCTION_FILE_NAME --from $OWNER_ADDR $EXECUTE_FLAGS
 elif [[ "$COMMAND" == 'auctions-manager' ]]; then
   $BINARY tx wasm s $AUCTIONS_MANAGER_FILE_NAME --from $OWNER_ADDR $EXECUTE_FLAGS

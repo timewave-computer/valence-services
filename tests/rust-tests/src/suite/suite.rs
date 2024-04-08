@@ -2,27 +2,28 @@ use std::collections::HashMap;
 
 use auction_package::Pair;
 use cosmwasm_schema::{cw_serde, serde, QueryResponses};
-use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Empty, StdError, Uint128};
 use cw_multi_test::{App, AppResponse, Executor};
 use rebalancer::{
     contract::DEFAULT_CYCLE_PERIOD,
     msg::{ManagersAddrsResponse, WhitelistsResponse},
 };
 use valence_package::services::{
-    rebalancer::{BaseDenom, RebalancerConfig, SystemRebalanceStatus},
+    rebalancer::{BaseDenom, PauseData, RebalancerConfig, ServiceFeeConfig, SystemRebalanceStatus},
     ValenceServices,
 };
 
 use super::{instantiates::AccountInstantiate, suite_builder::SuiteBuilder};
 
 pub const ATOM: &str = "uatom";
-pub const NTRN: &str = "untrn";
+pub const NTRN: &str = "ibc/untrn";
 pub const OSMO: &str = "uosmo";
 
 pub const ADMIN: &str = "admin";
 pub const ACC_OWNER: &str = "owner";
 pub const TRUSTEE: &str = "trustee";
 pub const MM: &str = "market_maker";
+pub const FEE: &str = "fee_addr";
 
 // PID defaults
 pub const DEFAULT_P: &str = "0.5";
@@ -35,6 +36,8 @@ pub const HALF_DAY: u64 = DAY / 2;
 
 pub const DEFAULT_NTRN_PRICE_BPS: u64 = 15000;
 pub const DEFAULT_OSMO_PRICE_BPS: u64 = 25000;
+
+pub const DEFAULT_BALANCE_AMOUNT: Uint128 = Uint128::new(1_000_000_000_000);
 
 pub(crate) struct Suite {
     pub app: App,
@@ -53,6 +56,9 @@ pub(crate) struct Suite {
 
     // code ids for future use
     pub account_code_id: u64,
+
+    // astro
+    pub astro_pools: HashMap<(String, String), Addr>,
 }
 
 impl Default for Suite {
@@ -71,6 +77,7 @@ impl Suite {
         self
     }
 
+    /// Updates block by 1 cycle (24 hours)
     pub fn update_block_cycle(&mut self) -> &mut Self {
         self.update_block(DEFAULT_CYCLE_PERIOD / DEFAULT_BLOCK_TIME)
     }
@@ -182,6 +189,17 @@ impl Suite {
             },
             &[],
         )
+    }
+
+    pub fn register_to_rebalancer_fee_err<D: serde::ser::Serialize>(
+        &mut self,
+        account_position: u64,
+        register_data: &D,
+    ) -> StdError {
+        self.register_to_rebalancer(account_position, register_data)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
     }
 
     pub fn register_to_rebalancer_err<D: serde::ser::Serialize>(
@@ -318,6 +336,20 @@ impl Suite {
             &[],
         )
     }
+
+    pub fn update_rebalancer_fees(
+        &mut self,
+        fees: ServiceFeeConfig,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.rebalancer_addr.clone(),
+            &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFess { fees },
+            ),
+            &[],
+        )
+    }
 }
 
 // Execute service management
@@ -446,6 +478,7 @@ impl Suite {
             account_addr,
             &valence_package::msgs::core_execute::AccountBaseExecuteMsg::PauseService {
                 service_name,
+                reason: Some("Some reason".to_string()),
             },
             &[],
         )
@@ -464,6 +497,7 @@ impl Suite {
             &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::PauseService {
                 service_name,
                 pause_for: account_addr.to_string(),
+                reason: Some("Some reason".to_string()),
             },
             &[],
         )
@@ -513,6 +547,22 @@ impl Suite {
             &[],
         )
     }
+
+    pub fn withdraw_fees_from_manager(
+        &mut self,
+        denom: impl Into<String>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.manager_addr.clone(),
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::Admin(
+                valence_package::msgs::core_execute::ServicesManagerAdminMsg::Withdraw {
+                    denom: denom.into(),
+                },
+            ),
+            &[],
+        )
+    }
 }
 
 // Queries
@@ -521,6 +571,15 @@ impl Suite {
         self.app.wrap().query_wasm_smart(
             self.rebalancer_addr.clone(),
             &rebalancer::msg::QueryMsg::GetConfig {
+                addr: account.to_string(),
+            },
+        )
+    }
+
+    pub fn query_rebalancer_paused_config(&self, account: Addr) -> Result<PauseData, StdError> {
+        self.app.wrap().query_wasm_smart(
+            self.rebalancer_addr.clone(),
+            &rebalancer::msg::QueryMsg::GetPausedConfig {
                 addr: account.to_string(),
             },
         )
@@ -589,7 +648,6 @@ impl Suite {
             assert!(query_config.targets.contains(target));
         }
 
-        assert_eq!(query_config.is_paused, config.is_paused);
         assert_eq!(query_config.trustee, config.trustee);
         assert_eq!(query_config.base_denom, config.base_denom);
         assert_eq!(query_config.pid, config.pid);
@@ -600,11 +658,5 @@ impl Suite {
             query_config.target_override_strategy,
             config.target_override_strategy
         );
-    }
-
-    pub fn assert_rebalancer_is_paused(&self, account_position: u64, is_paused: Option<Addr>) {
-        let account_addr = self.get_account_addr(account_position);
-        let query_config = self.query_rebalancer_config(account_addr).unwrap();
-        assert_eq!(query_config.is_paused, is_paused)
     }
 }

@@ -1,16 +1,20 @@
 use auction_package::helpers::{approve_admin_change, GetPriceResponse};
 use auction_package::msgs::AuctionsManagerQueryMsg;
-use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, ORACLE_ADDR, PAIRS};
+use auction_package::states::{
+    MinAmount, ADMIN, MIN_AUCTION_AMOUNT, MIN_AUCTION_AMOUNT_V0, ORACLE_ADDR, PAIRS,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdResult,
+    WasmMsg,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use cw_utils::{nonpayable, parse_reply_instantiate_data};
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 use crate::state::AUCTION_CODE_ID;
 
 const CONTRACT_NAME: &str = "crates.io:auctions-manager";
@@ -87,8 +91,8 @@ pub fn execute(
 
             Ok(Response::default().add_message(msg))
         }
-        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
-        ExecuteMsg::ApproveAdminChange => Ok(approve_admin_change(deps, &env, &info)?),
+        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
+        ExecuteMsg::ApproveAdminChange {} => Ok(approve_admin_change(deps, &env, &info)?),
     }
 }
 
@@ -110,7 +114,11 @@ mod admin {
         verify_admin(deps.as_ref(), &info)?;
 
         match msg {
-            AdminMsgs::NewAuction { msg, min_amount } => {
+            AdminMsgs::NewAuction {
+                msg,
+                label,
+                min_amount,
+            } => {
                 msg.pair.verify()?;
 
                 // Make sure we either set min_amount, or have it in storage
@@ -135,7 +143,7 @@ mod admin {
                         code_id: AUCTION_CODE_ID.load(deps.storage)?,
                         msg: to_json_binary(&msg)?,
                         funds: vec![],
-                        label: format!("auction-{}-{}", msg.pair.0, msg.pair.1),
+                        label,
                     },
                     INSTANTIATE_AUCTION_REPLY_ID,
                 );
@@ -146,9 +154,9 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::PauseAuction,
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
@@ -158,9 +166,9 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::ResumeAuction,
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
@@ -170,9 +178,9 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::StartAuction(params),
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
@@ -192,9 +200,9 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::UpdateStrategy { strategy },
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
@@ -204,9 +212,9 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::UpdateChainHaltConfig(halt_config),
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
@@ -216,13 +224,29 @@ mod admin {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
                 let msg = WasmMsg::Execute {
                     contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
                         auction::msg::AdminMsgs::UpdatePriceFreshnessStrategy(strategy),
-                    ))?,
+                    )))?,
                     funds: vec![],
                 };
 
                 Ok(Response::default().add_message(msg))
+            }
+            AdminMsgs::MigrateAuction { pair, code_id, msg } => {
+                let pair_addr = PAIRS.load(deps.storage, pair)?;
+
+                let migrate_msg = WasmMsg::Migrate {
+                    contract_addr: pair_addr.to_string(),
+                    msg: to_json_binary(&msg)?,
+                    new_code_id: code_id,
+                };
+
+                Ok(Response::default().add_message(migrate_msg))
+            }
+            AdminMsgs::UpdateMinAmount { denom, min_amount } => {
+                MIN_AUCTION_AMOUNT.save(deps.storage, denom, &min_amount)?;
+
+                Ok(Response::default())
             }
             AdminMsgs::StartAdminChange { addr, expiration } => {
                 Ok(start_admin_change(deps, &info, &addr, expiration)?)
@@ -235,6 +259,15 @@ mod admin {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: AuctionsManagerQueryMsg) -> StdResult<Binary> {
     match msg {
+        AuctionsManagerQueryMsg::GetPairs { start_after, limit } => {
+            let start_after = start_after.map(Bound::exclusive);
+            let pairs = PAIRS
+                .range(deps.storage, start_after, None, Order::Ascending)
+                .take(limit.unwrap_or(50) as usize)
+                .collect::<StdResult<Vec<_>>>()?;
+
+            to_json_binary(&pairs)
+        }
         AuctionsManagerQueryMsg::GetPairAddr { pair } => {
             to_json_binary(&PAIRS.load(deps.storage, pair)?)
         }
@@ -277,5 +310,34 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             Ok(Response::default())
         }
         _ => Err(ContractError::UnknownReplyId(msg.id)),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
+        MigrateMsg::ToV1 {} => {
+            let mins = MIN_AUCTION_AMOUNT_V0
+                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .collect::<StdResult<Vec<_>>>()?;
+
+            mins.iter().for_each(|(denom, amount)| {
+                MIN_AUCTION_AMOUNT
+                    .save(
+                        deps.storage,
+                        denom.to_string(),
+                        &MinAmount {
+                            send: *amount,
+                            start_auction: *amount,
+                        },
+                    )
+                    .unwrap();
+            });
+
+            Ok(Response::default())
+        }
     }
 }

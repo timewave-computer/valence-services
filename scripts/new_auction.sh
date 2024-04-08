@@ -7,26 +7,25 @@ if [[ "$CHAIN" == 'juno' ]]; then
   BINARY="junod"
   GAS_PRICES="0.025ujunox"
   OWNER_ADDR="juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn"
-  FEES="10000ujunox"
 
   ADDR_AUCTIONS_MANAGER="juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j"
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
-  FEES="1000untrn"
+  GAS_PRICES="0.075untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
 
-  # ADDR_AUCTIONS_MANAGER=""
+  ADDR_AUCTIONS_MANAGER="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 else
   echo "Unknown chain"
 fi
 
-# EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
-EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
+EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
+# EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
 ## You can change value manually and uncomment it here
-PAIR='["factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx", "ujunox"]'
-AUCTION_STRATEGY='{ "start_price_perc": 2000, "end_price_perc": 2000 }'
+PAIR='["ibc/B559A80D62249C8AA07A380E2A2BEA6E5CA9A6F079C912C3A9E9B494105E4F81", "factory/neutron1p8d89wvxyjcnawmgw72klknr3lg9gwwl6ypxda/newt"]'
+LABEL="auction USDC/NEWT"
+AUCTION_STRATEGY='{ "start_price_perc": 5000, "end_price_perc": 5000 }'
 CHAIN_HALT='{ "cap": "14400", "block_avg": "3" }'
 PRICE_FRESHNESS='{ "limit": "3", "multipliers": [["2", "2"], ["1", "1.5"]] }'
 
@@ -58,6 +57,7 @@ done
 
 execute_msg=$(jq -n \
   --argjson pair "$PAIR" \
+  --arg label "$LABEL" \
   --argjson auction_strategy "$AUCTION_STRATEGY" \
   --argjson chain_halt_config "$CHAIN_HALT" \
   --argjson price_freshness_strategy "$PRICE_FRESHNESS" \
@@ -69,6 +69,7 @@ execute_msg=$(jq -n \
           chain_halt_config: $chain_halt_config,
           price_freshness_strategy: $price_freshness_strategy
         },
+        label: "$label",
       }
     }}')
 

@@ -155,7 +155,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             account_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -178,7 +178,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             account_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap();
@@ -211,7 +211,7 @@ fn test_update_admin_cancel() {
         .execute_contract(
             suite.owner.clone(),
             account_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::CancelAdminChange,
+            &price_oracle::msg::ExecuteMsg::CancelAdminChange {},
             &[],
         )
         .unwrap();
@@ -222,7 +222,7 @@ fn test_update_admin_cancel() {
         .execute_contract(
             new_admin,
             account_addr,
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -254,7 +254,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             random_addr,
             account_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -267,7 +267,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             new_admin,
             account_addr,
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();

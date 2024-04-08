@@ -1,4 +1,5 @@
 use cosmwasm_std::{DecimalRangeExceeded, StdError};
+use cw_utils::PaymentError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -8,6 +9,9 @@ pub enum ValenceError {
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error(transparent)]
+    PaymentError(#[from] PaymentError),
 
     #[error("Sender is not a service!")]
     UnauthorizedService,
@@ -24,8 +28,8 @@ pub enum ValenceError {
     #[error("This services expects data on register: {0}")]
     MissingRegisterData(String),
 
-    #[error("Couldn't parse binary into: {0}")]
-    RegisterDataParseError(String),
+    #[error("Service: {service}, Couldn't parse binary into: {ty}")]
+    DataParseError { service: String, ty: String },
 
     #[error("PID values cannot be more then 1")]
     PIDErrorOver,
@@ -41,4 +45,7 @@ pub enum ValenceError {
 
     #[error("Change admin is expired")]
     AdminChangeExpired,
+
+    #[error("Must pay the registration fee of: {0}{1}")]
+    MustPayRegistrationFee(String, String),
 }

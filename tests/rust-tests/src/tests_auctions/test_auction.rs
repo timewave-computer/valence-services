@@ -2,8 +2,11 @@ use auction::state::{ActiveAuction, ActiveAuctionStatus};
 use auction_package::{error::AuctionError, states::TWAP_PRICES};
 use cosmwasm_std::{coin, coins, testing::mock_env, Addr, Decimal, Timestamp, Uint128};
 use cw_multi_test::Executor;
+use price_oracle::state::PriceStep;
 
-use crate::suite::suite::{Suite, DAY, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS};
+use crate::suite::suite::{
+    Suite, DAY, DEFAULT_BALANCE_AMOUNT, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS,
+};
 
 #[test]
 fn test_open_auction() {
@@ -160,7 +163,7 @@ fn test_bid() {
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
     assert_eq!(
-        Uint128::from(1000000000_u128) - mm_balance.amount,
+        DEFAULT_BALANCE_AMOUNT - mm_balance.amount,
         active_auction.resolved_amount
     );
 
@@ -188,7 +191,7 @@ fn test_bid() {
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
     assert_eq!(
-        Uint128::from(1000000000_u128) - mm_balance.amount,
+        DEFAULT_BALANCE_AMOUNT - mm_balance.amount,
         active_auction.resolved_amount
     );
 
@@ -213,7 +216,7 @@ fn test_bid() {
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
     assert_eq!(
-        Uint128::from(1000000000_u128) - mm_balance.amount,
+        DEFAULT_BALANCE_AMOUNT - mm_balance.amount,
         active_auction.resolved_amount
     );
     assert_eq!(active_auction.status, ActiveAuctionStatus::Finished)
@@ -264,10 +267,7 @@ fn test_exact_bid() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
-    assert_eq!(
-        Uint128::from(1000000000_u128) - mm_balance.amount,
-        ntrn_to_send
-    );
+    assert_eq!(DEFAULT_BALANCE_AMOUNT - mm_balance.amount, ntrn_to_send);
     assert_eq!(active_auction.status, ActiveAuctionStatus::Finished)
 }
 
@@ -318,10 +318,7 @@ fn test_overflow_bid() {
         .wrap()
         .query_balance(suite.mm.clone(), suite.pair.1.clone())
         .unwrap();
-    assert_eq!(
-        Uint128::from(1000000000_u128) - mm_balance.amount,
-        ntrn_to_buy_all
-    );
+    assert_eq!(DEFAULT_BALANCE_AMOUNT - mm_balance.amount, ntrn_to_buy_all);
     assert_eq!(active_auction.status, ActiveAuctionStatus::Finished)
 }
 
@@ -407,7 +404,7 @@ fn test_not_admin() {
         .execute_contract(
             Addr::unchecked("not_admin"),
             suite.get_default_auction_addr(),
-            &auction::msg::ExecuteMsg::Admin(auction::msg::AdminMsgs::PauseAuction),
+            &auction::msg::ExecuteMsg::Admin(Box::new(auction::msg::AdminMsgs::PauseAuction)),
             &[],
         )
         .unwrap_err();
@@ -622,16 +619,25 @@ fn test_saving_10_twap_prices() {
     let mut suite = Suite::default();
     let funds = coins(10_u128, suite.pair.0.clone());
 
+    // Add astroport path to oracle
+    let path = vec![PriceStep {
+        denom1: suite.pair.0.to_string(),
+        denom2: suite.pair.1.to_string(),
+        pool_address: suite
+            .astro_pools
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+    }];
+    suite
+        .add_astro_path_to_oracle(suite.pair.clone(), path)
+        .unwrap();
+
     // Do 11 auctions
-    for i in 0..11 {
+    for _ in 0..11 {
         suite.finalize_auction(&funds);
-        if i < 3 {
-            suite
-                .update_price(suite.pair.clone(), Some(Decimal::one()))
-                .unwrap();
-        } else {
-            suite.update_price(suite.pair.clone(), None).unwrap();
-        }
+
+        suite.update_price(suite.pair.clone()).unwrap();
     }
 
     let prices = TWAP_PRICES
@@ -726,7 +732,7 @@ fn test_auction_modified_strategy_for_price_freshness() {
     suite.finalize_auction(&funds);
     suite.finalize_auction(&funds);
 
-    suite.update_price(suite.pair.clone(), None).unwrap();
+    suite.update_price(suite.pair.clone()).unwrap();
 
     suite.update_block_cycle();
     suite.update_block_cycle();
@@ -742,13 +748,13 @@ fn test_auction_modified_strategy_for_price_freshness() {
     );
     assert_eq!(active_auction.end_price, price - price * Decimal::bps(3000));
 
-    suite.update_price(suite.pair.clone(), None).unwrap();
+    suite.update_price(suite.pair.clone()).unwrap();
 
     suite.update_block_cycle();
     suite.update_block_cycle();
     suite.update_block_cycle();
 
-    suite.update_price(suite.pair.clone(), None).unwrap();
+    suite.update_price(suite.pair.clone()).unwrap();
 
     suite.finalize_auction(&funds);
 
@@ -761,7 +767,7 @@ fn test_auction_modified_strategy_for_price_freshness() {
     );
     assert_eq!(active_auction.end_price, price - price * Decimal::bps(4000));
 
-    suite.update_price(suite.pair.clone(), None).unwrap();
+    suite.update_price(suite.pair.clone()).unwrap();
 
     suite.finalize_auction(&funds);
 
@@ -883,4 +889,81 @@ fn test_open_auction_bid_after_end_block_passed() {
     let err = suite.do_bid_err(suite.pair.clone(), coin(1000_u128, suite.pair.1.clone()));
 
     assert_eq!(err, auction::error::ContractError::AuctionFinished)
+}
+
+#[test]
+fn test_minimum_amounts() {
+    let mut suite = Suite::default();
+
+    // Try to send 1 denom to the auction (minimum is 5)
+    let err = suite.auction_funds_err(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(1_u128, suite.pair.0.clone()),
+    );
+
+    // should error telling us minimum is 5
+    assert_eq!(
+        err,
+        auction::error::ContractError::AuctionAmountTooLow(5_u128.into())
+    );
+
+    // get the old balance of the account
+    let old_balance = suite.get_balance(0, suite.pair.0.as_str());
+
+    // send 5 denom to the auction
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(5_u128, suite.pair.0.clone()),
+    );
+
+    // we try to star start the auction, it doesn't fail, but doesn't start and refunds to the account the sent amount
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+
+    // get new balance of the account
+    let new_balance = suite.get_balance(0, suite.pair.0.as_str());
+    assert_eq!(old_balance.amount, new_balance.amount);
+
+    // the auction status should be still AuctionClosed
+    let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
+    assert_eq!(active_auction.status, ActiveAuctionStatus::AuctionClosed);
+
+    // send 10 denom
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(10_u128, suite.pair.0.clone()),
+    );
+    // start auction as usual
+    suite.start_auction_day(suite.pair.clone()).unwrap();
+
+    let curr_balance = suite.get_balance(0, suite.pair.0.as_str());
+    assert_eq!(old_balance.amount - Uint128::new(10), curr_balance.amount);
+
+    // The auction status should be started, and avilable funds should be 10
+    let active_auction = suite.query_auction_details(suite.get_default_auction_addr());
+    assert_eq!(active_auction.status, ActiveAuctionStatus::Started);
+    assert_eq!(active_auction.available_amount, Uint128::new(10));
+}
+
+#[test]
+fn test_all_pairs_query() {
+    let suite = Suite::default();
+
+    // Should be successful query and not empty
+    let pairs = suite.query_auctions_manager_all_pairs();
+    assert!(!pairs.is_empty())
 }

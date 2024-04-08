@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use auction_package::helpers::{verify_admin, AuctionConfig, GetPriceResponse};
-use auction_package::states::{ADMIN, TWAP_PRICES};
+use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, TWAP_PRICES};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -14,7 +14,8 @@ use crate::error::ContractError;
 use crate::execute;
 use crate::helpers::calc_price;
 use crate::msg::{
-    ExecuteMsg, GetFundsAmountResponse, GetMmResponse, InstantiateMsg, NewAuctionParams, QueryMsg,
+    ExecuteMsg, GetFundsAmountResponse, GetMmResponse, InstantiateMsg, MigrateMsg,
+    NewAuctionParams, QueryMsg,
 };
 use crate::state::{
     ActiveAuction, ActiveAuctionStatus, AuctionIds, ACTIVE_AUCTION, AUCTION_CONFIG, AUCTION_FUNDS,
@@ -107,17 +108,18 @@ pub fn execute(
             verify_admin(deps.as_ref(), &info)?;
             execute::withdraw_funds(deps, sender)
         }
-        ExecuteMsg::AuctionFunds => execute::auction_funds(deps, &info, info.sender.clone()),
-        ExecuteMsg::WithdrawFunds => execute::withdraw_funds(deps, info.sender),
-        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
-        ExecuteMsg::Bid => execute::do_bid(deps, &info, &env),
+        ExecuteMsg::AuctionFunds {} => execute::auction_funds(deps, &info, info.sender.clone()),
+        ExecuteMsg::WithdrawFunds {} => execute::withdraw_funds(deps, info.sender),
+        ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
+        ExecuteMsg::Bid {} => execute::do_bid(deps, &info, &env),
         ExecuteMsg::FinishAuction { limit } => execute::finish_auction(deps, &env, limit),
-        ExecuteMsg::CleanAfterAuction => execute::clean_auction(deps),
+        ExecuteMsg::CleanAfterAuction {} => execute::clean_auction(deps),
     }
 }
 
 mod admin {
     use auction_package::helpers::GetPriceResponse;
+    use cosmwasm_std::{coin, BankMsg, Event};
 
     use crate::msg::AdminMsgs;
 
@@ -215,6 +217,19 @@ mod admin {
             return Err(ContractError::NoFundsForAuction);
         }
 
+        // Verify the amount of funds we have to auction, is more then the start auction min amount
+        let manager_addr = ADMIN.load(deps.storage)?;
+        let min_start_acution = MIN_AUCTION_AMOUNT
+            .query(&deps.querier, manager_addr, config.pair.0.clone())?
+            .unwrap_or_default()
+            .start_auction;
+
+        // if its less, refund the funds to the users
+        if total_funds < min_start_acution {
+            return do_refund(deps, auction_ids.next, config.pair.0.clone(), total_funds);
+        }
+
+        // get the starting and closing price of the auction
         let (start_price, end_price) = get_strategy_prices(deps.as_ref(), &config, env)?;
 
         // Add leftovers from previous auction
@@ -240,9 +255,45 @@ mod admin {
         AUCTION_IDS.save(deps.storage, &auction_ids)?;
         ACTIVE_AUCTION.save(deps.storage, &new_active_auction)?;
 
-        Ok(Response::default())
+        Ok(Response::default().add_event(
+            Event::new("new-auction")
+                .add_attribute("start_block", new_active_auction.start_block.to_string())
+                .add_attribute("end_block", new_active_auction.end_block.to_string())
+                .add_attribute("start_price", new_active_auction.start_price.to_string())
+                .add_attribute("end_price", new_active_auction.end_price.to_string())
+                .add_attribute("total_funds", new_active_auction.total_amount.to_string()),
+        ))
     }
 
+    /// Currently we only use this function for refunding when there is not enough funds to start an auction
+    /// so we can safely assume the AUCTION_FUNDS map will not hold a lot of entries ( max_entries = start_auction_minimum / send_minimum)
+    /// and because of this we do not need to paginate the map
+    fn do_refund(
+        deps: DepsMut,
+        auction_id: u64,
+        denom: String,
+        total_funds: Uint128,
+    ) -> Result<Response, ContractError> {
+        let bank_msgs = AUCTION_FUNDS
+            .prefix(auction_id)
+            .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+            .map(|fund| {
+                let (addr, amount) = fund.unwrap();
+                Ok(BankMsg::Send {
+                    to_address: addr.to_string(),
+                    amount: vec![coin(amount.into(), denom.clone())],
+                })
+            })
+            .collect::<StdResult<Vec<BankMsg>>>()?;
+
+        AUCTION_FUNDS_SUM.save(deps.storage, auction_id, &Uint128::zero())?;
+        AUCTION_FUNDS.clear(deps.storage);
+
+        Ok(Response::new()
+            .add_messages(bank_msgs)
+            .add_attribute("method", "refund")
+            .add_attribute("total_funds", total_funds.to_string()))
+    }
     /// Helper functions to get the starting and ending prices
     /// Factors in freshness of the price from the oracle
     /// as well as the strategy percentage
@@ -342,6 +393,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 block: env.block,
             })
         }
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    match msg {
+        MigrateMsg::NoStateChange {} => Ok(Response::default()),
     }
 }
 

@@ -16,22 +16,22 @@ if [[ "$CHAIN" == 'juno' ]]; then
 
 elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
-  GAS_PRICES="0.025ntrn"
-  OWNER_ADDR="neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g"
+  GAS_PRICES="0.075untrn"
+  OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
   FEES="1000untrn"
 
-# REBALANCER_ADDR=""
-# AUCTIONS_MANAGER=""
+  REBALANCER_ADDR="neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2"
+  AUCTIONS_MANAGER="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 
 else
   echo "Unknown chain"
 fi
 
-# EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
-EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
+EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 -y"
+# EXECUTE_FLAGS="--fees $FEES --gas auto --gas-adjustment 1.4 -y"
 
-declare -A pair1=([pair1]="ujunox" [pair2]="factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx")
-declare -A pair2=([pair1]="factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx" [pair2]="ujunox")
+declare -A pair1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9")
+declare -A pair2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn")
 
 declare -a pairs=(
   pair1
@@ -40,8 +40,8 @@ declare -a pairs=(
 
 if [[ "$COMMAND" == 'update-prices' ]]; then
 
-  declare -A price1=([pair1]="ujunox" [pair2]="factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx" [price]="0.5")
-  declare -A price2=([pair1]="factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx" [pair2]="ujunox" [price]="2.0")
+  declare -A price2=([pair1]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [pair2]="untrn" [price]="10.59551")
+  declare -A price1=([pair1]="untrn" [pair2]="ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9" [price]="0.09380")
 
   declare -a prices=(
     price1
@@ -57,14 +57,14 @@ if [[ "$COMMAND" == 'update-prices' ]]; then
 
     ./update_price.sh $CHAIN ${!pair1} ${!pair2} ${!price}
 
-    sleep 3
+    sleep 6
   done
 
 elif [[ "$COMMAND" == 'rebalance' ]]; then
   LIMIT=$1
   shift
 
-  if [ -z "$PRICE" ]; then
+  if [ -z "$LIMIT" ]; then
     execute_msg=$(jq -n \
       '{system_rebalance: {}}')
 
@@ -95,7 +95,7 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
       execute_msg=$(jq -n \
         --arg pair1 "${!pair1}" \
         --arg pair2 "${!pair2}" \
-        --arg end_block "$END_BLOCK" \
+        --arg end_block $END_BLOCK \
         '{admin: {
         open_auction: {
           pair: [$pair1, $pair2],
@@ -109,8 +109,8 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
       execute_msg=$(jq -n \
         --arg pair1 "${!pair1}" \
         --arg pair2 "${!pair2}" \
-        --arg end_block "$END_BLOCK" \
-        --arg start_block "$START_BLOCK" \
+        --arg end_block $END_BLOCK \
+        --arg start_block $START_BLOCK \
         '{admin: {
         open_auction: {
           pair: [$pair1, $pair2],
@@ -125,7 +125,7 @@ elif [[ "$COMMAND" == 'open-auctions' ]]; then
 
     $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
 
-    sleep 3
+    sleep 9
   done
 
 elif [[ "$COMMAND" == 'close-auctions' ]]; then
@@ -148,9 +148,17 @@ elif [[ "$COMMAND" == 'close-auctions' ]]; then
           pair: [$pair1, $pair2],
           limit: $limit,
         }}')
+
+    $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
   done
 
-  echo $BINARY tx wasm execute $AUCTIONS_MANAGER "$execute_msg" --from $OWNER_ADDR $EXECUTE_FLAGS
+elif [[ "$COMMAND" == 'do-bid' ]]; then
+  AMOUNT=$1
+  shift
+  AUCTION_ADDR=$1
+  shift
+
+  $BINARY tx wasm execute $AUCTION_ADDR '"bid"' --amount $AMOUNT --from $OWNER_ADDR $EXECUTE_FLAGS
 else
   echo "Unknown command"
 fi

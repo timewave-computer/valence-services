@@ -21,7 +21,7 @@ use crate::suite::{
 
 #[test]
 fn test_add_service() {
-    let mut suite = SuiteBuilder::default().build_basic();
+    let mut suite = SuiteBuilder::default().build_basic(true);
 
     suite
         .add_service_to_manager(
@@ -73,7 +73,7 @@ fn test_add_service() {
 
 #[test]
 fn test_register() {
-    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic();
+    let mut suite = SuiteBuilder::default().with_accounts(2).build_basic(true);
 
     // Because we have a basic setup here, we need to register the service to the manager
     suite
@@ -97,7 +97,6 @@ fn test_register() {
     suite.assert_rebalancer_config(
         0,
         RebalancerConfig {
-            is_paused: None,
             trustee: None,
             base_denom: ATOM.to_string(),
             targets: vec![
@@ -144,8 +143,7 @@ fn test_register() {
     suite.assert_rebalancer_config(
         1,
         RebalancerConfig {
-            is_paused: None,
-            trustee: register_data_1.trustee,
+            trustee: Some(suite.trustee.clone()),
             base_denom: ATOM.to_string(),
             targets: vec![
                 ParsedTarget {
@@ -226,18 +224,25 @@ fn test_pause() {
 
     /* Try to pause as someone random (trustee that isn't set as trustee) */
     let err: rebalancer::error::ContractError = suite
-        .pause_service_with_sender(suite.trustee.clone(), 0, ValenceServices::Rebalancer)
+        .pause_service_with_sender(
+            Addr::unchecked("random_sender"),
+            0,
+            ValenceServices::Rebalancer,
+        )
         .unwrap_err()
         .downcast()
         .unwrap();
     assert_eq!(err, rebalancer::error::ContractError::NotAuthorizedToPause);
 
     suite.pause_service(0, ValenceServices::Rebalancer).unwrap();
-    suite.assert_rebalancer_is_paused(0, Some(account_addr_0));
+    let paused_config = suite
+        .query_rebalancer_paused_config(account_addr_0.clone())
+        .unwrap();
+    assert_eq!(paused_config.pauser, account_addr_0);
 
     // If account paused try to pause again, it should fail
     let err: rebalancer::error::ContractError = suite
-        .pause_service_with_sender(suite.owner.clone(), 0, ValenceServices::Rebalancer)
+        .pause_service(0, ValenceServices::Rebalancer)
         .unwrap_err()
         .downcast()
         .unwrap();
@@ -245,7 +250,10 @@ fn test_pause() {
 
     /* Pause as the account owner */
     suite.pause_service(1, ValenceServices::Rebalancer).unwrap();
-    suite.assert_rebalancer_is_paused(1, Some(account_addr_1));
+    let paused_config = suite
+        .query_rebalancer_paused_config(account_addr_1.clone())
+        .unwrap();
+    assert_eq!(paused_config.pauser, account_addr_1);
 
     // Trustee can't pause after main account paused
     let err: rebalancer::error::ContractError = suite
@@ -270,11 +278,17 @@ fn test_pause() {
     suite
         .pause_service_with_sender(suite.trustee.clone(), 2, ValenceServices::Rebalancer)
         .unwrap();
-    suite.assert_rebalancer_is_paused(2, Some(suite.trustee.clone()));
+    let paused_config = suite
+        .query_rebalancer_paused_config(account_addr_2.clone())
+        .unwrap();
+    assert_eq!(paused_config.pauser, suite.trustee);
 
     // try pausing as the owner after trustee paused
     suite.pause_service(2, ValenceServices::Rebalancer).unwrap();
-    suite.assert_rebalancer_is_paused(2, Some(account_addr_2));
+    let paused_config = suite
+        .query_rebalancer_paused_config(account_addr_2.clone())
+        .unwrap();
+    assert_eq!(paused_config.pauser, account_addr_2);
 }
 
 #[test]
@@ -294,7 +308,9 @@ fn test_resume() {
     suite
         .resume_service(0, ValenceServices::Rebalancer)
         .unwrap();
-    suite.assert_rebalancer_is_paused(0, None);
+    suite
+        .query_rebalancer_paused_config(suite.get_account_addr(0))
+        .unwrap_err();
 
     /* Pause as account owner, but try to resume as trustee (can't because owner paused it) */
     suite.pause_service(1, ValenceServices::Rebalancer).unwrap();
@@ -376,7 +392,7 @@ fn test_update() {
                     i: "0.5".to_string(),
                     d: "0.5".to_string(),
                 }),
-                max_limit: Some(5000),
+                max_limit_bps: Some(valence_package::helpers::OptionalField::Set(5000)),
                 target_override_strategy: Some(TargetOverrideStrategy::Priority),
             },
         )
@@ -385,8 +401,7 @@ fn test_update() {
     suite.assert_rebalancer_config(
         0,
         RebalancerConfig {
-            is_paused: None,
-            trustee: Some("random_addr".to_string()),
+            trustee: Some(Addr::unchecked("random_addr")),
             base_denom: NTRN.to_string(),
             targets: vec![
                 ParsedTarget {
@@ -499,7 +514,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.manager_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::ApproveAdminChange,
+            &price_oracle::msg::ExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -524,7 +539,7 @@ fn test_update_admin_start() {
         .execute_contract(
             new_admin.clone(),
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap();
@@ -571,7 +586,7 @@ fn test_update_admin_cancel() {
         .execute_contract(
             new_admin,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -604,7 +619,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             random_addr,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();
@@ -617,7 +632,7 @@ fn test_update_admin_fails() {
         .execute_contract(
             new_admin,
             suite.manager_addr.clone(),
-            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange,
+            &valence_package::msgs::core_execute::ServicesManagerExecuteMsg::ApproveAdminChange {},
             &[],
         )
         .unwrap_err();

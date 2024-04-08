@@ -31,7 +31,7 @@ pub enum ServicesManagerAdminMsg {
         name: ValenceServices,
         addr: String,
     },
-    /// Update a service address
+    /// Update a service name to address data
     UpdateService {
         name: ValenceServices,
         addr: String,
@@ -49,4 +49,7 @@ pub enum ServicesManagerAdminMsg {
         expiration: Expiration,
     },
     CancelAdminChange,
+    Withdraw {
+        denom: String,
+    },
 }

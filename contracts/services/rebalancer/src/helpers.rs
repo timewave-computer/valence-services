@@ -1,5 +1,5 @@
-use cosmwasm_std::{Decimal, Uint128};
-use valence_package::services::rebalancer::ParsedTarget;
+use cosmwasm_std::{Decimal, Event, SubMsg, Uint128};
+use valence_package::services::rebalancer::{ParsedTarget, RebalancerConfig};
 
 pub const TRADE_HARD_LIMIT: Decimal = Decimal::raw(5_u128);
 
@@ -23,4 +23,27 @@ pub struct TargetHelper {
     pub value_to_trade: Decimal,
     /// The minimum value we can send to the auction
     pub auction_min_amount: Decimal,
+}
+
+pub struct RebalanceResponse {
+    pub config: RebalancerConfig,
+    pub msg: Option<SubMsg>,
+    pub event: Event,
+    pub should_pause: bool,
+}
+
+impl RebalanceResponse {
+    pub fn new(
+        config: RebalancerConfig,
+        msg: Option<SubMsg>,
+        event: Event,
+        should_pause: bool,
+    ) -> Self {
+        Self {
+            config,
+            msg,
+            event,
+            should_pause,
+        }
+    }
 }

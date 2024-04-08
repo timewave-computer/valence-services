@@ -34,10 +34,10 @@ fn test_basic_p_controller() {
         .build_default();
 
     let p_perc = Decimal::from_str(&config.pid.p).unwrap();
-    let atom_limit = suite.get_min_limit(ATOM);
+    let atom_limit = suite.get_send_min_limit(ATOM);
 
-    // we check 5 here because on the 7th we already reach the limit
-    for _ in 0..5 {
+    // we check 4 here because on the 4th we already reach the limit
+    for _ in 0..4 {
         let mut balance = suite.get_balance(0, ATOM);
         let ntrn_balance = suite.get_balance(0, NTRN);
         let price = suite.get_price(Pair::from((ATOM.to_string(), NTRN.to_string())));

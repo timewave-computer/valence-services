@@ -4,10 +4,14 @@ use auction::{
 };
 use auction_package::{
     helpers::{ChainHaltConfig, GetPriceResponse},
+    msgs::AuctionsManagerQueryMsg,
+    states::MinAmount,
     AuctionStrategy, Pair, PriceFreshnessStrategy,
 };
 use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, Uint128};
 use cw_multi_test::{AppResponse, Executor};
+use price_oracle::state::PriceStep;
+use rand::{rngs::ThreadRng, Rng};
 use valence_package::signed_decimal::SignedDecimal;
 
 use super::suite::{Suite, ATOM, DAY, DEFAULT_BLOCK_TIME, HALF_DAY, NTRN};
@@ -18,18 +22,19 @@ impl Suite {
         &mut self,
         pair: Pair,
         init_msg: auction::msg::InstantiateMsg,
-        min_amount: Option<Uint128>,
+        min_amount: Option<MinAmount>,
     ) -> &mut Self {
         self.app
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg.clone(),
+                        label: "label".to_string(),
                         min_amount,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -52,18 +57,19 @@ impl Suite {
     pub fn init_auction_err(
         &mut self,
         init_msg: auction::msg::InstantiateMsg,
-        min_amount: Option<Uint128>,
+        min_amount: Option<MinAmount>,
     ) -> anyhow::Error {
         self.app
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::NewAuction {
                         msg: init_msg,
+                        label: "label".to_string(),
                         min_amount,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap_err()
@@ -74,7 +80,7 @@ impl Suite {
             .execute_contract(
                 user,
                 auction_addr,
-                &auction::msg::ExecuteMsg::AuctionFunds,
+                &auction::msg::ExecuteMsg::AuctionFunds {},
                 amount,
             )
             .unwrap();
@@ -92,7 +98,7 @@ impl Suite {
             .execute_contract(
                 user,
                 auction_addr,
-                &auction::msg::ExecuteMsg::AuctionFunds,
+                &auction::msg::ExecuteMsg::AuctionFunds {},
                 amount,
             )
             .unwrap_err()
@@ -109,7 +115,7 @@ impl Suite {
         self.app.execute_contract(
             self.admin.clone(),
             self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::OpenAuction {
                     pair,
                     params: NewAuctionParams {
@@ -117,7 +123,7 @@ impl Suite {
                         end_block,
                     },
                 },
-            ),
+            )),
             &[],
         )
     }
@@ -154,7 +160,7 @@ impl Suite {
         self.app.execute_contract(
             self.mm.clone(),
             auction_addr,
-            &auction::msg::ExecuteMsg::Bid,
+            &auction::msg::ExecuteMsg::Bid {},
             &[amount],
         )
     }
@@ -173,7 +179,7 @@ impl Suite {
             .execute_contract(
                 self.mm.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::Bid,
+                &auction::msg::ExecuteMsg::Bid {},
                 &[amount],
             )
             .unwrap_err()
@@ -231,25 +237,39 @@ impl Suite {
 
         self.rebalance(None).unwrap();
 
-        // Its find if we can't update price yet
-        let _ = self.update_price(pair1.clone(), None);
-        let _ = self.update_price(pair2.clone(), None);
+        // Its fine if we can't update price yet
+        let _ = self.update_price(pair1.clone());
+        let _ = self.update_price(pair2.clone());
 
+        let _ = self.start_auction(
+            pair1.clone(),
+            None,
+            self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+        );
         let auction1_started = self
-            .start_auction(
-                pair1.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+            .query_auction_details(
+                self.auction_addrs
+                    .get(&pair1.clone().into())
+                    .unwrap()
+                    .clone(),
             )
-            .is_ok();
+            .status
+            == auction::state::ActiveAuctionStatus::Started;
 
+        let _ = self.start_auction(
+            pair2.clone(),
+            None,
+            self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+        );
         let auction2_started = self
-            .start_auction(
-                pair2.clone(),
-                None,
-                self.app.block_info().height + (DAY / DEFAULT_BLOCK_TIME),
+            .query_auction_details(
+                self.auction_addrs
+                    .get(&pair2.clone().into())
+                    .unwrap()
+                    .clone(),
             )
-            .is_ok();
+            .status
+            == auction::state::ActiveAuctionStatus::Started;
 
         self.update_block(HALF_DAY / DEFAULT_BLOCK_TIME);
 
@@ -303,28 +323,42 @@ impl Suite {
             price - price * price_change.value()
         };
 
-        self.update_price(pair, Some(new_price)).unwrap();
+        self.manual_update_price(pair, new_price).unwrap();
     }
 
-    pub fn update_price(
-        &mut self,
-        pair: Pair,
-        price: Option<Decimal>,
-    ) -> Result<AppResponse, anyhow::Error> {
+    // Permissionless price udpate method
+    pub fn update_price(&mut self, pair: Pair) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
             self.admin.clone(),
             self.oracle_addr.clone(),
-            &price_oracle::msg::ExecuteMsg::UpdatePrice { pair, price },
+            &price_oracle::msg::ExecuteMsg::UpdatePrice { pair },
             &[],
         )
     }
 
-    pub fn update_price_err(
+    pub fn manual_update_price(
         &mut self,
         pair: Pair,
-        price: Option<Decimal>,
+        price: Decimal,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.oracle_addr.clone(),
+            &price_oracle::msg::ExecuteMsg::ManualPriceUpdate { pair, price },
+            &[],
+        )
+    }
+
+    pub fn update_price_err(&mut self, pair: Pair) -> price_oracle::error::ContractError {
+        self.update_price(pair).unwrap_err().downcast().unwrap()
+    }
+
+    pub fn manual_update_price_err(
+        &mut self,
+        pair: Pair,
+        price: Decimal,
     ) -> price_oracle::error::ContractError {
-        self.update_price(pair, price)
+        self.manual_update_price(pair, price)
             .unwrap_err()
             .downcast()
             .unwrap()
@@ -340,7 +374,7 @@ impl Suite {
             .execute_contract(
                 self.mm.clone(),
                 self.get_default_auction_addr(),
-                &auction::msg::ExecuteMsg::Bid,
+                &auction::msg::ExecuteMsg::Bid {},
                 &coins(amount.u128(), self.pair.1.clone()),
             )
             .unwrap()
@@ -351,9 +385,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::PauseAuction { pair },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -364,9 +398,9 @@ impl Suite {
         self.app.execute_contract(
             self.admin.clone(),
             self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(
+            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                 auctions_manager::msg::AdminMsgs::ResumeAuction { pair },
-            ),
+            )),
             &[],
         )
     }
@@ -376,7 +410,7 @@ impl Suite {
             .execute_contract(
                 self.auctions_manager_addr.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::CleanAfterAuction,
+                &auction::msg::ExecuteMsg::CleanAfterAuction {},
                 &[],
             )
             .unwrap();
@@ -389,7 +423,7 @@ impl Suite {
             .execute_contract(
                 self.auctions_manager_addr.clone(),
                 auction_addr,
-                &auction::msg::ExecuteMsg::CleanAfterAuction,
+                &auction::msg::ExecuteMsg::CleanAfterAuction {},
                 &[],
             )
             .unwrap_err()
@@ -402,9 +436,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateStrategy { pair, strategy },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -417,11 +451,11 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateOracle {
                         oracle_addr: oracle_addr.to_string(),
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -450,9 +484,9 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdateChainHaltConfig { pair, halt_config },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -469,12 +503,12 @@ impl Suite {
             .execute_contract(
                 self.admin.clone(),
                 self.auctions_manager_addr.clone(),
-                &auctions_manager::msg::ExecuteMsg::Admin(
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
                     auctions_manager::msg::AdminMsgs::UpdatePriceFreshnessStrategy {
                         pair,
                         strategy,
                     },
-                ),
+                )),
                 &[],
             )
             .unwrap();
@@ -490,7 +524,7 @@ impl Suite {
         self.app.execute_contract(
             user,
             auction_addr,
-            &auction::msg::ExecuteMsg::WithdrawFunds,
+            &auction::msg::ExecuteMsg::WithdrawFunds {},
             &[],
         )
     }
@@ -518,6 +552,80 @@ impl Suite {
 
         self
     }
+
+    pub fn add_astro_path_to_oracle(
+        &mut self,
+        pair: Pair,
+        path: Vec<PriceStep>,
+    ) -> Result<AppResponse, anyhow::Error> {
+        self.app.execute_contract(
+            self.admin.clone(),
+            self.oracle_addr.clone(),
+            &price_oracle::msg::ExecuteMsg::AddAstroPath { pair, path },
+            &[],
+        )
+    }
+
+    pub fn add_astro_path_to_oracle_err(
+        &mut self,
+        pair: Pair,
+        path: Vec<PriceStep>,
+    ) -> price_oracle::error::ContractError {
+        self.add_astro_path_to_oracle(pair, path)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
+    }
+
+    pub fn astro_swap(&mut self, pool_addr: Addr, coin: Coin) -> &mut Self {
+        let offer_asset = astroport::asset::Asset {
+            info: astroport::asset::AssetInfo::NativeToken {
+                denom: coin.denom.clone(),
+            },
+            amount: coin.amount,
+        };
+
+        let swap_msg = astroport::pair::ExecuteMsg::Swap {
+            offer_asset,
+            ask_asset_info: None,
+            belief_price: None,
+            max_spread: Some(Decimal::bps(5000)),
+            to: None,
+        };
+
+        self.app
+            .execute_contract(self.admin.clone(), pool_addr, &swap_msg, &[coin])
+            .unwrap();
+
+        self
+    }
+
+    pub fn do_random_swap(
+        &mut self,
+        rng: &mut ThreadRng,
+        pair: Pair,
+        min_limit: u128,
+        max_limit: u128,
+    ) -> &mut Self {
+        let pool_addr = self.astro_pools.get(&pair.clone().into()).unwrap().clone();
+        let swap_amount = rng.gen_range(min_limit..max_limit);
+        let denom_index = rng.gen_range(0..2);
+
+        let coin = match denom_index {
+            0 => Coin {
+                denom: pair.0,
+                amount: Uint128::from(swap_amount),
+            },
+            _ => Coin {
+                denom: pair.1,
+                amount: Uint128::from(swap_amount),
+            },
+        };
+        self.update_block_cycle();
+        // println!("Swap amount: {}", coin);
+
+        self.astro_swap(pool_addr, coin)
+    }
 }
 
 // Queries
@@ -540,16 +648,17 @@ impl Suite {
             .price
     }
 
-    pub fn get_min_limit(&mut self, denom: &str) -> Uint128 {
+    pub fn get_send_min_limit(&mut self, denom: &str) -> Uint128 {
         self.app
             .wrap()
-            .query_wasm_smart(
+            .query_wasm_smart::<MinAmount>(
                 self.auctions_manager_addr.clone(),
                 &auction_package::msgs::AuctionsManagerQueryMsg::GetMinLimit {
                     denom: denom.to_string(),
                 },
             )
             .unwrap()
+            .send
     }
 
     pub fn query_auction_details(&self, auction_addr: Addr) -> ActiveAuction {
@@ -623,6 +732,44 @@ impl Suite {
                 &price_oracle::msg::QueryMsg::GetConfig,
             )
             .unwrap()
+    }
+
+    pub fn query_auctions_manager_all_pairs(&self) -> Vec<(Pair, Addr)> {
+        self.app
+            .wrap()
+            .query_wasm_smart(
+                self.auctions_manager_addr.clone(),
+                &AuctionsManagerQueryMsg::GetPairs {
+                    start_after: None,
+                    limit: None,
+                },
+            )
+            .unwrap()
+    }
+
+    pub fn query_astro_pool_price(&self, pool_addr: Addr, pair: Pair) -> Decimal {
+        let multiply = 1_000_000_u128;
+        let res: astroport::pair::SimulationResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                pool_addr,
+                &astroport::pair::QueryMsg::Simulation {
+                    offer_asset: astroport::asset::Asset {
+                        info: astroport::asset::AssetInfo::NativeToken { denom: pair.0 },
+                        amount: multiply.into(),
+                    },
+                    ask_asset_info: None,
+                },
+            )
+            .unwrap();
+
+        let total_got = Decimal::from_atomics(
+            res.return_amount + res.commission_amount + res.spread_amount,
+            0,
+        )
+        .unwrap();
+        total_got / Decimal::from_atomics(multiply, 0).unwrap()
     }
 }
 

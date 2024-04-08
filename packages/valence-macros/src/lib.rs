@@ -33,7 +33,8 @@ pub fn valence_service_manager_execute_msgs(
           /// Only callable by the account or the trustee
           PauseService {
               service_name: ValenceServices,
-              pause_for: String
+              pause_for: String,
+              reason: Option<String>
           },
           /// Resume service for the pause_for address
           /// Only callable by the account or the trustee
@@ -42,7 +43,7 @@ pub fn valence_service_manager_execute_msgs(
               resume_for: String
           },
           /// Message to aprprove the admin change if you are the new admin
-          ApproveAdminChange,
+          ApproveAdminChange {},
       }
     };
 
@@ -71,6 +72,7 @@ pub fn valence_account_execute_msgs(metadata: TokenStream, input: TokenStream) -
         /// Pause service
         PauseService {
             service_name: ValenceServices,
+            reason: Option<String>
         },
         /// Resume service
         ResumeService {
@@ -96,8 +98,8 @@ pub fn valence_account_execute_msgs(metadata: TokenStream, input: TokenStream) -
           addr: String,
           expiration: Expiration,
         },
-        CancelAdminChange,
-        ApproveAdminChange,
+        CancelAdminChange {},
+        ApproveAdminChange {},
       }
     };
 
@@ -127,6 +129,7 @@ pub fn valence_service_execute_msgs(metadata: TokenStream, input: TokenStream) -
         Pause {
             pause_for: String,
             sender: String,
+            reason: Option<String>
         },
         /// Resume the service
         Resume {
@@ -164,7 +167,7 @@ pub fn valence_services_manager_query_msgs(
     input: TokenStream,
 ) -> TokenStream {
     let quote = quote! {
-      enum ServiceQueryMsg {
+      enum ServicesManagerQueryMsg {
         /// Check if address is of a service
         #[returns(ValenceServices)]
         IsService {
@@ -183,6 +186,30 @@ pub fn valence_services_manager_query_msgs(
         GetAllServices {
           start_from: Option<String>,
           limit: Option<u64>
+        },
+        /// Get the service fee of a service
+        #[returns(Option<Coin>)]
+        GetServiceFee {
+          account: String,
+          service: ValenceServices,
+          action: QueryFeeAction,
+        },
+      }
+    };
+
+    merge_variants(metadata, input, quote.into())
+}
+
+/// Macro to add queries to services manager
+#[proc_macro_attribute]
+pub fn valence_service_query_msgs(metadata: TokenStream, input: TokenStream) -> TokenStream {
+    let quote = quote! {
+      enum ServiceQueryMsg {
+        /// Get the service fee of a service
+        #[returns(Option<Coin>)]
+        GetServiceFee {
+          account: String,
+          action: QueryFeeAction,
         },
       }
     };

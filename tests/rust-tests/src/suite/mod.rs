@@ -1,3 +1,4 @@
+pub mod builder_astro;
 pub mod contracts;
 pub mod instantiates;
 #[allow(clippy::module_inception)]

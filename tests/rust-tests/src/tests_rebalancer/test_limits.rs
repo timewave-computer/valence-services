@@ -29,9 +29,9 @@ fn test_min_balance_more_than_balance_with_coins() {
 
     // Send some ntrn to the account
     let amount = (Decimal::bps(DEFAULT_NTRN_PRICE_BPS)
-        * Decimal::from_atomics(1000_u128, 0).unwrap())
+        * Decimal::from_atomics(2000_u128, 0).unwrap())
     .to_uint_floor()
-        + Uint128::new(50);
+        + Uint128::new(100);
     suite
         .app
         .execute(
@@ -51,6 +51,7 @@ fn test_min_balance_more_than_balance_with_coins() {
     let balance_atom = suite.get_balance(0, ATOM);
     // Balance should be equal or greater then our set minimum
     assert!(balance_atom.amount >= Uint128::new(2000));
+    println!("{}", balance_atom.amount);
 }
 
 #[test]

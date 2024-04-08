@@ -188,7 +188,7 @@ fn terminal_play() {
                     let new_price = info[1];
 
                     suite
-                        .update_price(pair.clone(), Some(Decimal::from_str(new_price).unwrap()))
+                        .manual_update_price(pair.clone(), Decimal::from_str(new_price).unwrap())
                         .unwrap();
                 } else {
                     println!("Command wasn't recognized");

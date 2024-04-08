@@ -1,6 +1,6 @@
 {
   "contract_name": "auction",
-  "contract_version": "0.1.0",
+  "contract_version": "1.2.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -155,10 +155,17 @@
       },
       {
         "description": "Send funds to be auctioned on the next auction",
-        "type": "string",
-        "enum": [
+        "type": "object",
+        "required": [
           "auction_funds"
-        ]
+        ],
+        "properties": {
+          "auction_funds": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
         "description": "Withdraw funds from future auction, can only be called by the admin/auctions manager",
@@ -184,17 +191,31 @@
       },
       {
         "description": "Withdraw funds from future auction",
-        "type": "string",
-        "enum": [
+        "type": "object",
+        "required": [
           "withdraw_funds"
-        ]
+        ],
+        "properties": {
+          "withdraw_funds": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
         "description": "Bid on the current auction",
-        "type": "string",
-        "enum": [
+        "type": "object",
+        "required": [
           "bid"
-        ]
+        ],
+        "properties": {
+          "bid": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
         "description": "Finish the current auction and send funds to the funds provider Send pair.1 according to the weight of the funds provider from the total amount If we have unsold pair.0, send to funds provider according to provided weight",
@@ -222,10 +243,17 @@
       },
       {
         "description": "Message to clean finished auction unneeded storage",
-        "type": "string",
-        "enum": [
+        "type": "object",
+        "required": [
           "clean_after_auction"
-        ]
+        ],
+        "properties": {
+          "clean_after_auction": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
         "description": "Admin messages that can only be called by the auctions manager",
@@ -615,7 +643,7 @@
               ]
             },
             {
-              "description": "The auction is finished, if param is 0, we resolved everything, else it holds the last resovled height",
+              "description": "The auction is finished, waiting for the funds to be resolved",
               "type": "string",
               "enum": [
                 "finished"
@@ -887,7 +915,7 @@
               ]
             },
             {
-              "description": "The auction is finished, if param is 0, we resolved everything, else it holds the last resovled height",
+              "description": "The auction is finished, waiting for the funds to be resolved",
               "type": "string",
               "enum": [
                 "finished"

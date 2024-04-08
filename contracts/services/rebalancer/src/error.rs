@@ -1,4 +1,5 @@
 use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cw_utils::PaymentError;
 use thiserror::Error;
 use valence_package::error::ValenceError;
 
@@ -18,6 +19,9 @@ pub enum ContractError {
 
     #[error(transparent)]
     DecimalRangeExceeded(#[from] DecimalRangeExceeded),
+
+    #[error(transparent)]
+    PaymentError(#[from] PaymentError),
 
     #[error("Account is already registered")]
     AccountAlreadyRegistered,
@@ -92,4 +96,10 @@ pub enum ContractError {
         "Account balance doesn't meet the minimum balance requirement: Current: {0}, Minimum: {1}"
     )]
     InvalidAccountMinValue(String, String),
+
+    #[error("Cannot remove base denom that doesn't exist: {0}")]
+    CannotRemoveBaseDenom(String),
+
+    #[error("Cannot remove denom that doesn't exist: {0}")]
+    CannotRemoveDenom(String),
 }

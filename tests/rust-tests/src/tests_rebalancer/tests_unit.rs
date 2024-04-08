@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{testing::mock_dependencies, Decimal, Uint128};
 use rebalancer::{helpers::TargetHelper, rebalance::verify_targets};
 use valence_package::{
     services::rebalancer::{ParsedTarget, TargetOverrideStrategy},
@@ -14,8 +14,9 @@ use crate::suite::{
 
 #[test]
 fn test_verify_target_2_denoms() {
+    let deps = mock_dependencies();
     let config = SuiteBuilder::get_default_rebalancer_register_data()
-        .to_config()
+        .to_config(&deps.api)
         .unwrap();
     let mut target_helpers = vec![
         TargetHelper {
@@ -96,8 +97,9 @@ fn test_verify_target_2_denoms() {
 
 #[test]
 fn test_verify_target_3_denoms() {
+    let deps = mock_dependencies();
     let config = SuiteBuilder::get_default_rebalancer_register_data()
-        .to_config()
+        .to_config(&deps.api)
         .unwrap();
     let mut target_helpers = vec![
         TargetHelper {
@@ -208,8 +210,9 @@ fn test_verify_target_3_denoms() {
 
 #[test]
 fn test_verify_target_leftover_strategy() {
+    let deps = mock_dependencies();
     let mut config = SuiteBuilder::get_default_rebalancer_register_data()
-        .to_config()
+        .to_config(&deps.api)
         .unwrap();
     let mut target_helpers = vec![
         TargetHelper {
@@ -317,8 +320,9 @@ fn test_verify_target_leftover_strategy() {
 
 #[test]
 fn test_verify_target_min_balance_over_balance() {
+    let deps = mock_dependencies();
     let config = SuiteBuilder::get_default_rebalancer_register_data()
-        .to_config()
+        .to_config(&deps.api)
         .unwrap();
     let target_helpers = vec![
         TargetHelper {
@@ -373,8 +377,9 @@ fn test_verify_target_min_balance_over_balance() {
 
 #[test]
 fn test_verify_target_priority() {
+    let deps = mock_dependencies();
     let mut config = SuiteBuilder::get_default_rebalancer_register_data()
-        .to_config()
+        .to_config(&deps.api)
         .unwrap();
     let mut target_helpers = vec![
         TargetHelper {

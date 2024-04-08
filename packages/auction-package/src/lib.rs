@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Timestamp};
 
@@ -14,8 +16,8 @@ pub const CLOSEST_TO_ONE_POSSIBLE: u64 = 9999;
 
 #[cw_serde]
 pub struct AuctionStrategy {
-    pub start_price_perc: u64, // BPS
-    pub end_price_perc: u64,   // BPS
+    pub start_price_perc: u64, // BPS // 1.5
+    pub end_price_perc: u64,   // BPS // 0.01
 }
 
 impl AuctionStrategy {
@@ -51,4 +53,10 @@ pub struct PriceFreshnessStrategy {
 pub struct Price {
     pub price: Decimal,
     pub time: Timestamp,
+}
+
+impl Display for Price {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Price: {}, Time: {}", self.price, self.time)
+    }
 }
