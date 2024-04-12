@@ -370,6 +370,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::GetPrice => {
             let active_auction = ACTIVE_AUCTION.load(deps.storage)?;
+            if active_auction.status != ActiveAuctionStatus::Started {
+                return Err(ContractError::AuctionClosed.into());
+            }
             let price = calc_price(&active_auction, env.block.height);
             to_json_binary(&GetPriceResponse {
                 price,
