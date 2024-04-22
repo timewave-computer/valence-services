@@ -1,3 +1,5 @@
+use std::env;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,6 +7,7 @@ use cosmwasm_std::{
     Reply, Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
+use valence_package::event_indexing::EventIndex;
 use valence_package::helpers::{
     approve_admin_change, cancel_admin_change, forward_to_services_manager,
     forward_to_services_manager_with_funds, sender_is_a_service, start_admin_change, verify_admin,
@@ -24,7 +27,7 @@ const EXECUTE_BY_SERVICE_REPLY_ID: u64 = 0;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -38,7 +41,12 @@ pub fn instantiate(
         &deps.api.addr_validate(&msg.services_manager)?,
     )?;
 
-    Ok(Response::default().add_attribute("method", "instantiate"))
+    let index_event = EventIndex::AccountCreation {
+        address: env.contract.address.to_string(),
+        admin: info.sender.to_string(),
+    };
+
+    Ok(Response::default().add_event(index_event.into()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

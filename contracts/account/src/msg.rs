@@ -5,6 +5,8 @@ use cosmwasm_std::Addr;
 pub struct InstantiateMsg {
     /// Address of the service manager contract.
     pub services_manager: String,
+    /// Optional referral (for indexing currently)
+    pub referral: Option<String>,
 }
 
 #[cw_serde]
