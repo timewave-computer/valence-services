@@ -1,12 +1,15 @@
 use std::fmt;
 
-use auction_package::Pair;
+use auction_package::{states::MinAmount, Pair};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Decimal, Empty, Event, SubMsg};
 use serde::Serialize;
 
 #[cw_serde]
-pub enum EventIndex<E = Empty> where E: Serialize{
+pub enum EventIndex<E = Empty>
+where
+    E: Serialize,
+{
     AccountCreation {
         /// The admin address of the account
         admin: String,
@@ -72,6 +75,28 @@ pub enum EventIndex<E = Empty> where E: Serialize{
     OracleCancelAdminChange {},
     OracleApproveAdminChange {},
 
+    // Auction manager
+    AuctionManagerUpdateAuctionCodeId {
+        code_id: u64,
+    },
+    AuctionManagerUpdateOracle {
+        oracle_addr: String,
+    },
+    AuctionManagerMigrateAuction {
+        pair: Pair,
+        code_id: u64,
+        msg: E,
+    },
+    AuctionManagerUpdateMinAmount {
+        denom: String,
+        min_amount: MinAmount,
+    },
+    AuctionManagerStartAdminChange {
+        admin: String,
+    },
+    AuctionManagerCancelAdminChange {},
+    AuctionManagerApproveAdminChange {},
+
     // Services manager
     ServicesManagerAddService {
         service_name: String,
@@ -126,6 +151,29 @@ impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
             EventIndex::OracleStartAdminChange { .. } => write!(f, "oracle-start-admin-change"),
             EventIndex::OracleCancelAdminChange {} => write!(f, "oracle-cancel-admin-change"),
             EventIndex::OracleApproveAdminChange {} => write!(f, "oracle-approve-admin-change"),
+
+            // Auction manager
+            EventIndex::AuctionManagerUpdateAuctionCodeId { .. } => {
+                write!(f, "auction-manager-update-auction-code-id")
+            }
+            EventIndex::AuctionManagerUpdateOracle { .. } => {
+                write!(f, "auction-manager-update-oracle")
+            }
+            EventIndex::AuctionManagerMigrateAuction { .. } => {
+                write!(f, "auction-manager-migrate-auction")
+            }
+            EventIndex::AuctionManagerUpdateMinAmount { .. } => {
+                write!(f, "auction-manager-update-min-amount")
+            }
+            EventIndex::AuctionManagerStartAdminChange { .. } => {
+                write!(f, "auction-manager-start-admin-change")
+            }
+            EventIndex::AuctionManagerCancelAdminChange {} => {
+                write!(f, "auction-manager-cancel-admin-change")
+            }
+            EventIndex::AuctionManagerApproveAdminChange {} => {
+                write!(f, "auction-manager-approve-admin-change")
+            }
 
             // Services manager
             EventIndex::ServicesManagerAddService { .. } => {

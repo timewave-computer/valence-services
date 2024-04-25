@@ -180,6 +180,7 @@ dependencies = [
  "price-oracle",
  "serde",
  "thiserror",
+ "valence-package",
 ]
 
 [[package]]

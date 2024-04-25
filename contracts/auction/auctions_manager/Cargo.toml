@@ -26,6 +26,7 @@ serde           = { workspace = true }
 thiserror       = { workspace = true }
 auction         = { workspace = true }
 auction-package = { workspace = true }
+valence-package = { workspace = true }
 price-oracle    = { workspace = true }
 
 [dev-dependencies]
