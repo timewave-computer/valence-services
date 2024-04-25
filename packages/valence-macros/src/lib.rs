@@ -169,7 +169,7 @@ pub fn valence_services_manager_query_msgs(
     let quote = quote! {
       enum ServicesManagerQueryMsg {
         /// Check if address is of a service
-        #[returns(ValenceServices)]
+        #[returns(Option<String>)]
         IsService {
             addr: String,
         },

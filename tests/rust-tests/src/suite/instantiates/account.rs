@@ -14,6 +14,7 @@ impl AccountInstantiate {
         Self {
             msg: valence_account::msg::InstantiateMsg {
                 services_manager: services_manager.to_string(),
+                referral: None,
             },
         }
     }
