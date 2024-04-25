@@ -111,6 +111,7 @@ pub fn execute(
 
 mod admin {
     use valence_package::{
+        event_indexing::EventIndex,
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
         msgs::core_execute::ServicesManagerAdminMsg,
     };
@@ -137,10 +138,15 @@ mod admin {
                 } else if ADDR_TO_SERVICES.has(deps.storage, addr.clone()) {
                     return Err(ContractError::ServiceAddressAlreadyExists(addr.to_string()));
                 } else {
-                    save_service(deps, name.to_string(), addr)?;
+                    save_service(deps, name.to_string(), addr.clone())?;
                 }
 
-                Ok(Response::default().add_attribute("method", "add_service"))
+                let event = EventIndex::ServicesManagerAddService {
+                    service_name: name.to_string(),
+                    addr: addr.to_string(),
+                };
+
+                Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::UpdateService { name, addr } => {
                 let addr = deps.api.addr_validate(&addr)?;
@@ -151,44 +157,62 @@ mod admin {
                     return Err(ContractError::ServiceDoesntExistYet(name.to_string()));
                 }
 
-                save_service(deps, name.to_string(), addr)?;
+                save_service(deps, name.to_string(), addr.clone())?;
 
-                Ok(Response::default().add_attribute("method", "update_service"))
+                let event = EventIndex::ServicesManagerUpdateService {
+                    service_name: name.to_string(),
+                    addr: addr.to_string(),
+                };
+
+                Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::RemoveService { name } => {
                 let addr = get_service_addr(deps.as_ref(), name.to_string())?;
                 remove_service(deps, name.to_string(), addr)?;
 
-                Ok(Response::default().add_attribute("method", "remove_service"))
+                let event = EventIndex::ServicesManagerRemoveService {
+                    service_name: name.to_string(),
+                };
+
+                Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::UpdateCodeIdWhitelist { to_add, to_remove } => {
                 let mut whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
 
-                whitelist.extend(to_add);
+                whitelist.extend(to_add.clone());
 
-                for code_id in to_remove {
+                for code_id in &to_remove {
                     if !whitelist.remove(&code_id) {
-                        return Err(ContractError::CodeIdNotInWhitelist(code_id));
+                        return Err(ContractError::CodeIdNotInWhitelist(*code_id));
                     }
                 }
 
                 ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
-                Ok(Response::default().add_attribute("method", "update_code_id_whitelist"))
+                let event = EventIndex::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
+                Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
-                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+                let event = EventIndex::ServicesManagerStartAdminChange {
+                    admin: addr.clone(),
+                };
+                Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
-            ServicesManagerAdminMsg::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+            ServicesManagerAdminMsg::CancelAdminChange => {
+                let event = EventIndex::ServicesManagerCancelAdminChange {};
+                Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
+            }
             ServicesManagerAdminMsg::Withdraw { denom } => {
                 let amount = deps.querier.query_balance(env.contract.address, denom)?;
 
                 let msg = BankMsg::Send {
                     to_address: info.sender.to_string(), // sender must be admin
-                    amount: vec![amount],
+                    amount: vec![amount.clone()],
                 };
 
-                Ok(Response::default().add_message(msg))
+                let event = EventIndex::ServicesManagerWithdraw { amount };
+
+                Ok(Response::default().add_event(event.into()).add_message(msg))
             }
         }
     }
@@ -198,7 +222,8 @@ mod admin {
 pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<Binary> {
     match msg {
         ServicesManagerQueryMsg::IsService { addr } => {
-            let is_service = ADDR_TO_SERVICES.may_load(deps.storage, deps.api.addr_validate(&addr)?)?;
+            let is_service =
+                ADDR_TO_SERVICES.may_load(deps.storage, deps.api.addr_validate(&addr)?)?;
             to_json_binary(&is_service)
         }
         ServicesManagerQueryMsg::GetServiceAddr { service } => {
