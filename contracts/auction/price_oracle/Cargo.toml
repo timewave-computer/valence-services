@@ -25,6 +25,7 @@ serde           = { workspace = true }
 thiserror       = { workspace = true }
 cw-utils        = { workspace = true }
 auction-package = { workspace = true }
+valence-package = { workspace = true }
 
 astroport = "2.9.5"
 

@@ -1006,6 +1006,7 @@ dependencies = [
  "cw2 1.1.2",
  "serde",
  "thiserror",
+ "valence-package",
 ]
 
 [[package]]

@@ -1,10 +1,12 @@
 use std::fmt;
 
+use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Event, SubMsg};
+use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Decimal, Empty, Event, SubMsg};
+use serde::Serialize;
 
 #[cw_serde]
-pub enum EventIndex {
+pub enum EventIndex<E = Empty> where E: Serialize{
     AccountCreation {
         /// The admin address of the account
         admin: String,
@@ -47,6 +49,29 @@ pub enum EventIndex {
     AccountCancelAdminChange {},
     AccountApproveAdminChange {},
 
+    // Oracle
+    OracleUpdatePrice {
+        pair: Pair,
+        price: Decimal,
+        source: String,
+    },
+    OracleAddPath {
+        pair: Pair,
+        path: Vec<E>,
+    },
+    OracleUpdatePath {
+        pair: Pair,
+        path: Vec<E>,
+    },
+    OracleUpdateConfig {
+        config: E,
+    },
+    OracleStartAdminChange {
+        admin: String,
+    },
+    OracleCancelAdminChange {},
+    OracleApproveAdminChange {},
+
     // Services manager
     ServicesManagerAddService {
         service_name: String,
@@ -74,7 +99,7 @@ pub enum EventIndex {
 }
 
 /// Turn a ValenceServices enum into a string
-impl fmt::Display for EventIndex {
+impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             // Account
@@ -92,6 +117,16 @@ impl fmt::Display for EventIndex {
             EventIndex::AccountStartAdminChange { .. } => write!(f, "account-start-admin-change"),
             EventIndex::AccountCancelAdminChange {} => write!(f, "account-cancel-admin-change"),
             EventIndex::AccountApproveAdminChange {} => write!(f, "account-approve-admin-change"),
+
+            // oracle
+            EventIndex::OracleUpdatePrice { .. } => write!(f, "oracle-update-price"),
+            EventIndex::OracleAddPath { .. } => write!(f, "oracle-add-path"),
+            EventIndex::OracleUpdatePath { .. } => write!(f, "oracle-update-path"),
+            EventIndex::OracleUpdateConfig { .. } => write!(f, "oracle-update-config"),
+            EventIndex::OracleStartAdminChange { .. } => write!(f, "oracle-start-admin-change"),
+            EventIndex::OracleCancelAdminChange {} => write!(f, "oracle-cancel-admin-change"),
+            EventIndex::OracleApproveAdminChange {} => write!(f, "oracle-approve-admin-change"),
+
             // Services manager
             EventIndex::ServicesManagerAddService { .. } => {
                 write!(f, "services-manager-add-service")
@@ -119,8 +154,8 @@ impl fmt::Display for EventIndex {
     }
 }
 
-impl From<EventIndex> for Event {
-    fn from(value: EventIndex) -> Self {
+impl<E: serde::Serialize> From<EventIndex<E>> for Event {
+    fn from(value: EventIndex<E>) -> Self {
         Event::new("valence")
             .add_attribute("action", value.to_string())
             .add_attribute("data", to_json_binary(&value).unwrap().to_string())

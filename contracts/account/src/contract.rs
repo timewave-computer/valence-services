@@ -3,8 +3,7 @@ use std::env;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, IbcMsg, MessageInfo,
-    Reply, Response, StdResult, SubMsg, WasmMsg,
+    to_json_binary, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Empty, Env, IbcMsg, MessageInfo, Reply, Response, StdResult, SubMsg, WasmMsg
 };
 use cw2::set_contract_version;
 use valence_package::event_indexing::EventIndex;
@@ -41,12 +40,12 @@ pub fn instantiate(
         &deps.api.addr_validate(&msg.services_manager)?,
     )?;
 
-    let index_event = EventIndex::AccountCreation {
+    let event = EventIndex::<Empty>::AccountCreation {
         admin: info.sender.to_string(),
         referral: msg.referral.unwrap_or_default(),
     };
 
-    Ok(Response::default().add_event(index_event.into()))
+    Ok(Response::default().add_event(event.into()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -67,7 +66,7 @@ pub fn execute(
                 services_manager_addr.clone(),
                 &ServicesManagerQueryMsg::GetServiceFee {
                     account: env.contract.address.to_string(),
-                    service: service_name.clone(),
+                    service: service_name,
                     action: valence_package::states::QueryFeeAction::Register,
                 },
             )? {
@@ -88,7 +87,7 @@ pub fn execute(
                 ),
             }?;
 
-            let event = EventIndex::AccountRegisterService {
+            let event = EventIndex::<Empty>::AccountRegisterService {
                 service_name: service_name.to_string(),
                 data,
             };
@@ -105,7 +104,7 @@ pub fn execute(
                 ServicesManagerExecuteMsg::DeregisterFromService { service_name },
             )?;
 
-            let event = EventIndex::AccountDeregisterService {
+            let event = EventIndex::<Empty>::AccountDeregisterService {
                 service_name: service_name.to_string(),
             };
 
@@ -124,7 +123,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = EventIndex::AccountUpdateService {
+            let event = EventIndex::<Empty>::AccountUpdateService {
                 service_name: service_name.to_string(),
                 data,
             };
@@ -148,7 +147,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = EventIndex::AccountPauseService {
+            let event = EventIndex::<Empty>::AccountPauseService {
                 service_name: service_name.to_string(),
             };
 
@@ -163,7 +162,7 @@ pub fn execute(
                 services_manager_addr.clone(),
                 &ServicesManagerQueryMsg::GetServiceFee {
                     account: env.contract.address.to_string(),
-                    service: service_name.clone(),
+                    service: service_name,
                     action: valence_package::states::QueryFeeAction::Resume,
                 },
             )? {
@@ -184,7 +183,7 @@ pub fn execute(
                 )?,
             };
 
-            let event = EventIndex::AccountResumeService {
+            let event = EventIndex::<Empty>::AccountResumeService {
                 service_name: service_name.to_string(),
             };
 
@@ -201,7 +200,7 @@ pub fn execute(
             // to allow the msgs to fail without failing the rest of the messages
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
-            let event = EventIndex::AccountSendFundsByService {
+            let event = EventIndex::<Empty>::AccountSendFundsByService {
                 service_name: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
@@ -219,7 +218,7 @@ pub fn execute(
 
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
-            let event = EventIndex::AccountExecuteByService {
+            let event = EventIndex::<Empty>::AccountExecuteByService {
                 service_name: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
@@ -233,24 +232,24 @@ pub fn execute(
         AccountBaseExecuteMsg::ExecuteByAdmin { msgs } => {
             verify_admin(deps.as_ref(), &info)?;
 
-            let event = EventIndex::AccountExecuteByAdmin { msgs: msgs.clone() };
+            let event = EventIndex::<Empty>::AccountExecuteByAdmin { msgs: msgs.clone() };
 
             Ok(Response::default()
                 .add_event(event.into())
                 .add_messages(msgs))
         }
         AccountBaseExecuteMsg::StartAdminChange { addr, expiration } => {
-            let event = EventIndex::AccountStartAdminChange {
+            let event = EventIndex::<Empty>::AccountStartAdminChange {
                 admin: addr.to_string(),
             };
             Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
         }
         AccountBaseExecuteMsg::CancelAdminChange {} => {
-            let event = EventIndex::AccountCancelAdminChange {};
+            let event = EventIndex::<Empty>::AccountCancelAdminChange {};
             Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
         }
         AccountBaseExecuteMsg::ApproveAdminChange {} => {
-            let event = EventIndex::AccountApproveAdminChange {};
+            let event = EventIndex::<Empty>::AccountApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
     }
