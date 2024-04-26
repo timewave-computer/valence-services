@@ -6,9 +6,11 @@ use auction_package::states::{ADMIN, MIN_AUCTION_AMOUNT, TWAP_PRICES};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdResult,
+    Uint128,
 };
 use cw2::set_contract_version;
+use valence_package::event_indexing::EventIndex;
 
 use crate::error::ContractError;
 use crate::execute;
@@ -49,15 +51,13 @@ pub fn instantiate(
         .sort_by(|p1, p2| p2.0.cmp(&p1.0));
 
     // Set config
-    AUCTION_CONFIG.save(
-        deps.storage,
-        &AuctionConfig {
-            is_paused: false,
-            pair: msg.pair,
-            chain_halt_config: msg.chain_halt_config,
-            price_freshness_strategy,
-        },
-    )?;
+    let auction_config = AuctionConfig {
+        is_paused: false,
+        pair: msg.pair,
+        chain_halt_config: msg.chain_halt_config,
+        price_freshness_strategy,
+    };
+    AUCTION_CONFIG.save(deps.storage, &auction_config)?;
 
     // Set the strategy for this auction
     msg.auction_strategy.verify()?;
@@ -89,7 +89,12 @@ pub fn instantiate(
         },
     )?;
 
-    Ok(Response::default().add_attribute("method", "instantiate"))
+    let event = EventIndex::<Empty>::AuctionInit {
+        config: auction_config,
+        strategy: msg.auction_strategy,
+    };
+
+    Ok(Response::default().add_event(event.into()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -119,7 +124,7 @@ pub fn execute(
 
 mod admin {
     use auction_package::helpers::GetPriceResponse;
-    use cosmwasm_std::{coin, BankMsg, Event};
+    use cosmwasm_std::{coin, BankMsg};
 
     use crate::msg::AdminMsgs;
 
@@ -143,7 +148,10 @@ mod admin {
                         Ok(config)
                     },
                 )?;
-                Ok(Response::default())
+
+                let event = EventIndex::<Empty>::AuctionPause {};
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::ResumeAuction => {
                 AUCTION_CONFIG.update(
@@ -153,32 +161,44 @@ mod admin {
                         Ok(config)
                     },
                 )?;
-                Ok(Response::default())
+
+                let event = EventIndex::<Empty>::AuctionResume {};
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdateStrategy { strategy } => {
                 AUCTION_STRATEGY.save(deps.storage, &strategy)?;
-                Ok(Response::default())
+
+                let event = EventIndex::<Empty>::AuctionUpdateStrategy { strategy };
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::StartAuction(new_auction) => open_auction(deps, &env, new_auction),
             AdminMsgs::UpdateChainHaltConfig(halt_config) => {
                 AUCTION_CONFIG.update(
                     deps.storage,
                     |mut config| -> Result<AuctionConfig, ContractError> {
-                        config.chain_halt_config = halt_config;
+                        config.chain_halt_config = halt_config.clone();
                         Ok(config)
                     },
                 )?;
-                Ok(Response::default())
+
+                let event = EventIndex::<Empty>::AuctionUpdateChainHaltConfig { halt_config };
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdatePriceFreshnessStrategy(strategy) => {
                 AUCTION_CONFIG.update(
                     deps.storage,
                     |mut config| -> Result<AuctionConfig, ContractError> {
-                        config.price_freshness_strategy = strategy;
+                        config.price_freshness_strategy = strategy.clone();
                         Ok(config)
                     },
                 )?;
-                Ok(Response::default())
+
+                let event = EventIndex::<Empty>::AuctionUpdatePriceFreshnessStrategy { strategy };
+
+                Ok(Response::default().add_event(event.into()))
             }
         }
     }
@@ -224,9 +244,21 @@ mod admin {
             .unwrap_or_default()
             .start_auction;
 
+        // Update auction id
+        auction_ids.curr = auction_ids.next;
+        auction_ids.next += 1;
+
+        AUCTION_IDS.save(deps.storage, &auction_ids)?;
+
         // if its less, refund the funds to the users
         if total_funds < min_start_acution {
-            return do_refund(deps, auction_ids.next, config.pair.0.clone(), total_funds);
+            return do_refund(
+                deps,
+                auction_ids.curr,
+                config.pair.0.clone(),
+                min_start_acution,
+                total_funds,
+            );
         }
 
         // get the starting and closing price of the auction
@@ -248,21 +280,14 @@ mod admin {
             last_checked_block: env.block.clone(),
         };
 
-        // Update auction id
-        auction_ids.curr = auction_ids.next;
-        auction_ids.next += 1;
-
-        AUCTION_IDS.save(deps.storage, &auction_ids)?;
         ACTIVE_AUCTION.save(deps.storage, &new_active_auction)?;
 
-        Ok(Response::default().add_event(
-            Event::new("new-auction")
-                .add_attribute("start_block", new_active_auction.start_block.to_string())
-                .add_attribute("end_block", new_active_auction.end_block.to_string())
-                .add_attribute("start_price", new_active_auction.start_price.to_string())
-                .add_attribute("end_price", new_active_auction.end_price.to_string())
-                .add_attribute("total_funds", new_active_auction.total_amount.to_string()),
-        ))
+        let event = EventIndex::<ActiveAuction>::AuctionOpen {
+            auction_id: auction_ids.curr,
+            auction: new_active_auction,
+        };
+
+        Ok(Response::default().add_event(event.into()))
     }
 
     /// Currently we only use this function for refunding when there is not enough funds to start an auction
@@ -272,6 +297,7 @@ mod admin {
         deps: DepsMut,
         auction_id: u64,
         denom: String,
+        min_amount: Uint128,
         total_funds: Uint128,
     ) -> Result<Response, ContractError> {
         let bank_msgs = AUCTION_FUNDS
@@ -289,10 +315,16 @@ mod admin {
         AUCTION_FUNDS_SUM.save(deps.storage, auction_id, &Uint128::zero())?;
         AUCTION_FUNDS.clear(deps.storage);
 
+        let event = EventIndex::<Empty>::AuctionOpenRefund {
+            auction_id,
+            min_amount,
+            refund_amount: total_funds,
+            total_users: bank_msgs.len() as u64,
+        };
+
         Ok(Response::new()
-            .add_messages(bank_msgs)
-            .add_attribute("method", "refund")
-            .add_attribute("total_funds", total_funds.to_string()))
+            .add_event(event.into())
+            .add_messages(bank_msgs))
     }
     /// Helper functions to get the starting and ending prices
     /// Factors in freshness of the price from the oracle

@@ -1,12 +1,24 @@
 use std::fmt;
 
-use auction_package::{states::MinAmount, Pair};
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Decimal, Empty, Event, SubMsg};
+use auction_package::{
+    helpers::{AuctionConfig, ChainHaltConfig},
+    states::MinAmount,
+    AuctionStrategy, Pair, PriceFreshnessStrategy,
+};
+use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Decimal, Event, SubMsg, Uint128};
 use serde::Serialize;
 
-#[cw_serde]
-pub enum EventIndex<E = Empty>
+#[derive(
+    cosmwasm_schema::serde::Serialize,
+    cosmwasm_schema::serde::Deserialize,
+    std::clone::Clone,
+    std::fmt::Debug,
+    std::cmp::PartialEq,
+    cosmwasm_schema::schemars::JsonSchema,
+)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+#[schemars(crate = "cosmwasm_schema::schemars")]
+pub enum EventIndex<E>
 where
     E: Serialize,
 {
@@ -97,6 +109,57 @@ where
     AuctionManagerCancelAdminChange {},
     AuctionManagerApproveAdminChange {},
 
+    // Auctions
+    AuctionInit {
+        config: AuctionConfig,
+        strategy: AuctionStrategy,
+    },
+    AuctionAuctinFunds {
+        address: String,
+        amount: Uint128,
+        auction_id: u64,
+    },
+    AuctionWithdrawFunds {
+        address: String,
+        amount: Uint128,
+        auction_id: u64,
+    },
+    AuctionDoBid {
+        bidder: String,
+        /// How much of token.0 the bidder bought
+        bought_amount: Uint128,
+        /// If bidder sent too much and we couldn't "swap" all, then we refund him the rest
+        refunded_amount: Uint128,
+        auction_id: u64,
+    },
+    AuctionPause {},
+    AuctionResume {},
+    AuctionUpdateStrategy {
+        strategy: AuctionStrategy,
+    },
+    AuctionUpdateChainHaltConfig {
+        halt_config: ChainHaltConfig,
+    },
+    AuctionUpdatePriceFreshnessStrategy {
+        strategy: PriceFreshnessStrategy,
+    },
+    AuctionOpen {
+        auction_id: u64,
+        auction: E,
+    },
+    AuctionOpenRefund {
+        auction_id: u64,
+        min_amount: Uint128,
+        refund_amount: Uint128,
+        total_users: u64,
+    },
+    AuctionClose {
+        auction_id: u64,
+        is_closed: bool,
+        price: String,
+        accounts: u64,
+    },
+
     // Services manager
     ServicesManagerAddService {
         service_name: String,
@@ -174,6 +237,24 @@ impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
             EventIndex::AuctionManagerApproveAdminChange {} => {
                 write!(f, "auction-manager-approve-admin-change")
             }
+
+            // auctions
+            EventIndex::AuctionInit { .. } => write!(f, "auction-init"),
+            EventIndex::AuctionAuctinFunds { .. } => write!(f, "auction-auction-funds"),
+            EventIndex::AuctionWithdrawFunds { .. } => write!(f, "auction-withdraw-funds"),
+            EventIndex::AuctionDoBid { .. } => write!(f, "auction-do-bid"),
+            EventIndex::AuctionPause {} => write!(f, "auction-pause"),
+            EventIndex::AuctionResume {} => write!(f, "auction-resume"),
+            EventIndex::AuctionUpdateStrategy { .. } => write!(f, "auction-update-strategy"),
+            EventIndex::AuctionUpdateChainHaltConfig { .. } => {
+                write!(f, "auction-update-chain-halt-config")
+            }
+            EventIndex::AuctionUpdatePriceFreshnessStrategy { .. } => {
+                write!(f, "auction-update-price-freshness-strategy")
+            }
+            EventIndex::AuctionOpen { .. } => write!(f, "auction-open"),
+            EventIndex::AuctionOpenRefund { .. } => write!(f, "auction-open-refund"),
+            EventIndex::AuctionClose { .. } => write!(f, "auction-close"),
 
             // Services manager
             EventIndex::ServicesManagerAddService { .. } => {

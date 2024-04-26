@@ -190,7 +190,8 @@ mod admin {
 
                 ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
-                let event = EventIndex::<Empty>::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
+                let event =
+                    EventIndex::<Empty>::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
                 Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
