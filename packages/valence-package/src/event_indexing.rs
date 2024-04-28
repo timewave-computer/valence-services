@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use auction_package::{
     helpers::{AuctionConfig, ChainHaltConfig},
@@ -7,6 +7,10 @@ use auction_package::{
 };
 use cosmwasm_std::{to_json_binary, Binary, Coin, CosmosMsg, Decimal, Event, SubMsg, Uint128};
 use serde::Serialize;
+
+use crate::services::rebalancer::{
+    BaseDenom, RebalanceTrade, RebalancerConfig, ServiceFeeConfig, SystemRebalanceStatus,
+};
 
 #[derive(
     cosmwasm_schema::serde::Serialize,
@@ -184,6 +188,65 @@ where
     },
     ServicesManagerCancelAdminChange {},
     ServicesManagerApproveAdminChange {},
+
+    // Rebalancer
+    RebalancerRegister {
+        account: String,
+        config: RebalancerConfig,
+    },
+    RebalancerDeregister {
+        account: String,
+    },
+    RebalancerUpdate {
+        account: String,
+        config: RebalancerConfig,
+    },
+    RebalancerPause {
+        account: String,
+        reason: String,
+    },
+    RebalancerResume {
+        account: String,
+    },
+    RebalancerUpdateSystemStatus {
+        status: SystemRebalanceStatus,
+    },
+    RebalancerUpdateDenomWhitelist {
+        denoms: HashSet<String>,
+    },
+    RebalancerUpdateBaseDenomWhitelist {
+        base_denoms: HashSet<BaseDenom>,
+    },
+    RebalancerUpdateServicesManager {
+        addr: String,
+    },
+    RebalancerUpdateAuctionsManager {
+        addr: String,
+    },
+    RebalancerUpdateCyclePeriod {
+        period: u64,
+    },
+    RebalancerUpdateFees {
+        fees: ServiceFeeConfig,
+    },
+    RebalancerStartAdminChange {
+        admin: String,
+    },
+    RebalancerCancelAdminChange {},
+    RebalancerApproveAdminChange {},
+    RebalancerCycle {
+        limit: u64,
+        cycled_over: u64,
+    },
+    RebalancerAccountRebalance {
+        account: String,
+        total_value: Decimal,
+        trades: Vec<RebalanceTrade>,
+    },
+    RebalancerAccountRebalancePause {
+        account: String,
+        total_value: Decimal,
+    },
 }
 
 /// Turn a ValenceServices enum into a string
@@ -278,6 +341,48 @@ impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
             }
             EventIndex::ServicesManagerApproveAdminChange {} => {
                 write!(f, "services-manager-approve-admin-change")
+            }
+
+            // Rebalancer
+            EventIndex::RebalancerRegister { .. } => write!(f, "rebalancer-register"),
+            EventIndex::RebalancerDeregister { .. } => write!(f, "rebalancer-deregister"),
+            EventIndex::RebalancerUpdate { .. } => write!(f, "rebalancer-update"),
+            EventIndex::RebalancerPause { .. } => write!(f, "rebalancer-pause"),
+            EventIndex::RebalancerResume { .. } => write!(f, "rebalancer-resume"),
+            EventIndex::RebalancerUpdateSystemStatus { .. } => {
+                write!(f, "rebalancer-update-system-status")
+            }
+            EventIndex::RebalancerUpdateDenomWhitelist { .. } => {
+                write!(f, "rebalancer-update-denom-whitelist")
+            }
+            EventIndex::RebalancerUpdateBaseDenomWhitelist { .. } => {
+                write!(f, "rebalancer-update-base-denom-whitelist")
+            }
+            EventIndex::RebalancerUpdateServicesManager { .. } => {
+                write!(f, "rebalancer-update-services-manager")
+            }
+            EventIndex::RebalancerUpdateAuctionsManager { .. } => {
+                write!(f, "rebalancer-update-auctions-manager")
+            }
+            EventIndex::RebalancerUpdateCyclePeriod { .. } => {
+                write!(f, "rebalancer-update-cycle-period")
+            }
+            EventIndex::RebalancerUpdateFees { .. } => write!(f, "rebalancer-update-fees"),
+            EventIndex::RebalancerStartAdminChange { .. } => {
+                write!(f, "rebalancer-start-admin-change")
+            }
+            EventIndex::RebalancerCancelAdminChange {} => {
+                write!(f, "rebalancer-cancel-admin-change")
+            }
+            EventIndex::RebalancerApproveAdminChange {} => {
+                write!(f, "rebalancer-approve-admin-change")
+            }
+            EventIndex::RebalancerCycle { .. } => write!(f, "rebalancer-cycle"),
+            EventIndex::RebalancerAccountRebalance { .. } => {
+                write!(f, "rebalancer-account-rebalance")
+            }
+            EventIndex::RebalancerAccountRebalancePause { .. } => {
+                write!(f, "rebalancer-account-rebalance-pause")
             }
         }
     }

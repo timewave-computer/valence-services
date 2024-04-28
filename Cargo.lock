@@ -1015,6 +1015,7 @@ name = "rebalancer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "auction",
  "auction-package",
  "auctions-manager",
  "cosmwasm-schema",

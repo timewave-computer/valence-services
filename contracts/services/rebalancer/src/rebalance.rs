@@ -2,18 +2,20 @@ use std::{borrow::BorrowMut, collections::HashMap, str::FromStr};
 
 use auction_package::{
     helpers::GetPriceResponse,
-    states::{MinAmount, MIN_AUCTION_AMOUNT},
+    states::{MinAmount, MIN_AUCTION_AMOUNT, PAIRS},
     Pair,
 };
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Event, Order,
+    coins, to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, Event, Order,
     Response, StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw_storage_plus::Bound;
 use valence_package::{
+    event_indexing::EventIndex,
     helpers::start_of_cycle,
     services::rebalancer::{
-        ParsedPID, PauseData, RebalancerConfig, SystemRebalanceStatus, TargetOverrideStrategy,
+        ParsedPID, PauseData, RebalanceTrade, RebalancerConfig, SystemRebalanceStatus,
+        TargetOverrideStrategy,
     },
     signed_decimal::SignedDecimal,
     CLOSEST_TO_ONE_POSSIBLE,
@@ -109,7 +111,7 @@ pub fn execute_system_rebalance(
 
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
     let mut msgs: Vec<SubMsg> = vec![];
-    let mut events: Vec<Event> = vec![];
+    let mut account_events: Vec<Event> = vec![];
 
     for res in configs {
         let Ok((account, config)) = res else {
@@ -157,7 +159,7 @@ pub fn execute_system_rebalance(
         }
 
         // Add event to all events
-        events.push(event);
+        account_events.push(event.into());
 
         if let Some(msg) = msg {
             msgs.push(msg);
@@ -180,14 +182,15 @@ pub fn execute_system_rebalance(
 
     SYSTEM_REBALANCE_STATUS.save(deps.storage, &status)?;
 
+    let event = EventIndex::<Empty>::RebalancerCycle {
+        limit: limit as u64,
+        cycled_over: configs_len as u64,
+    };
+
     Ok(Response::default()
-        .add_submessages(msgs)
-        .add_events(events)
-        .add_event(
-            Event::new("rebalance_cycle")
-                .add_attribute("limit", limit.to_string())
-                .add_attribute("cycled_over", configs_len.to_string()),
-        ))
+        .add_event(event.into())
+        .add_events(account_events)
+        .add_submessages(msgs))
 }
 
 /// Make sure the balance of the account is not zero and is above our minimum value
@@ -218,10 +221,7 @@ pub fn do_rebalance(
     min_values: &HashMap<String, Uint128>,
     prices: &[(Pair, Decimal)],
     cycle_period: u64,
-) -> Result<RebalanceResponse, ContractError> {
-    // Create new event to show important data about the rebalance
-    let mut event = Event::new("rebalance-account").add_attribute("account", account.to_string());
-
+) -> Result<RebalanceResponse<Empty>, ContractError> {
     // get a vec of inputs for our calculations
     let (total_value, mut target_helpers) = get_inputs(deps, account, &config, prices)?;
 
@@ -231,13 +231,14 @@ pub fn do_rebalance(
         .unwrap_or(&Uint128::zero());
 
     if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
-        event = event.add_attribute("pausing", true.to_string());
+        let event = EventIndex::<Empty>::RebalancerAccountRebalancePause {
+            account: account.to_string(),
+            total_value,
+        };
 
         // We pause the account if the account balance doesn't meet the minimum requirements
         return Ok(RebalanceResponse::new(config, None, event, true));
     };
-
-    event = event.add_attribute("total_account_value", total_value.to_string());
 
     // Verify the targets, if we have a min_balance we need to do some extra steps
     // to make sure min_balance is accounted for in our calculations
@@ -262,15 +263,8 @@ pub fn do_rebalance(
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
 
     // Generate the trades msgs, how much funds to send to what auction.
-    let (msgs, event) = generate_trades_msgs(
-        deps,
-        to_sell,
-        to_buy,
-        auction_manager,
-        &config,
-        total_value,
-        event,
-    );
+    let (msgs, trades) =
+        generate_trades_msgs(deps, to_sell, to_buy, auction_manager, &config, total_value);
 
     // Construct the msg we need to execute on the account
     // Notice the atomic false, it means each trade msg (sending funds to specific pair auction)
@@ -293,6 +287,12 @@ pub fn do_rebalance(
 
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
+
+    let event = EventIndex::<Empty>::RebalancerAccountRebalance {
+        account: account.to_string(),
+        total_value,
+        trades,
+    };
 
     Ok(RebalanceResponse::new(config, Some(msg), event, false))
 }
@@ -569,15 +569,18 @@ pub fn verify_targets(
 
 /// Construct the messages the account need to exeucte (send funds to auctions)
 fn construct_msg(
-    _deps: Deps,
-    auction_manager: &Addr,
-    pair: Pair,
-    amount: Coin,
+    deps: Deps,
+    auction_manager: Addr,
+    trade: RebalanceTrade,
 ) -> Result<CosmosMsg, ContractError> {
+    let Some(pair_addr) = PAIRS.query(&deps.querier, auction_manager, trade.pair.clone())? else {
+        return Err(ContractError::PairDoesntExists(trade.pair.0, trade.pair.1));
+    };
+
     let msg = WasmMsg::Execute {
-        contract_addr: auction_manager.to_string(),
-        msg: to_json_binary(&auctions_manager::msg::ExecuteMsg::AuctionFunds { pair })?,
-        funds: vec![amount],
+        contract_addr: pair_addr.to_string(),
+        msg: to_json_binary(&auction::msg::ExecuteMsg::AuctionFunds {})?,
+        funds: coins(trade.amount.u128(), trade.pair.0),
     };
 
     Ok(msg.into())
@@ -591,9 +594,10 @@ fn generate_trades_msgs(
     auction_manager: &Addr,
     config: &RebalancerConfig,
     total_value: Decimal,
-    mut event: Event,
-) -> (Vec<CosmosMsg>, Event) {
-    let mut msgs: Vec<CosmosMsg> = vec![];
+) -> (Vec<CosmosMsg>, Vec<RebalanceTrade>) {
+    let max_trades = to_sell.len().max(to_buy.len());
+    let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(max_trades);
+    let mut trades: Vec<RebalanceTrade> = Vec::with_capacity(max_trades);
 
     // Get max tokens to sell as a value and not amount
     let mut max_sell = config.max_limit * total_value;
@@ -638,11 +642,11 @@ fn generate_trades_msgs(
                     token_buy.target.denom.clone(),
                 ));
                 let amount = (token_sell.auction_min_amount * token_sell.price).to_uint_ceil();
-                let coin = coin(amount.u128(), &pair.0);
+                let trade = RebalanceTrade::new(pair, amount);
 
                 token_buy.value_to_trade = Decimal::zero();
 
-                if let Ok(msg) = construct_msg(deps, auction_manager, pair, coin) {
+                if let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) {
                     max_sell -= token_sell.auction_min_amount;
                     msgs.push(msg);
                 };
@@ -709,47 +713,34 @@ fn generate_trades_msgs(
             if token_sell.value_to_trade >= token_buy.value_to_trade {
                 token_sell.value_to_trade -= token_buy.value_to_trade;
 
-                let token = coin(
-                    (token_buy.value_to_trade * token_sell.price)
-                        .to_uint_ceil()
-                        .u128(),
-                    token_sell.target.denom.clone(),
-                );
+                let amount = (token_buy.value_to_trade * token_sell.price).to_uint_ceil();
+                let trade = RebalanceTrade::new(pair, amount);
 
                 token_buy.value_to_trade = Decimal::zero();
 
-                event = event
-                    .clone()
-                    .add_attribute("trade", format!("Coin: {token} | Pair: {pair:?}"));
-
-                let Ok(msg) = construct_msg(deps, auction_manager, pair, token) else {
+                let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
                     return;
                 };
+
                 msgs.push(msg);
+                trades.push(trade);
             } else {
                 token_buy.value_to_trade -= token_sell.value_to_trade;
 
-                let token = coin(
-                    (token_sell.value_to_trade * token_sell.price)
-                        .to_uint_ceil()
-                        .u128(),
-                    token_sell.target.denom.clone(),
-                );
+                let amount = (token_sell.value_to_trade * token_sell.price).to_uint_ceil();
+                let trade = RebalanceTrade::new(pair, amount);
 
                 token_sell.value_to_trade = Decimal::zero();
 
-                event = event
-                    .clone()
-                    .add_attribute("trade", format!("Coin: {token} | Pair: {pair:?}"));
-
-                let Ok(msg) = construct_msg(deps, auction_manager, pair, token) else {
+                let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
                     return;
                 };
 
                 msgs.push(msg);
+                trades.push(trade);
             }
         });
     });
 
-    (msgs, event)
+    (msgs, trades)
 }
