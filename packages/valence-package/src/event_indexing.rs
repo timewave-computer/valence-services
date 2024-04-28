@@ -390,7 +390,7 @@ impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
 
 impl<E: serde::Serialize> From<EventIndex<E>> for Event {
     fn from(value: EventIndex<E>) -> Self {
-        Event::new("valence")
+        Event::new("valence-event")
             .add_attribute("action", value.to_string())
             .add_attribute("data", to_json_binary(&value).unwrap().to_string())
     }

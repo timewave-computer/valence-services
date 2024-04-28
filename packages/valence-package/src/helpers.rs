@@ -53,16 +53,15 @@ pub fn sender_is_a_service(
     deps: DepsMut,
     info: &MessageInfo,
     manager_addr: String,
-) -> Result<(), ValenceError> {
-    if deps.querier.query_wasm_smart::<bool>(
+) -> Result<Addr, ValenceError> {
+    match deps.querier.query_wasm_smart::<Option<String>>(
         manager_addr,
         &ServicesManagerQueryMsg::IsService {
             addr: info.sender.to_string(),
         },
     )? {
-        Ok(())
-    } else {
-        Err(ValenceError::UnauthorizedService)
+        Some(addr) => Ok(deps.api.addr_validate(&addr)?),
+        None => Err(ValenceError::UnauthorizedService),
     }
 }
 

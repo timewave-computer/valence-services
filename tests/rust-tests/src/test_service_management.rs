@@ -443,8 +443,7 @@ fn test_manager_queries() {
     let is_service = suite
         .query_is_service_on_manager(suite.rebalancer_addr.as_str())
         .unwrap();
-    assert!(is_service);
-    assert!(is_service);
+    assert!(is_service.is_some());
 
     // suite
     //     .query_service_addr_from_manager(ValenceServices::Test)
@@ -499,7 +498,7 @@ fn test_remove_service() {
     let is_service = suite
         .query_is_service_on_manager(suite.rebalancer_addr.as_str())
         .unwrap();
-    assert!(!is_service);
+    assert!(is_service.is_none());
 }
 
 #[test]

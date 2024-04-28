@@ -595,7 +595,7 @@ impl Suite {
         )
     }
 
-    pub fn query_is_service_on_manager(&self, addr: &str) -> Result<bool, StdError> {
+    pub fn query_is_service_on_manager(&self, addr: &str) -> Result<Option<String>, StdError> {
         self.app.wrap().query_wasm_smart(
             self.manager_addr.clone(),
             &valence_package::msgs::core_query::ServicesManagerQueryMsg::IsService {
