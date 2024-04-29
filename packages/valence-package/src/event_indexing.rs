@@ -118,7 +118,7 @@ where
         config: AuctionConfig,
         strategy: AuctionStrategy,
     },
-    AuctionAuctinFunds {
+    AuctionAuctionFunds {
         address: String,
         amount: Uint128,
         auction_id: u64,
@@ -303,7 +303,7 @@ impl<E: serde::Serialize> fmt::Display for EventIndex<E> {
 
             // auctions
             EventIndex::AuctionInit { .. } => write!(f, "auction-init"),
-            EventIndex::AuctionAuctinFunds { .. } => write!(f, "auction-auction-funds"),
+            EventIndex::AuctionAuctionFunds { .. } => write!(f, "auction-auction-funds"),
             EventIndex::AuctionWithdrawFunds { .. } => write!(f, "auction-withdraw-funds"),
             EventIndex::AuctionDoBid { .. } => write!(f, "auction-do-bid"),
             EventIndex::AuctionPause {} => write!(f, "auction-pause"),

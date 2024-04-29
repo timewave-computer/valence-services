@@ -68,7 +68,7 @@ pub(crate) fn auction_funds(
         },
     )?;
 
-    let event = EventIndex::<Empty>::AuctionAuctinFunds {
+    let event = EventIndex::<Empty>::AuctionAuctionFunds {
         address: sender.to_string(),
         amount: funds,
         auction_id: next_auction_id,
