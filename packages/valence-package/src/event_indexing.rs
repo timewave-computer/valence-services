@@ -129,12 +129,13 @@ where
         auction_id: u64,
     },
     AuctionDoBid {
+        auction_id: u64,
         bidder: String,
+        price: Decimal,
         /// How much of token.0 the bidder bought
         bought_amount: Uint128,
         /// If bidder sent too much and we couldn't "swap" all, then we refund him the rest
         refunded_amount: Uint128,
-        auction_id: u64,
     },
     AuctionPause {},
     AuctionResume {},

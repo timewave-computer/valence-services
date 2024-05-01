@@ -146,6 +146,7 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     }
 
     let sent_funds = must_pay(info, &config.pair.1)?;
+    let curr_price = calc_price(&active_auction, env.block.height);
 
     let (buy_amount, leftover_amount) = if is_chain_halted(
         env,
@@ -155,7 +156,6 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
         active_auction.status = ActiveAuctionStatus::Finished;
         (Uint128::zero(), sent_funds)
     } else {
-        let curr_price = calc_price(&active_auction, env.block.height);
         let (buy_amount, mut send_leftover) = calc_buy_amount(curr_price, sent_funds);
 
         let send_amount = match active_auction.available_amount.checked_sub(buy_amount) {
@@ -214,10 +214,11 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
     let event = EventIndex::<Empty>::AuctionDoBid {
+        auction_id: AUCTION_IDS.load(deps.storage)?.curr,
         bidder: info.sender.to_string(),
         bought_amount: buy_amount,
         refunded_amount: leftover_amount,
-        auction_id: AUCTION_IDS.load(deps.storage)?.curr,
+        price: curr_price,
     };
 
     Ok(response.add_event(event.into()))
