@@ -1,6 +1,6 @@
 {
   "contract_name": "services-manager",
-  "contract_version": "1.2.0",
+  "contract_version": "0.1.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -676,16 +676,10 @@
     },
     "is_service": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ValenceServices",
-      "description": "An enum that represent all services that available for valence accounts",
-      "oneOf": [
-        {
-          "description": "The rebalancer service",
-          "type": "string",
-          "enum": [
-            "rebalancer"
-          ]
-        }
+      "title": "Nullable_String",
+      "type": [
+        "string",
+        "null"
       ]
     }
   }

@@ -110,9 +110,8 @@ pub fn execute(
 }
 
 mod admin {
-    use cosmwasm_std::Empty;
     use valence_package::{
-        event_indexing::EventIndex,
+        event_indexing::ValenceEventEmpty,
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
         msgs::core_execute::ServicesManagerAdminMsg,
     };
@@ -142,7 +141,7 @@ mod admin {
                     save_service(deps, name.to_string(), addr.clone())?;
                 }
 
-                let event = EventIndex::<Empty>::ServicesManagerAddService {
+                let event = ValenceEventEmpty::ServicesManagerAddService {
                     service_name: name.to_string(),
                     addr: addr.to_string(),
                 };
@@ -160,7 +159,7 @@ mod admin {
 
                 save_service(deps, name.to_string(), addr.clone())?;
 
-                let event = EventIndex::<Empty>::ServicesManagerUpdateService {
+                let event = ValenceEventEmpty::ServicesManagerUpdateService {
                     service_name: name.to_string(),
                     addr: addr.to_string(),
                 };
@@ -171,7 +170,7 @@ mod admin {
                 let addr = get_service_addr(deps.as_ref(), name.to_string())?;
                 remove_service(deps, name.to_string(), addr)?;
 
-                let event = EventIndex::<Empty>::ServicesManagerRemoveService {
+                let event = ValenceEventEmpty::ServicesManagerRemoveService {
                     service_name: name.to_string(),
                 };
 
@@ -191,17 +190,17 @@ mod admin {
                 ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
                 let event =
-                    EventIndex::<Empty>::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
+                    ValenceEventEmpty::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
                 Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
-                let event = EventIndex::<Empty>::ServicesManagerStartAdminChange {
+                let event = ValenceEventEmpty::ServicesManagerStartAdminChange {
                     admin: addr.clone(),
                 };
                 Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
             ServicesManagerAdminMsg::CancelAdminChange => {
-                let event = EventIndex::<Empty>::ServicesManagerCancelAdminChange {};
+                let event = ValenceEventEmpty::ServicesManagerCancelAdminChange {};
                 Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
             }
             ServicesManagerAdminMsg::Withdraw { denom } => {
@@ -212,7 +211,7 @@ mod admin {
                     amount: vec![amount.clone()],
                 };
 
-                let event = EventIndex::<Empty>::ServicesManagerWithdraw { amount };
+                let event = ValenceEventEmpty::ServicesManagerWithdraw { amount };
 
                 Ok(Response::default().add_event(event.into()).add_message(msg))
             }

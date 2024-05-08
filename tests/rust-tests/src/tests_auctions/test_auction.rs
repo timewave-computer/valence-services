@@ -3,11 +3,11 @@ use core::panic;
 use auction::state::{ActiveAuction, ActiveAuctionStatus};
 use auction_package::{error::AuctionError, states::TWAP_PRICES};
 use cosmwasm_std::{
-    coin, coins, from_json, testing::mock_env, Addr, Binary, Decimal, Empty, Timestamp, Uint128,
+    coin, coins, from_json, testing::mock_env, Addr, Binary, Decimal, Timestamp, Uint128,
 };
 use cw_multi_test::Executor;
 use price_oracle::state::PriceStep;
-use valence_package::event_indexing::EventIndex;
+use valence_package::event_indexing::ValenceEventEmpty;
 
 use crate::suite::suite::{
     Suite, DAY, DEFAULT_BALANCE_AMOUNT, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS,
@@ -368,11 +368,11 @@ fn test_chain_halt() {
     // Should return 0 as the bought amount
     let res = suite.do_full_bid(1_u128);
 
-    let data = from_json::<EventIndex<Empty>>(
+    let data = from_json::<ValenceEventEmpty>(
         Binary::from_base64(suite.get_attr_value(&res, "data").unwrap().as_str()).unwrap(),
     )
     .unwrap();
-    let EventIndex::AuctionDoBid {
+    let ValenceEventEmpty::AuctionDoBid {
         bought_amount,
         refunded_amount,
         ..

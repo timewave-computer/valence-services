@@ -3,12 +3,11 @@ use auction_package::{
     Price, CLOSEST_TO_ONE_POSSIBLE,
 };
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Empty, Env, MessageInfo, Response,
-    Uint128,
+    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 use cw_storage_plus::Bound;
 use cw_utils::must_pay;
-use valence_package::event_indexing::EventIndex;
+use valence_package::event_indexing::ValenceEventEmpty;
 
 use crate::{
     contract::TWAP_PRICE_MAX_LEN,
@@ -68,7 +67,7 @@ pub(crate) fn auction_funds(
         },
     )?;
 
-    let event = EventIndex::<Empty>::AuctionAuctionFunds {
+    let event = ValenceEventEmpty::AuctionAuctionFunds {
         address: sender.to_string(),
         amount: funds,
         auction_id: next_auction_id,
@@ -108,7 +107,7 @@ pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractE
         amount: vec![send_funds.clone()],
     };
 
-    let event = EventIndex::<Empty>::AuctionWithdrawFunds {
+    let event = ValenceEventEmpty::AuctionWithdrawFunds {
         address: sender.to_string(),
         amount: send_funds.amount,
         auction_id: auction_ids.next,
@@ -213,7 +212,7 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     active_auction.last_checked_block = env.block.clone();
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    let event = EventIndex::<Empty>::AuctionDoBid {
+    let event = ValenceEventEmpty::AuctionDoBid {
         auction_id: AUCTION_IDS.load(deps.storage)?.curr,
         bidder: info.sender.to_string(),
         bought_amount: buy_amount,
@@ -368,7 +367,7 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
     active_auction.status = status;
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    let event = EventIndex::<Empty>::AuctionClose {
+    let event = ValenceEventEmpty::AuctionClose {
         auction_id: curr_auction_id,
         is_closed,
         price,

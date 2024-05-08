@@ -7,11 +7,9 @@ use auction_package::states::{ADMIN, PAIRS, PRICES, TWAP_PRICES};
 use auction_package::Price;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_json_binary, Binary, Decimal, Deps, DepsMut, Empty, Env, MessageInfo, Response,
-};
+use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
-use valence_package::event_indexing::EventIndex;
+use valence_package::event_indexing::{ValenceEvent, ValenceEventEmpty};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -82,7 +80,7 @@ pub fn execute(
             // Save price
             PRICES.save(deps.storage, pair.clone(), &price)?;
 
-            let event: EventIndex<Empty> = EventIndex::OracleUpdatePrice {
+            let event = ValenceEventEmpty::OracleUpdatePrice {
                 pair: pair.clone(),
                 price: price.price,
                 source: source.to_string(),
@@ -129,7 +127,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = EventIndex::<Empty>::OracleUpdatePrice {
+            let event = ValenceEventEmpty::OracleUpdatePrice {
                 pair,
                 price,
                 source: "manual".to_string(),
@@ -156,7 +154,7 @@ pub fn execute(
 
             ASTRO_PRICE_PATHS.save(deps.storage, pair.clone(), &path)?;
 
-            let event = EventIndex::OracleAddPath { pair, path };
+            let event = ValenceEvent::OracleAddPath { pair, path };
 
             Ok(Response::default().add_event(event.into()))
         }
@@ -179,7 +177,7 @@ pub fn execute(
 
             ASTRO_PRICE_PATHS.save(deps.storage, pair.clone(), &path)?;
 
-            let event = EventIndex::OracleUpdatePath { pair, path };
+            let event = ValenceEvent::OracleUpdatePath { pair, path };
 
             Ok(Response::default().add_event(event.into()))
         }
@@ -206,22 +204,22 @@ pub fn execute(
 
             CONFIG.save(deps.storage, &config)?;
 
-            let event = EventIndex::OracleUpdateConfig { config };
+            let event = ValenceEvent::OracleUpdateConfig { config };
 
             Ok(Response::default().add_event(event.into()))
         }
         ExecuteMsg::StartAdminChange { addr, expiration } => {
-            let event = EventIndex::<Empty>::OracleStartAdminChange {
+            let event = ValenceEventEmpty::OracleStartAdminChange {
                 admin: addr.clone(),
             };
             Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
         }
         ExecuteMsg::CancelAdminChange {} => {
-            let event = EventIndex::<Empty>::OracleCancelAdminChange {};
+            let event = ValenceEventEmpty::OracleCancelAdminChange {};
             Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
         }
         ExecuteMsg::ApproveAdminChange {} => {
-            let event = EventIndex::<Empty>::OracleApproveAdminChange {};
+            let event = ValenceEventEmpty::OracleApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
     }

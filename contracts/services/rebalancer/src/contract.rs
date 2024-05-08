@@ -5,13 +5,13 @@ use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Empty, Env, Event, MessageInfo,
-    Reply, Response, StdError, StdResult, Uint128,
+    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply,
+    Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
 use valence_package::error::ValenceError;
-use valence_package::event_indexing::EventIndex;
+use valence_package::event_indexing::ValenceEventEmpty;
 use valence_package::helpers::{approve_admin_change, verify_services_manager, OptionalField};
 use valence_package::services::rebalancer::{
     PauseData, RebalancerExecuteMsg, SystemRebalanceStatus,
@@ -99,7 +99,7 @@ pub fn execute(
     match msg {
         RebalancerExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, admin_msg),
         RebalancerExecuteMsg::ApproveAdminChange => {
-            let event = EventIndex::<Empty>::RebalancerApproveAdminChange {};
+            let event = ValenceEventEmpty::RebalancerApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
         RebalancerExecuteMsg::Register { register_for, data } => {
@@ -217,7 +217,7 @@ pub fn execute(
             let config = data.to_config(deps.api)?;
             CONFIGS.save(deps.storage, registree.clone(), &config)?;
 
-            let event = EventIndex::<Empty>::RebalancerRegister {
+            let event = ValenceEventEmpty::RebalancerRegister {
                 account: registree.to_string(),
                 config,
             };
@@ -233,7 +233,7 @@ pub fn execute(
             CONFIGS.remove(deps.storage, account.clone());
             PAUSED_CONFIGS.remove(deps.storage, account.clone());
 
-            let event = EventIndex::<Empty>::RebalancerDeregister {
+            let event = ValenceEventEmpty::RebalancerDeregister {
                 account: account.to_string(),
             };
 
@@ -322,7 +322,7 @@ pub fn execute(
 
             CONFIGS.save(deps.storage, account.clone(), &config)?;
 
-            let event = EventIndex::<Empty>::RebalancerUpdate {
+            let event = ValenceEventEmpty::RebalancerUpdate {
                 account: account.to_string(),
                 config,
             };
@@ -393,7 +393,7 @@ pub fn execute(
                 Err(ContractError::NotAuthorizedToPause)
             }?;
 
-            let event = EventIndex::<Empty>::RebalancerPause {
+            let event = ValenceEventEmpty::RebalancerPause {
                 account: account.to_string(),
                 reason: reason.unwrap_or_default(),
             };
@@ -490,7 +490,7 @@ pub fn execute(
             CONFIGS.save(deps.storage, account.clone(), &paused_data.config)?;
             PAUSED_CONFIGS.remove(deps.storage, account.clone());
 
-            let event = EventIndex::<Empty>::RebalancerResume {
+            let event = ValenceEventEmpty::RebalancerResume {
                 account: account.to_string(),
             };
 
@@ -505,9 +505,9 @@ pub fn execute(
 }
 
 mod admin {
-    use cosmwasm_std::{DepsMut, Empty, Env, MessageInfo, Response};
+    use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
     use valence_package::{
-        event_indexing::EventIndex,
+        event_indexing::ValenceEventEmpty,
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
         services::rebalancer::{BaseDenom, RebalancerAdminMsg, SystemRebalanceStatus},
         states::{SERVICES_MANAGER, SERVICE_FEE_CONFIG},
@@ -541,7 +541,7 @@ mod admin {
 
                 SYSTEM_REBALANCE_STATUS.save(deps.storage, &status)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateSystemStatus { status };
+                let event = ValenceEventEmpty::RebalancerUpdateSystemStatus { status };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -560,7 +560,7 @@ mod admin {
 
                 DENOM_WHITELIST.save(deps.storage, &denoms)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateDenomWhitelist { denoms };
+                let event = ValenceEventEmpty::RebalancerUpdateDenomWhitelist { denoms };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -580,7 +580,7 @@ mod admin {
 
                 BASE_DENOM_WHITELIST.save(deps.storage, &base_denoms)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateBaseDenomWhitelist { base_denoms };
+                let event = ValenceEventEmpty::RebalancerUpdateBaseDenomWhitelist { base_denoms };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -589,7 +589,7 @@ mod admin {
 
                 SERVICES_MANAGER.save(deps.storage, &addr)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateServicesManager {
+                let event = ValenceEventEmpty::RebalancerUpdateServicesManager {
                     addr: addr.to_string(),
                 };
 
@@ -600,7 +600,7 @@ mod admin {
 
                 AUCTIONS_MANAGER_ADDR.save(deps.storage, &addr)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateAuctionsManager {
+                let event = ValenceEventEmpty::RebalancerUpdateAuctionsManager {
                     addr: addr.to_string(),
                 };
 
@@ -609,25 +609,25 @@ mod admin {
             RebalancerAdminMsg::UpdateCyclePeriod { period } => {
                 CYCLE_PERIOD.save(deps.storage, &period)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateCyclePeriod { period };
+                let event = ValenceEventEmpty::RebalancerUpdateCyclePeriod { period };
 
                 Ok(Response::default().add_event(event.into()))
             }
             RebalancerAdminMsg::UpdateFess { fees } => {
                 SERVICE_FEE_CONFIG.save(deps.storage, &fees)?;
 
-                let event = EventIndex::<Empty>::RebalancerUpdateFees { fees };
+                let event = ValenceEventEmpty::RebalancerUpdateFees { fees };
 
                 Ok(Response::default().add_event(event.into()))
             }
             RebalancerAdminMsg::StartAdminChange { addr, expiration } => {
-                let event = EventIndex::<Empty>::RebalancerStartAdminChange {
+                let event = ValenceEventEmpty::RebalancerStartAdminChange {
                     admin: addr.clone(),
                 };
                 Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
             RebalancerAdminMsg::CancelAdminChange => {
-                let event = EventIndex::<Empty>::RebalancerCancelAdminChange {};
+                let event = ValenceEventEmpty::RebalancerCancelAdminChange {};
                 Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
             }
         }

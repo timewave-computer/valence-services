@@ -6,13 +6,13 @@ use auction_package::states::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Order, Reply, Response,
-    StdResult, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Reply, Response, StdResult,
+    WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
 use cw_utils::{nonpayable, parse_reply_instantiate_data};
-use valence_package::event_indexing::EventIndex;
+use valence_package::event_indexing::ValenceEventEmpty;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
@@ -94,7 +94,7 @@ pub fn execute(
         }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
         ExecuteMsg::ApproveAdminChange {} => {
-            let event = EventIndex::<Empty>::AuctionManagerApproveAdminChange {};
+            let event = ValenceEventEmpty::AuctionManagerApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
     }
@@ -102,8 +102,8 @@ pub fn execute(
 
 mod admin {
     use auction_package::helpers::{cancel_admin_change, start_admin_change, verify_admin};
-    use cosmwasm_std::{to_json_binary, Empty, SubMsg, WasmMsg};
-    use valence_package::event_indexing::EventIndex;
+    use cosmwasm_std::{to_json_binary, SubMsg, WasmMsg};
+    use valence_package::event_indexing::ValenceEvent;
 
     use crate::msg::AdminMsgs;
 
@@ -194,14 +194,14 @@ mod admin {
             AdminMsgs::UpdateAuctionId { code_id } => {
                 AUCTION_CODE_ID.save(deps.storage, &code_id)?;
 
-                let event = EventIndex::<Empty>::AuctionManagerUpdateAuctionCodeId { code_id };
+                let event = ValenceEventEmpty::AuctionManagerUpdateAuctionCodeId { code_id };
 
                 Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdateOracle { oracle_addr } => {
                 ORACLE_ADDR.save(deps.storage, &deps.api.addr_validate(&oracle_addr)?)?;
 
-                let event = EventIndex::<Empty>::AuctionManagerUpdateOracle { oracle_addr };
+                let event = ValenceEventEmpty::AuctionManagerUpdateOracle { oracle_addr };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -250,11 +250,12 @@ mod admin {
                     new_code_id: code_id,
                 };
 
-                let event = EventIndex::<auction::msg::MigrateMsg>::AuctionManagerMigrateAuction {
-                    pair,
-                    code_id,
-                    msg,
-                };
+                let event =
+                    ValenceEvent::<auction::msg::MigrateMsg>::AuctionManagerMigrateAuction {
+                        pair,
+                        code_id,
+                        msg,
+                    };
 
                 Ok(Response::default()
                     .add_event(event.into())
@@ -263,19 +264,18 @@ mod admin {
             AdminMsgs::UpdateMinAmount { denom, min_amount } => {
                 MIN_AUCTION_AMOUNT.save(deps.storage, denom.clone(), &min_amount)?;
 
-                let event =
-                    EventIndex::<Empty>::AuctionManagerUpdateMinAmount { denom, min_amount };
+                let event = ValenceEventEmpty::AuctionManagerUpdateMinAmount { denom, min_amount };
 
                 Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::StartAdminChange { addr, expiration } => {
-                let event = EventIndex::<Empty>::AuctionManagerStartAdminChange {
+                let event = ValenceEventEmpty::AuctionManagerStartAdminChange {
                     admin: addr.clone(),
                 };
                 Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
             AdminMsgs::CancelAdminChange => {
-                let event = EventIndex::<Empty>::AuctionManagerCancelAdminChange {};
+                let event = ValenceEventEmpty::AuctionManagerCancelAdminChange {};
                 Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
             }
         }
