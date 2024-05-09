@@ -414,6 +414,18 @@ impl ServiceFeeConfig {
     }
 }
 
+#[cw_serde]
+pub struct RebalanceTrade {
+    pub pair: Pair,
+    pub amount: Uint128,
+}
+
+impl RebalanceTrade {
+    pub fn new(pair: Pair, amount: Uint128) -> Self {
+        Self { pair, amount }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::error::ValenceError;

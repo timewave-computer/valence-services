@@ -16,6 +16,7 @@ pub enum GeneralServiceExecuteMsg<A, B> {}
 
 /// An enum that represent all services that available for valence accounts
 #[cw_serde]
+#[derive(Copy)]
 pub enum ValenceServices {
     /// The rebalancer service
     Rebalancer,

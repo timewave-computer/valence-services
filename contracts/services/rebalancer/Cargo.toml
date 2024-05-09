@@ -28,6 +28,7 @@ valence-macros   = { workspace = true }
 valence-package  = { workspace = true }
 auction-package  = { workspace = true }
 auctions-manager = { workspace = true }
+auction          = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test = { workspace = true }

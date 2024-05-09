@@ -3,11 +3,11 @@ use auction_package::{
     Price, CLOSEST_TO_ONE_POSSIBLE,
 };
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, Event, MessageInfo, Response,
-    Uint128,
+    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 use cw_storage_plus::Bound;
 use cw_utils::must_pay;
+use valence_package::event_indexing::ValenceEvent;
 
 use crate::{
     contract::TWAP_PRICE_MAX_LEN,
@@ -46,7 +46,7 @@ pub(crate) fn auction_funds(
     // Update funds of the sender for next auction
     AUCTION_FUNDS.update(
         deps.storage,
-        (next_auction_id, sender),
+        (next_auction_id, sender.clone()),
         |amount| -> Result<Uint128, ContractError> {
             match amount {
                 Some(amount) => Ok(amount.checked_add(funds)?),
@@ -67,7 +67,13 @@ pub(crate) fn auction_funds(
         },
     )?;
 
-    Ok(Response::default())
+    let event = ValenceEvent::AuctionAuctionFunds {
+        address: sender.to_string(),
+        amount: funds,
+        auction_id: next_auction_id,
+    };
+
+    Ok(Response::default().add_event(event.into()))
 }
 
 pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractError> {
@@ -101,9 +107,15 @@ pub fn withdraw_funds(deps: DepsMut, sender: Addr) -> Result<Response, ContractE
         amount: vec![send_funds.clone()],
     };
 
+    let event = ValenceEvent::AuctionWithdrawFunds {
+        address: sender.to_string(),
+        amount: send_funds.amount,
+        auction_id: auction_ids.next,
+    };
+
     Ok(Response::default()
-        .add_message(bank_msg)
-        .add_event(Event::new("withdraw-funds").add_attribute("amount", send_funds.to_string())))
+        .add_event(event.into())
+        .add_message(bank_msg))
 }
 
 pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, ContractError> {
@@ -133,6 +145,7 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     }
 
     let sent_funds = must_pay(info, &config.pair.1)?;
+    let curr_price = calc_price(&active_auction, env.block.height);
 
     let (buy_amount, leftover_amount) = if is_chain_halted(
         env,
@@ -142,7 +155,6 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
         active_auction.status = ActiveAuctionStatus::Finished;
         (Uint128::zero(), sent_funds)
     } else {
-        let curr_price = calc_price(&active_auction, env.block.height);
         let (buy_amount, mut send_leftover) = calc_buy_amount(curr_price, sent_funds);
 
         let send_amount = match active_auction.available_amount.checked_sub(buy_amount) {
@@ -200,11 +212,15 @@ pub fn do_bid(deps: DepsMut, info: &MessageInfo, env: &Env) -> Result<Response, 
     active_auction.last_checked_block = env.block.clone();
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    Ok(
-        response
-            .add_attribute("bought_amount", buy_amount) // pair.0 amount we sent
-            .add_attribute("refunded", leftover_amount), // pair.1 amount we refunded
-    )
+    let event = ValenceEvent::AuctionDoBid {
+        auction_id: AUCTION_IDS.load(deps.storage)?.curr,
+        bidder: info.sender.to_string(),
+        bought_amount: buy_amount,
+        refunded_amount: leftover_amount,
+        price: curr_price,
+    };
+
+    Ok(response.add_event(event.into()))
 }
 
 pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, ContractError> {
@@ -351,11 +367,16 @@ pub fn finish_auction(deps: DepsMut, env: &Env, limit: u64) -> Result<Response, 
     active_auction.status = status;
     ACTIVE_AUCTION.save(deps.storage, &active_auction)?;
 
-    Ok(Response::default().add_messages(bank_msgs).add_event(
-        Event::new("close-auction")
-            .add_attribute("is_closed", is_closed.to_string())
-            .add_attribute("price", price),
-    ))
+    let event = ValenceEvent::AuctionClose {
+        auction_id: curr_auction_id,
+        is_closed,
+        price,
+        accounts: bank_msgs.len() as u64,
+    };
+
+    Ok(Response::default()
+        .add_event(event.into())
+        .add_messages(bank_msgs))
 }
 
 pub fn clean_auction(deps: DepsMut) -> Result<Response, ContractError> {

@@ -12,6 +12,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
 use cw_utils::{nonpayable, parse_reply_instantiate_data};
+use valence_package::event_indexing::ValenceEvent;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
@@ -92,13 +93,17 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
-        ExecuteMsg::ApproveAdminChange {} => Ok(approve_admin_change(deps, &env, &info)?),
+        ExecuteMsg::ApproveAdminChange {} => {
+            let event = ValenceEvent::AuctionManagerApproveAdminChange {};
+            Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
+        }
     }
 }
 
 mod admin {
     use auction_package::helpers::{cancel_admin_change, start_admin_change, verify_admin};
     use cosmwasm_std::{to_json_binary, SubMsg, WasmMsg};
+    use valence_package::event_indexing::{ValenceEvent, ValenceGenericEvent};
 
     use crate::msg::AdminMsgs;
 
@@ -189,12 +194,16 @@ mod admin {
             AdminMsgs::UpdateAuctionId { code_id } => {
                 AUCTION_CODE_ID.save(deps.storage, &code_id)?;
 
-                Ok(Response::default())
+                let event = ValenceEvent::AuctionManagerUpdateAuctionCodeId { code_id };
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdateOracle { oracle_addr } => {
                 ORACLE_ADDR.save(deps.storage, &deps.api.addr_validate(&oracle_addr)?)?;
 
-                Ok(Response::default())
+                let event = ValenceEvent::AuctionManagerUpdateOracle { oracle_addr };
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdateStrategy { pair, strategy } => {
                 let pair_addr = PAIRS.load(deps.storage, pair)?;
@@ -233,7 +242,7 @@ mod admin {
                 Ok(Response::default().add_message(msg))
             }
             AdminMsgs::MigrateAuction { pair, code_id, msg } => {
-                let pair_addr = PAIRS.load(deps.storage, pair)?;
+                let pair_addr = PAIRS.load(deps.storage, pair.clone())?;
 
                 let migrate_msg = WasmMsg::Migrate {
                     contract_addr: pair_addr.to_string(),
@@ -241,17 +250,34 @@ mod admin {
                     new_code_id: code_id,
                 };
 
-                Ok(Response::default().add_message(migrate_msg))
+                let event =
+                    ValenceGenericEvent::<auction::msg::MigrateMsg>::AuctionManagerMigrateAuction {
+                        pair,
+                        code_id,
+                        msg,
+                    };
+
+                Ok(Response::default()
+                    .add_event(event.into())
+                    .add_message(migrate_msg))
             }
             AdminMsgs::UpdateMinAmount { denom, min_amount } => {
-                MIN_AUCTION_AMOUNT.save(deps.storage, denom, &min_amount)?;
+                MIN_AUCTION_AMOUNT.save(deps.storage, denom.clone(), &min_amount)?;
 
-                Ok(Response::default())
+                let event = ValenceEvent::AuctionManagerUpdateMinAmount { denom, min_amount };
+
+                Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::StartAdminChange { addr, expiration } => {
-                Ok(start_admin_change(deps, &info, &addr, expiration)?)
+                let event = ValenceEvent::AuctionManagerStartAdminChange {
+                    admin: addr.clone(),
+                };
+                Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
-            AdminMsgs::CancelAdminChange => Ok(cancel_admin_change(deps, &info)?),
+            AdminMsgs::CancelAdminChange => {
+                let event = ValenceEvent::AuctionManagerCancelAdminChange {};
+                Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
+            }
         }
     }
 }

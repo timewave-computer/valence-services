@@ -1,8 +1,13 @@
+use core::panic;
+
 use auction::state::{ActiveAuction, ActiveAuctionStatus};
 use auction_package::{error::AuctionError, states::TWAP_PRICES};
-use cosmwasm_std::{coin, coins, testing::mock_env, Addr, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{
+    coin, coins, from_json, testing::mock_env, Addr, Binary, Decimal, Timestamp, Uint128,
+};
 use cw_multi_test::Executor;
 use price_oracle::state::PriceStep;
+use valence_package::event_indexing::ValenceEvent;
 
 use crate::suite::suite::{
     Suite, DAY, DEFAULT_BALANCE_AMOUNT, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS,
@@ -327,6 +332,7 @@ fn test_chain_halt() {
     let avg_block_time = ((100.0 * 3.6) as f32).floor() as u64;
     let mut suite = Suite::default();
     let funds = coins(1000_u128, suite.pair.0.clone());
+
     suite.auction_funds(
         suite.get_account_addr(0),
         suite
@@ -361,19 +367,22 @@ fn test_chain_halt() {
 
     // Should return 0 as the bought amount
     let res = suite.do_full_bid(1_u128);
-    let amount_bought = suite
-        .get_attr_value(&res, "bought_amount")
-        .unwrap()
-        .parse::<u128>()
-        .unwrap();
-    let amount_refunded = suite
-        .get_attr_value(&res, "refunded")
-        .unwrap()
-        .parse::<u128>()
-        .unwrap();
 
-    assert_eq!(amount_bought, 0_u128);
-    assert_eq!(amount_refunded, 2_u128);
+    let data = from_json::<ValenceEvent>(
+        Binary::from_base64(suite.get_attr_value(&res, "data").unwrap().as_str()).unwrap(),
+    )
+    .unwrap();
+    let ValenceEvent::AuctionDoBid {
+        bought_amount,
+        refunded_amount,
+        ..
+    } = data
+    else {
+        panic!("Unexpected event data: {:?}", data)
+    };
+
+    assert_eq!(bought_amount.u128(), 0_u128);
+    assert_eq!(refunded_amount.u128(), 2_u128);
 }
 
 #[test]

@@ -102,4 +102,7 @@ pub enum ContractError {
 
     #[error("Cannot remove denom that doesn't exist: {0}")]
     CannotRemoveDenom(String),
+
+    #[error("Cannot find pair address: {0} / {1}")]
+    PairDoesntExists(String, String),
 }

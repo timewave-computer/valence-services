@@ -1,5 +1,9 @@
-use cosmwasm_std::{Decimal, Event, SubMsg, Uint128};
-use valence_package::services::rebalancer::{ParsedTarget, RebalancerConfig};
+use cosmwasm_std::{Decimal, SubMsg, Uint128};
+use serde::Serialize;
+use valence_package::{
+    event_indexing::ValenceGenericEvent,
+    services::rebalancer::{ParsedTarget, RebalancerConfig},
+};
 
 pub const TRADE_HARD_LIMIT: Decimal = Decimal::raw(5_u128);
 
@@ -25,18 +29,18 @@ pub struct TargetHelper {
     pub auction_min_amount: Decimal,
 }
 
-pub struct RebalanceResponse {
+pub struct RebalanceResponse<E: Serialize> {
     pub config: RebalancerConfig,
     pub msg: Option<SubMsg>,
-    pub event: Event,
+    pub event: ValenceGenericEvent<E>,
     pub should_pause: bool,
 }
 
-impl RebalanceResponse {
+impl<E: Serialize> RebalanceResponse<E> {
     pub fn new(
         config: RebalancerConfig,
         msg: Option<SubMsg>,
-        event: Event,
+        event: ValenceGenericEvent<E>,
         should_pause: bool,
     ) -> Self {
         Self {

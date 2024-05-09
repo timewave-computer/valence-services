@@ -49,7 +49,7 @@ fn test_send_funds_by_service_not_atomic() {
 fn test_non_funds_by_service() {
     let mut suite = Suite::default();
 
-    // should failed as we try to execute a message that send funds
+    // should fail as we try to execute a message that send funds
     // for a msg type that doesn't send funds
     suite
         .app

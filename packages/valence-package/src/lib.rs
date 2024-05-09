@@ -1,4 +1,5 @@
 pub mod error;
+pub mod event_indexing;
 pub mod helpers;
 pub mod msgs;
 pub mod services;
