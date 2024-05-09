@@ -9,6 +9,7 @@ use cw_utils::Expiration;
 pub struct InstantiateMsg {
     pub auction_code_id: u64,
     pub min_auction_amount: Vec<(String, MinAmount)>,
+    pub server_addr: String,
 }
 
 #[cw_serde]
@@ -18,6 +19,7 @@ pub enum ExecuteMsg {
     FinishAuction { pair: Pair, limit: u64 },
     ApproveAdminChange {},
     Admin(Box<AdminMsgs>),
+    Server(ServerMsgs),
 }
 
 #[cw_serde]
@@ -27,15 +29,19 @@ pub enum MigrateMsg {
 }
 
 #[cw_serde]
+pub enum ServerMsgs {
+    OpenAuction {
+        pair: Pair,
+        params: NewAuctionParams,
+    },
+}
+
+#[cw_serde]
 pub enum AdminMsgs {
     NewAuction {
         msg: auction::msg::InstantiateMsg,
         label: String,
         min_amount: Option<MinAmount>,
-    },
-    OpenAuction {
-        pair: Pair,
-        params: NewAuctionParams,
     },
     PauseAuction {
         pair: Pair,
@@ -69,6 +75,9 @@ pub enum AdminMsgs {
         pair: Pair,
         code_id: u64,
         msg: auction::msg::MigrateMsg,
+    },
+    ChangeServerAddr {
+        addr: String,
     },
     StartAdminChange {
         addr: String,

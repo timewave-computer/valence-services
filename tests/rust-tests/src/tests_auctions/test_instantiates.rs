@@ -17,7 +17,7 @@ fn test_instantiate_auction_manager() {
 
     let manager_addr = builder.init_auctions_manager(
         app.borrow_mut(),
-        AuctionsManagerInstantiate::default(builder.auction_code_id).into(),
+        AuctionsManagerInstantiate::default(builder.auction_code_id, builder.mm.to_string()).into(),
     );
 
     let admin_addr = SuiteBuilder::query_wasm_raw_item(&app, manager_addr.clone(), ADMIN);
@@ -39,7 +39,7 @@ fn test_instantiate_oracle() {
 
     let manager_addr = builder.init_auctions_manager(
         app.borrow_mut(),
-        AuctionsManagerInstantiate::default(builder.auction_code_id).into(),
+        AuctionsManagerInstantiate::default(builder.auction_code_id, builder.mm.to_string()).into(),
     );
 
     let oracle_addr = builder.init_oracle(

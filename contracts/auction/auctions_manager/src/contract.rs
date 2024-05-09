@@ -16,7 +16,7 @@ use valence_package::event_indexing::ValenceEventEmpty;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
-use crate::state::AUCTION_CODE_ID;
+use crate::state::{AUCTION_CODE_ID, SERVER_ADDR};
 
 const CONTRACT_NAME: &str = "crates.io:auctions-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -33,6 +33,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     ADMIN.save(deps.storage, &info.sender)?;
+    SERVER_ADDR.save(deps.storage, &deps.api.addr_validate(&msg.server_addr)?)?;
     AUCTION_CODE_ID.save(deps.storage, &msg.auction_code_id)?;
 
     for min_amount in msg.min_auction_amount {
@@ -93,9 +94,44 @@ pub fn execute(
             Ok(Response::default().add_message(msg))
         }
         ExecuteMsg::Admin(admin_msg) => admin::handle_msg(deps, env, info, *admin_msg),
+        ExecuteMsg::Server(server_msg) => server::handle_msg(deps, env, info, server_msg),
         ExecuteMsg::ApproveAdminChange {} => {
             let event = ValenceEventEmpty::AuctionManagerApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
+        }
+    }
+}
+
+mod server {
+    use cosmwasm_std::{ensure, to_json_binary, WasmMsg};
+
+    use crate::msg::ServerMsgs;
+
+    use super::*;
+
+    pub fn handle_msg(
+        deps: DepsMut,
+        _env: Env,
+        info: MessageInfo,
+        msg: ServerMsgs,
+    ) -> Result<Response, ContractError> {
+        // Verify that the sender is the server
+        let server_addr = SERVER_ADDR.load(deps.storage)?;
+        ensure!(info.sender == server_addr, ContractError::NotServer);
+
+        match msg {
+            ServerMsgs::OpenAuction { pair, params } => {
+                let pair_addr = PAIRS.load(deps.storage, pair)?;
+                let msg = WasmMsg::Execute {
+                    contract_addr: pair_addr.to_string(),
+                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
+                        auction::msg::AdminMsgs::StartAuction(params),
+                    )))?,
+                    funds: vec![],
+                };
+
+                Ok(Response::default().add_message(msg))
+            }
         }
     }
 }
@@ -179,18 +215,6 @@ mod admin {
 
                 Ok(Response::default().add_message(msg))
             }
-            AdminMsgs::OpenAuction { pair, params } => {
-                let pair_addr = PAIRS.load(deps.storage, pair)?;
-                let msg = WasmMsg::Execute {
-                    contract_addr: pair_addr.to_string(),
-                    msg: to_json_binary(&auction::msg::ExecuteMsg::Admin(Box::new(
-                        auction::msg::AdminMsgs::StartAuction(params),
-                    )))?,
-                    funds: vec![],
-                };
-
-                Ok(Response::default().add_message(msg))
-            }
             AdminMsgs::UpdateAuctionId { code_id } => {
                 AUCTION_CODE_ID.save(deps.storage, &code_id)?;
 
@@ -268,6 +292,13 @@ mod admin {
 
                 Ok(Response::default().add_event(event.into()))
             }
+            AdminMsgs::ChangeServerAddr { addr } => {
+                SERVER_ADDR.save(deps.storage, &deps.api.addr_validate(&addr)?)?;
+
+                let event = ValenceEventEmpty::AuctionManagerChangeServerAddr { addr };
+
+                Ok(Response::default().add_event(event.into()))
+            }
             AdminMsgs::StartAdminChange { addr, expiration } => {
                 let event = ValenceEventEmpty::AuctionManagerStartAdminChange {
                     admin: addr.clone(),
@@ -317,6 +348,7 @@ pub fn query(deps: Deps, _env: Env, msg: AuctionsManagerQueryMsg) -> StdResult<B
             to_json_binary(&MIN_AUCTION_AMOUNT.load(deps.storage, denom)?)
         }
         AuctionsManagerQueryMsg::GetAdmin => to_json_binary(&ADMIN.load(deps.storage)?),
+        AuctionsManagerQueryMsg::GetServerAddr => to_json_binary(&SERVER_ADDR.load(deps.storage)?),
     }
 }
 

@@ -14,11 +14,11 @@ impl From<AuctionsManagerInstantiate> for auctions_manager::msg::InstantiateMsg 
 }
 
 impl AuctionsManagerInstantiate {
-    pub fn default(auction_code_id: u64) -> Self {
-        Self::new(auction_code_id)
+    pub fn default(auction_code_id: u64, server_addr: String) -> Self {
+        Self::new(auction_code_id, server_addr)
     }
 
-    pub fn new(auction_code_id: u64) -> Self {
+    pub fn new(auction_code_id: u64, server_addr: String) -> Self {
         let min_auction_amount = vec![
             (
                 ATOM.to_string(),
@@ -47,6 +47,7 @@ impl AuctionsManagerInstantiate {
             msg: auctions_manager::msg::InstantiateMsg {
                 auction_code_id,
                 min_auction_amount,
+                server_addr,
             },
         }
     }
