@@ -32,6 +32,9 @@ pub enum ContractError {
     #[error("Not the new admin")]
     NotNewAdmin,
 
+    #[error("Sender is not the server")]
+    NotServer,
+
     #[error("Not the new admin")]
     AdminChangeExpired,
 }

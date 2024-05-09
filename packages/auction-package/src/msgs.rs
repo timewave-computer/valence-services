@@ -38,4 +38,7 @@ pub enum AuctionsManagerQueryMsg {
 
     #[returns(Addr)]
     GetAdmin,
+
+    #[returns(Addr)]
+    GetServerAddr,
 }

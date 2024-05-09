@@ -232,7 +232,7 @@ impl SuiteBuilder {
         // init Auctions manager contract
         let auctions_manager_addr = self.init_auctions_manager(
             app,
-            AuctionsManagerInstantiate::new(self.auction_code_id).into(),
+            AuctionsManagerInstantiate::new(self.auction_code_id, self.mm.to_string()).into(),
         );
 
         // init price_oracle contract

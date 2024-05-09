@@ -113,17 +113,17 @@ impl Suite {
         end_block: u64,
     ) -> Result<AppResponse, anyhow::Error> {
         self.app.execute_contract(
-            self.admin.clone(),
+            self.mm.clone(),
             self.auctions_manager_addr.clone(),
-            &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
-                auctions_manager::msg::AdminMsgs::OpenAuction {
+            &auctions_manager::msg::ExecuteMsg::Server(
+                auctions_manager::msg::ServerMsgs::OpenAuction {
                     pair,
                     params: NewAuctionParams {
                         start_block,
                         end_block,
                     },
                 },
-            )),
+            ),
             &[],
         )
     }
