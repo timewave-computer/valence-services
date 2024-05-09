@@ -11,7 +11,7 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Bound;
 use valence_package::{
-    event_indexing::ValenceEventEmpty,
+    event_indexing::ValenceEvent,
     helpers::start_of_cycle,
     services::rebalancer::{
         ParsedPID, PauseData, RebalanceTrade, RebalancerConfig, SystemRebalanceStatus,
@@ -182,7 +182,7 @@ pub fn execute_system_rebalance(
 
     SYSTEM_REBALANCE_STATUS.save(deps.storage, &status)?;
 
-    let event = ValenceEventEmpty::RebalancerCycle {
+    let event = ValenceEvent::RebalancerCycle {
         limit: limit as u64,
         cycled_over: configs_len as u64,
     };
@@ -231,7 +231,7 @@ pub fn do_rebalance(
         .unwrap_or(&Uint128::zero());
 
     if verify_account_balance(total_value.to_uint_floor(), min_value).is_err() {
-        let event = ValenceEventEmpty::RebalancerAccountRebalancePause {
+        let event = ValenceEvent::RebalancerAccountRebalancePause {
             account: account.to_string(),
             total_value,
         };
@@ -288,7 +288,7 @@ pub fn do_rebalance(
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
 
-    let event = ValenceEventEmpty::RebalancerAccountRebalance {
+    let event = ValenceEvent::RebalancerAccountRebalance {
         account: account.to_string(),
         total_value,
         trades,

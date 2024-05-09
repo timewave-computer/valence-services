@@ -7,7 +7,7 @@ use cosmwasm_std::{
     Reply, Response, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use valence_package::event_indexing::ValenceEventEmpty;
+use valence_package::event_indexing::ValenceEvent;
 use valence_package::helpers::{
     approve_admin_change, cancel_admin_change, forward_to_services_manager,
     forward_to_services_manager_with_funds, sender_is_a_service, start_admin_change, verify_admin,
@@ -41,7 +41,7 @@ pub fn instantiate(
         &deps.api.addr_validate(&msg.services_manager)?,
     )?;
 
-    let event = ValenceEventEmpty::AccountCreation {
+    let event = ValenceEvent::AccountCreation {
         admin: info.sender.to_string(),
         referral: msg.referral.unwrap_or_default(),
     };
@@ -88,7 +88,7 @@ pub fn execute(
                 ),
             }?;
 
-            let event = ValenceEventEmpty::AccountRegisterService {
+            let event = ValenceEvent::AccountRegisterService {
                 service_name: service_name.to_string(),
                 data,
             };
@@ -105,7 +105,7 @@ pub fn execute(
                 ServicesManagerExecuteMsg::DeregisterFromService { service_name },
             )?;
 
-            let event = ValenceEventEmpty::AccountDeregisterService {
+            let event = ValenceEvent::AccountDeregisterService {
                 service_name: service_name.to_string(),
             };
 
@@ -124,7 +124,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = ValenceEventEmpty::AccountUpdateService {
+            let event = ValenceEvent::AccountUpdateService {
                 service_name: service_name.to_string(),
                 data,
             };
@@ -148,7 +148,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = ValenceEventEmpty::AccountPauseService {
+            let event = ValenceEvent::AccountPauseService {
                 service_name: service_name.to_string(),
             };
 
@@ -184,7 +184,7 @@ pub fn execute(
                 )?,
             };
 
-            let event = ValenceEventEmpty::AccountResumeService {
+            let event = ValenceEvent::AccountResumeService {
                 service_name: service_name.to_string(),
             };
 
@@ -201,7 +201,7 @@ pub fn execute(
             // to allow the msgs to fail without failing the rest of the messages
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
-            let event = ValenceEventEmpty::AccountSendFundsByService {
+            let event = ValenceEvent::AccountSendFundsByService {
                 service_name: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
@@ -219,7 +219,7 @@ pub fn execute(
 
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
-            let event = ValenceEventEmpty::AccountExecuteByService {
+            let event = ValenceEvent::AccountExecuteByService {
                 service_name: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
@@ -233,24 +233,24 @@ pub fn execute(
         AccountBaseExecuteMsg::ExecuteByAdmin { msgs } => {
             verify_admin(deps.as_ref(), &info)?;
 
-            let event = ValenceEventEmpty::AccountExecuteByAdmin { msgs: msgs.clone() };
+            let event = ValenceEvent::AccountExecuteByAdmin { msgs: msgs.clone() };
 
             Ok(Response::default()
                 .add_event(event.into())
                 .add_messages(msgs))
         }
         AccountBaseExecuteMsg::StartAdminChange { addr, expiration } => {
-            let event = ValenceEventEmpty::AccountStartAdminChange {
+            let event = ValenceEvent::AccountStartAdminChange {
                 admin: addr.to_string(),
             };
             Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
         }
         AccountBaseExecuteMsg::CancelAdminChange {} => {
-            let event = ValenceEventEmpty::AccountCancelAdminChange {};
+            let event = ValenceEvent::AccountCancelAdminChange {};
             Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
         }
         AccountBaseExecuteMsg::ApproveAdminChange {} => {
-            let event = ValenceEventEmpty::AccountApproveAdminChange {};
+            let event = ValenceEvent::AccountApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
     }

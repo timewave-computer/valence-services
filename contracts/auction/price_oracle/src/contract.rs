@@ -9,7 +9,7 @@ use auction_package::Price;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
-use valence_package::event_indexing::{ValenceEvent, ValenceEventEmpty};
+use valence_package::event_indexing::{ValenceEvent, ValenceGenericEvent};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -80,7 +80,7 @@ pub fn execute(
             // Save price
             PRICES.save(deps.storage, pair.clone(), &price)?;
 
-            let event = ValenceEventEmpty::OracleUpdatePrice {
+            let event = ValenceEvent::OracleUpdatePrice {
                 pair: pair.clone(),
                 price: price.price,
                 source: source.to_string(),
@@ -127,7 +127,7 @@ pub fn execute(
                 },
             )?;
 
-            let event = ValenceEventEmpty::OracleUpdatePrice {
+            let event = ValenceEvent::OracleUpdatePrice {
                 pair,
                 price,
                 source: "manual".to_string(),
@@ -154,7 +154,7 @@ pub fn execute(
 
             ASTRO_PRICE_PATHS.save(deps.storage, pair.clone(), &path)?;
 
-            let event = ValenceEvent::OracleAddPath { pair, path };
+            let event = ValenceGenericEvent::OracleAddPath { pair, path };
 
             Ok(Response::default().add_event(event.into()))
         }
@@ -177,7 +177,7 @@ pub fn execute(
 
             ASTRO_PRICE_PATHS.save(deps.storage, pair.clone(), &path)?;
 
-            let event = ValenceEvent::OracleUpdatePath { pair, path };
+            let event = ValenceGenericEvent::OracleUpdatePath { pair, path };
 
             Ok(Response::default().add_event(event.into()))
         }
@@ -204,22 +204,22 @@ pub fn execute(
 
             CONFIG.save(deps.storage, &config)?;
 
-            let event = ValenceEvent::OracleUpdateConfig { config };
+            let event = ValenceGenericEvent::OracleUpdateConfig { config };
 
             Ok(Response::default().add_event(event.into()))
         }
         ExecuteMsg::StartAdminChange { addr, expiration } => {
-            let event = ValenceEventEmpty::OracleStartAdminChange {
+            let event = ValenceEvent::OracleStartAdminChange {
                 admin: addr.clone(),
             };
             Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
         }
         ExecuteMsg::CancelAdminChange {} => {
-            let event = ValenceEventEmpty::OracleCancelAdminChange {};
+            let event = ValenceEvent::OracleCancelAdminChange {};
             Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
         }
         ExecuteMsg::ApproveAdminChange {} => {
-            let event = ValenceEventEmpty::OracleApproveAdminChange {};
+            let event = ValenceEvent::OracleApproveAdminChange {};
             Ok(approve_admin_change(deps, &env, &info)?.add_event(event.into()))
         }
     }

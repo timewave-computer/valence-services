@@ -9,7 +9,7 @@ use cosmwasm_std::{
     to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
 use cw2::set_contract_version;
-use valence_package::event_indexing::ValenceEventEmpty;
+use valence_package::event_indexing::ValenceEvent;
 
 use crate::error::ContractError;
 use crate::execute;
@@ -88,7 +88,7 @@ pub fn instantiate(
         },
     )?;
 
-    let event = ValenceEventEmpty::AuctionInit {
+    let event = ValenceEvent::AuctionInit {
         config: auction_config,
         strategy: msg.auction_strategy,
     };
@@ -124,7 +124,7 @@ pub fn execute(
 mod admin {
     use auction_package::helpers::GetPriceResponse;
     use cosmwasm_std::{coin, BankMsg};
-    use valence_package::event_indexing::ValenceEvent;
+    use valence_package::event_indexing::{ValenceEvent, ValenceGenericEvent};
 
     use crate::msg::AdminMsgs;
 
@@ -149,7 +149,7 @@ mod admin {
                     },
                 )?;
 
-                let event = ValenceEventEmpty::AuctionPause {};
+                let event = ValenceEvent::AuctionPause {};
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -162,14 +162,14 @@ mod admin {
                     },
                 )?;
 
-                let event = ValenceEventEmpty::AuctionResume {};
+                let event = ValenceEvent::AuctionResume {};
 
                 Ok(Response::default().add_event(event.into()))
             }
             AdminMsgs::UpdateStrategy { strategy } => {
                 AUCTION_STRATEGY.save(deps.storage, &strategy)?;
 
-                let event = ValenceEventEmpty::AuctionUpdateStrategy { strategy };
+                let event = ValenceEvent::AuctionUpdateStrategy { strategy };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -183,7 +183,7 @@ mod admin {
                     },
                 )?;
 
-                let event = ValenceEventEmpty::AuctionUpdateChainHaltConfig { halt_config };
+                let event = ValenceEvent::AuctionUpdateChainHaltConfig { halt_config };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -196,7 +196,7 @@ mod admin {
                     },
                 )?;
 
-                let event = ValenceEventEmpty::AuctionUpdatePriceFreshnessStrategy { strategy };
+                let event = ValenceEvent::AuctionUpdatePriceFreshnessStrategy { strategy };
 
                 Ok(Response::default().add_event(event.into()))
             }
@@ -282,7 +282,7 @@ mod admin {
 
         ACTIVE_AUCTION.save(deps.storage, &new_active_auction)?;
 
-        let event = ValenceEvent::<ActiveAuction>::AuctionOpen {
+        let event = ValenceGenericEvent::<ActiveAuction>::AuctionOpen {
             auction_id: auction_ids.curr,
             auction: new_active_auction,
         };
@@ -315,7 +315,7 @@ mod admin {
         AUCTION_FUNDS_SUM.save(deps.storage, auction_id, &Uint128::zero())?;
         AUCTION_FUNDS.clear(deps.storage);
 
-        let event = ValenceEventEmpty::AuctionOpenRefund {
+        let event = ValenceEvent::AuctionOpenRefund {
             auction_id,
             min_amount,
             refund_amount: total_funds,

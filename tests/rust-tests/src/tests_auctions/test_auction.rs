@@ -7,7 +7,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::Executor;
 use price_oracle::state::PriceStep;
-use valence_package::event_indexing::ValenceEventEmpty;
+use valence_package::event_indexing::ValenceEvent;
 
 use crate::suite::suite::{
     Suite, DAY, DEFAULT_BALANCE_AMOUNT, DEFAULT_BLOCK_TIME, DEFAULT_NTRN_PRICE_BPS,
@@ -368,11 +368,11 @@ fn test_chain_halt() {
     // Should return 0 as the bought amount
     let res = suite.do_full_bid(1_u128);
 
-    let data = from_json::<ValenceEventEmpty>(
+    let data = from_json::<ValenceEvent>(
         Binary::from_base64(suite.get_attr_value(&res, "data").unwrap().as_str()).unwrap(),
     )
     .unwrap();
-    let ValenceEventEmpty::AuctionDoBid {
+    let ValenceEvent::AuctionDoBid {
         bought_amount,
         refunded_amount,
         ..

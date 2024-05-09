@@ -14,7 +14,7 @@ use crate::services::rebalancer::{
     BaseDenom, RebalanceTrade, RebalancerConfig, ServiceFeeConfig, SystemRebalanceStatus,
 };
 
-pub type ValenceEventEmpty = ValenceEvent<Empty>;
+pub type ValenceEvent = ValenceGenericEvent<Empty>;
 
 #[derive(
     cosmwasm_schema::serde::Serialize,
@@ -26,7 +26,7 @@ pub type ValenceEventEmpty = ValenceEvent<Empty>;
 )]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 #[schemars(crate = "cosmwasm_schema::schemars")]
-pub enum ValenceEvent<E>
+pub enum ValenceGenericEvent<E>
 where
     E: Serialize,
 {
@@ -255,148 +255,148 @@ where
 }
 
 /// Turn a ValenceServices enum into a string
-impl<E: serde::Serialize> fmt::Display for ValenceEvent<E> {
+impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             // Account
-            ValenceEvent::AccountCreation { .. } => write!(f, "account-creation"),
-            ValenceEvent::AccountRegisterService { .. } => write!(f, "account-register-service"),
-            ValenceEvent::AccountUpdateService { .. } => write!(f, "account-update-service"),
-            ValenceEvent::AccountDeregisterService { .. } => {
+            ValenceGenericEvent::AccountCreation { .. } => write!(f, "account-creation"),
+            ValenceGenericEvent::AccountRegisterService { .. } => write!(f, "account-register-service"),
+            ValenceGenericEvent::AccountUpdateService { .. } => write!(f, "account-update-service"),
+            ValenceGenericEvent::AccountDeregisterService { .. } => {
                 write!(f, "account-deregister-service")
             }
-            ValenceEvent::AccountPauseService { .. } => write!(f, "account-pause-service"),
-            ValenceEvent::AccountResumeService { .. } => write!(f, "account-resume-service"),
-            ValenceEvent::AccountSendFundsByService { .. } => {
+            ValenceGenericEvent::AccountPauseService { .. } => write!(f, "account-pause-service"),
+            ValenceGenericEvent::AccountResumeService { .. } => write!(f, "account-resume-service"),
+            ValenceGenericEvent::AccountSendFundsByService { .. } => {
                 write!(f, "account-send-funds-by-service")
             }
-            ValenceEvent::AccountExecuteByService { .. } => write!(f, "account-execute-by-service"),
-            ValenceEvent::AccountExecuteByAdmin { .. } => write!(f, "account-execute-by-admin"),
-            ValenceEvent::AccountStartAdminChange { .. } => write!(f, "account-start-admin-change"),
-            ValenceEvent::AccountCancelAdminChange {} => write!(f, "account-cancel-admin-change"),
-            ValenceEvent::AccountApproveAdminChange {} => write!(f, "account-approve-admin-change"),
+            ValenceGenericEvent::AccountExecuteByService { .. } => write!(f, "account-execute-by-service"),
+            ValenceGenericEvent::AccountExecuteByAdmin { .. } => write!(f, "account-execute-by-admin"),
+            ValenceGenericEvent::AccountStartAdminChange { .. } => write!(f, "account-start-admin-change"),
+            ValenceGenericEvent::AccountCancelAdminChange {} => write!(f, "account-cancel-admin-change"),
+            ValenceGenericEvent::AccountApproveAdminChange {} => write!(f, "account-approve-admin-change"),
 
             // oracle
-            ValenceEvent::OracleUpdatePrice { .. } => write!(f, "oracle-update-price"),
-            ValenceEvent::OracleAddPath { .. } => write!(f, "oracle-add-path"),
-            ValenceEvent::OracleUpdatePath { .. } => write!(f, "oracle-update-path"),
-            ValenceEvent::OracleUpdateConfig { .. } => write!(f, "oracle-update-config"),
-            ValenceEvent::OracleStartAdminChange { .. } => write!(f, "oracle-start-admin-change"),
-            ValenceEvent::OracleCancelAdminChange {} => write!(f, "oracle-cancel-admin-change"),
-            ValenceEvent::OracleApproveAdminChange {} => write!(f, "oracle-approve-admin-change"),
+            ValenceGenericEvent::OracleUpdatePrice { .. } => write!(f, "oracle-update-price"),
+            ValenceGenericEvent::OracleAddPath { .. } => write!(f, "oracle-add-path"),
+            ValenceGenericEvent::OracleUpdatePath { .. } => write!(f, "oracle-update-path"),
+            ValenceGenericEvent::OracleUpdateConfig { .. } => write!(f, "oracle-update-config"),
+            ValenceGenericEvent::OracleStartAdminChange { .. } => write!(f, "oracle-start-admin-change"),
+            ValenceGenericEvent::OracleCancelAdminChange {} => write!(f, "oracle-cancel-admin-change"),
+            ValenceGenericEvent::OracleApproveAdminChange {} => write!(f, "oracle-approve-admin-change"),
 
             // Auction manager
-            ValenceEvent::AuctionManagerUpdateAuctionCodeId { .. } => {
+            ValenceGenericEvent::AuctionManagerUpdateAuctionCodeId { .. } => {
                 write!(f, "auction-manager-update-auction-code-id")
             }
-            ValenceEvent::AuctionManagerUpdateOracle { .. } => {
+            ValenceGenericEvent::AuctionManagerUpdateOracle { .. } => {
                 write!(f, "auction-manager-update-oracle")
             }
-            ValenceEvent::AuctionManagerMigrateAuction { .. } => {
+            ValenceGenericEvent::AuctionManagerMigrateAuction { .. } => {
                 write!(f, "auction-manager-migrate-auction")
             }
-            ValenceEvent::AuctionManagerUpdateMinAmount { .. } => {
+            ValenceGenericEvent::AuctionManagerUpdateMinAmount { .. } => {
                 write!(f, "auction-manager-update-min-amount")
             }
-            ValenceEvent::AuctionManagerStartAdminChange { .. } => {
+            ValenceGenericEvent::AuctionManagerStartAdminChange { .. } => {
                 write!(f, "auction-manager-start-admin-change")
             }
-            ValenceEvent::AuctionManagerCancelAdminChange {} => {
+            ValenceGenericEvent::AuctionManagerCancelAdminChange {} => {
                 write!(f, "auction-manager-cancel-admin-change")
             }
-            ValenceEvent::AuctionManagerApproveAdminChange {} => {
+            ValenceGenericEvent::AuctionManagerApproveAdminChange {} => {
                 write!(f, "auction-manager-approve-admin-change")
             }
 
             // auctions
-            ValenceEvent::AuctionInit { .. } => write!(f, "auction-init"),
-            ValenceEvent::AuctionAuctionFunds { .. } => write!(f, "auction-auction-funds"),
-            ValenceEvent::AuctionWithdrawFunds { .. } => write!(f, "auction-withdraw-funds"),
-            ValenceEvent::AuctionDoBid { .. } => write!(f, "auction-do-bid"),
-            ValenceEvent::AuctionPause {} => write!(f, "auction-pause"),
-            ValenceEvent::AuctionResume {} => write!(f, "auction-resume"),
-            ValenceEvent::AuctionUpdateStrategy { .. } => write!(f, "auction-update-strategy"),
-            ValenceEvent::AuctionUpdateChainHaltConfig { .. } => {
+            ValenceGenericEvent::AuctionInit { .. } => write!(f, "auction-init"),
+            ValenceGenericEvent::AuctionAuctionFunds { .. } => write!(f, "auction-auction-funds"),
+            ValenceGenericEvent::AuctionWithdrawFunds { .. } => write!(f, "auction-withdraw-funds"),
+            ValenceGenericEvent::AuctionDoBid { .. } => write!(f, "auction-do-bid"),
+            ValenceGenericEvent::AuctionPause {} => write!(f, "auction-pause"),
+            ValenceGenericEvent::AuctionResume {} => write!(f, "auction-resume"),
+            ValenceGenericEvent::AuctionUpdateStrategy { .. } => write!(f, "auction-update-strategy"),
+            ValenceGenericEvent::AuctionUpdateChainHaltConfig { .. } => {
                 write!(f, "auction-update-chain-halt-config")
             }
-            ValenceEvent::AuctionUpdatePriceFreshnessStrategy { .. } => {
+            ValenceGenericEvent::AuctionUpdatePriceFreshnessStrategy { .. } => {
                 write!(f, "auction-update-price-freshness-strategy")
             }
-            ValenceEvent::AuctionOpen { .. } => write!(f, "auction-open"),
-            ValenceEvent::AuctionOpenRefund { .. } => write!(f, "auction-open-refund"),
-            ValenceEvent::AuctionClose { .. } => write!(f, "auction-close"),
+            ValenceGenericEvent::AuctionOpen { .. } => write!(f, "auction-open"),
+            ValenceGenericEvent::AuctionOpenRefund { .. } => write!(f, "auction-open-refund"),
+            ValenceGenericEvent::AuctionClose { .. } => write!(f, "auction-close"),
 
             // Services manager
-            ValenceEvent::ServicesManagerAddService { .. } => {
+            ValenceGenericEvent::ServicesManagerAddService { .. } => {
                 write!(f, "services-manager-add-service")
             }
-            ValenceEvent::ServicesManagerUpdateService { .. } => {
+            ValenceGenericEvent::ServicesManagerUpdateService { .. } => {
                 write!(f, "services-manager-update-service")
             }
-            ValenceEvent::ServicesManagerRemoveService { .. } => {
+            ValenceGenericEvent::ServicesManagerRemoveService { .. } => {
                 write!(f, "services-manager-remove-service")
             }
-            ValenceEvent::ServicesManagerUpdateCodeIdWhitelist { .. } => {
+            ValenceGenericEvent::ServicesManagerUpdateCodeIdWhitelist { .. } => {
                 write!(f, "services-manager-update-code-id-whitelist")
             }
-            ValenceEvent::ServicesManagerWithdraw { .. } => write!(f, "services-manager-withdraw"),
-            ValenceEvent::ServicesManagerStartAdminChange { .. } => {
+            ValenceGenericEvent::ServicesManagerWithdraw { .. } => write!(f, "services-manager-withdraw"),
+            ValenceGenericEvent::ServicesManagerStartAdminChange { .. } => {
                 write!(f, "services-manager-start-admin-change")
             }
-            ValenceEvent::ServicesManagerCancelAdminChange {} => {
+            ValenceGenericEvent::ServicesManagerCancelAdminChange {} => {
                 write!(f, "services-manager-cancel-admin-change")
             }
-            ValenceEvent::ServicesManagerApproveAdminChange {} => {
+            ValenceGenericEvent::ServicesManagerApproveAdminChange {} => {
                 write!(f, "services-manager-approve-admin-change")
             }
 
             // Rebalancer
-            ValenceEvent::RebalancerRegister { .. } => write!(f, "rebalancer-register"),
-            ValenceEvent::RebalancerDeregister { .. } => write!(f, "rebalancer-deregister"),
-            ValenceEvent::RebalancerUpdate { .. } => write!(f, "rebalancer-update"),
-            ValenceEvent::RebalancerPause { .. } => write!(f, "rebalancer-pause"),
-            ValenceEvent::RebalancerResume { .. } => write!(f, "rebalancer-resume"),
-            ValenceEvent::RebalancerUpdateSystemStatus { .. } => {
+            ValenceGenericEvent::RebalancerRegister { .. } => write!(f, "rebalancer-register"),
+            ValenceGenericEvent::RebalancerDeregister { .. } => write!(f, "rebalancer-deregister"),
+            ValenceGenericEvent::RebalancerUpdate { .. } => write!(f, "rebalancer-update"),
+            ValenceGenericEvent::RebalancerPause { .. } => write!(f, "rebalancer-pause"),
+            ValenceGenericEvent::RebalancerResume { .. } => write!(f, "rebalancer-resume"),
+            ValenceGenericEvent::RebalancerUpdateSystemStatus { .. } => {
                 write!(f, "rebalancer-update-system-status")
             }
-            ValenceEvent::RebalancerUpdateDenomWhitelist { .. } => {
+            ValenceGenericEvent::RebalancerUpdateDenomWhitelist { .. } => {
                 write!(f, "rebalancer-update-denom-whitelist")
             }
-            ValenceEvent::RebalancerUpdateBaseDenomWhitelist { .. } => {
+            ValenceGenericEvent::RebalancerUpdateBaseDenomWhitelist { .. } => {
                 write!(f, "rebalancer-update-base-denom-whitelist")
             }
-            ValenceEvent::RebalancerUpdateServicesManager { .. } => {
+            ValenceGenericEvent::RebalancerUpdateServicesManager { .. } => {
                 write!(f, "rebalancer-update-services-manager")
             }
-            ValenceEvent::RebalancerUpdateAuctionsManager { .. } => {
+            ValenceGenericEvent::RebalancerUpdateAuctionsManager { .. } => {
                 write!(f, "rebalancer-update-auctions-manager")
             }
-            ValenceEvent::RebalancerUpdateCyclePeriod { .. } => {
+            ValenceGenericEvent::RebalancerUpdateCyclePeriod { .. } => {
                 write!(f, "rebalancer-update-cycle-period")
             }
-            ValenceEvent::RebalancerUpdateFees { .. } => write!(f, "rebalancer-update-fees"),
-            ValenceEvent::RebalancerStartAdminChange { .. } => {
+            ValenceGenericEvent::RebalancerUpdateFees { .. } => write!(f, "rebalancer-update-fees"),
+            ValenceGenericEvent::RebalancerStartAdminChange { .. } => {
                 write!(f, "rebalancer-start-admin-change")
             }
-            ValenceEvent::RebalancerCancelAdminChange {} => {
+            ValenceGenericEvent::RebalancerCancelAdminChange {} => {
                 write!(f, "rebalancer-cancel-admin-change")
             }
-            ValenceEvent::RebalancerApproveAdminChange {} => {
+            ValenceGenericEvent::RebalancerApproveAdminChange {} => {
                 write!(f, "rebalancer-approve-admin-change")
             }
-            ValenceEvent::RebalancerCycle { .. } => write!(f, "rebalancer-cycle"),
-            ValenceEvent::RebalancerAccountRebalance { .. } => {
+            ValenceGenericEvent::RebalancerCycle { .. } => write!(f, "rebalancer-cycle"),
+            ValenceGenericEvent::RebalancerAccountRebalance { .. } => {
                 write!(f, "rebalancer-account-rebalance")
             }
-            ValenceEvent::RebalancerAccountRebalancePause { .. } => {
+            ValenceGenericEvent::RebalancerAccountRebalancePause { .. } => {
                 write!(f, "rebalancer-account-rebalance-pause")
             }
         }
     }
 }
 
-impl<E: serde::Serialize> From<ValenceEvent<E>> for Event {
-    fn from(value: ValenceEvent<E>) -> Self {
+impl<E: serde::Serialize> From<ValenceGenericEvent<E>> for Event {
+    fn from(value: ValenceGenericEvent<E>) -> Self {
         Event::new("valence-event")
             .add_attribute("action", value.to_string())
             .add_attribute("data", to_json_binary(&value).unwrap().to_string())

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, SubMsg, Uint128};
 use serde::Serialize;
 use valence_package::{
-    event_indexing::ValenceEvent,
+    event_indexing::ValenceGenericEvent,
     services::rebalancer::{ParsedTarget, RebalancerConfig},
 };
 
@@ -32,7 +32,7 @@ pub struct TargetHelper {
 pub struct RebalanceResponse<E: Serialize> {
     pub config: RebalancerConfig,
     pub msg: Option<SubMsg>,
-    pub event: ValenceEvent<E>,
+    pub event: ValenceGenericEvent<E>,
     pub should_pause: bool,
 }
 
@@ -40,7 +40,7 @@ impl<E: Serialize> RebalanceResponse<E> {
     pub fn new(
         config: RebalancerConfig,
         msg: Option<SubMsg>,
-        event: ValenceEvent<E>,
+        event: ValenceGenericEvent<E>,
         should_pause: bool,
     ) -> Self {
         Self {

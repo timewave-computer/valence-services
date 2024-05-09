@@ -111,7 +111,7 @@ pub fn execute(
 
 mod admin {
     use valence_package::{
-        event_indexing::ValenceEventEmpty,
+        event_indexing::ValenceEvent,
         helpers::{cancel_admin_change, start_admin_change, verify_admin},
         msgs::core_execute::ServicesManagerAdminMsg,
     };
@@ -141,7 +141,7 @@ mod admin {
                     save_service(deps, name.to_string(), addr.clone())?;
                 }
 
-                let event = ValenceEventEmpty::ServicesManagerAddService {
+                let event = ValenceEvent::ServicesManagerAddService {
                     service_name: name.to_string(),
                     addr: addr.to_string(),
                 };
@@ -159,7 +159,7 @@ mod admin {
 
                 save_service(deps, name.to_string(), addr.clone())?;
 
-                let event = ValenceEventEmpty::ServicesManagerUpdateService {
+                let event = ValenceEvent::ServicesManagerUpdateService {
                     service_name: name.to_string(),
                     addr: addr.to_string(),
                 };
@@ -170,7 +170,7 @@ mod admin {
                 let addr = get_service_addr(deps.as_ref(), name.to_string())?;
                 remove_service(deps, name.to_string(), addr)?;
 
-                let event = ValenceEventEmpty::ServicesManagerRemoveService {
+                let event = ValenceEvent::ServicesManagerRemoveService {
                     service_name: name.to_string(),
                 };
 
@@ -190,17 +190,17 @@ mod admin {
                 ACCOUNT_WHITELISTED_CODE_IDS.save(deps.storage, &whitelist)?;
 
                 let event =
-                    ValenceEventEmpty::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
+                    ValenceEvent::ServicesManagerUpdateCodeIdWhitelist { to_add, to_remove };
                 Ok(Response::default().add_event(event.into()))
             }
             ServicesManagerAdminMsg::StartAdminChange { addr, expiration } => {
-                let event = ValenceEventEmpty::ServicesManagerStartAdminChange {
+                let event = ValenceEvent::ServicesManagerStartAdminChange {
                     admin: addr.clone(),
                 };
                 Ok(start_admin_change(deps, &info, &addr, expiration)?.add_event(event.into()))
             }
             ServicesManagerAdminMsg::CancelAdminChange => {
-                let event = ValenceEventEmpty::ServicesManagerCancelAdminChange {};
+                let event = ValenceEvent::ServicesManagerCancelAdminChange {};
                 Ok(cancel_admin_change(deps, &info)?.add_event(event.into()))
             }
             ServicesManagerAdminMsg::Withdraw { denom } => {
@@ -211,7 +211,7 @@ mod admin {
                     amount: vec![amount.clone()],
                 };
 
-                let event = ValenceEventEmpty::ServicesManagerWithdraw { amount };
+                let event = ValenceEvent::ServicesManagerWithdraw { amount };
 
                 Ok(Response::default().add_event(event.into()).add_message(msg))
             }
