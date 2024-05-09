@@ -260,7 +260,9 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
         match self {
             // Account
             ValenceGenericEvent::AccountCreation { .. } => write!(f, "account-creation"),
-            ValenceGenericEvent::AccountRegisterService { .. } => write!(f, "account-register-service"),
+            ValenceGenericEvent::AccountRegisterService { .. } => {
+                write!(f, "account-register-service")
+            }
             ValenceGenericEvent::AccountUpdateService { .. } => write!(f, "account-update-service"),
             ValenceGenericEvent::AccountDeregisterService { .. } => {
                 write!(f, "account-deregister-service")
@@ -270,20 +272,36 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
             ValenceGenericEvent::AccountSendFundsByService { .. } => {
                 write!(f, "account-send-funds-by-service")
             }
-            ValenceGenericEvent::AccountExecuteByService { .. } => write!(f, "account-execute-by-service"),
-            ValenceGenericEvent::AccountExecuteByAdmin { .. } => write!(f, "account-execute-by-admin"),
-            ValenceGenericEvent::AccountStartAdminChange { .. } => write!(f, "account-start-admin-change"),
-            ValenceGenericEvent::AccountCancelAdminChange {} => write!(f, "account-cancel-admin-change"),
-            ValenceGenericEvent::AccountApproveAdminChange {} => write!(f, "account-approve-admin-change"),
+            ValenceGenericEvent::AccountExecuteByService { .. } => {
+                write!(f, "account-execute-by-service")
+            }
+            ValenceGenericEvent::AccountExecuteByAdmin { .. } => {
+                write!(f, "account-execute-by-admin")
+            }
+            ValenceGenericEvent::AccountStartAdminChange { .. } => {
+                write!(f, "account-start-admin-change")
+            }
+            ValenceGenericEvent::AccountCancelAdminChange {} => {
+                write!(f, "account-cancel-admin-change")
+            }
+            ValenceGenericEvent::AccountApproveAdminChange {} => {
+                write!(f, "account-approve-admin-change")
+            }
 
             // oracle
             ValenceGenericEvent::OracleUpdatePrice { .. } => write!(f, "oracle-update-price"),
             ValenceGenericEvent::OracleAddPath { .. } => write!(f, "oracle-add-path"),
             ValenceGenericEvent::OracleUpdatePath { .. } => write!(f, "oracle-update-path"),
             ValenceGenericEvent::OracleUpdateConfig { .. } => write!(f, "oracle-update-config"),
-            ValenceGenericEvent::OracleStartAdminChange { .. } => write!(f, "oracle-start-admin-change"),
-            ValenceGenericEvent::OracleCancelAdminChange {} => write!(f, "oracle-cancel-admin-change"),
-            ValenceGenericEvent::OracleApproveAdminChange {} => write!(f, "oracle-approve-admin-change"),
+            ValenceGenericEvent::OracleStartAdminChange { .. } => {
+                write!(f, "oracle-start-admin-change")
+            }
+            ValenceGenericEvent::OracleCancelAdminChange {} => {
+                write!(f, "oracle-cancel-admin-change")
+            }
+            ValenceGenericEvent::OracleApproveAdminChange {} => {
+                write!(f, "oracle-approve-admin-change")
+            }
 
             // Auction manager
             ValenceGenericEvent::AuctionManagerUpdateAuctionCodeId { .. } => {
@@ -315,7 +333,9 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
             ValenceGenericEvent::AuctionDoBid { .. } => write!(f, "auction-do-bid"),
             ValenceGenericEvent::AuctionPause {} => write!(f, "auction-pause"),
             ValenceGenericEvent::AuctionResume {} => write!(f, "auction-resume"),
-            ValenceGenericEvent::AuctionUpdateStrategy { .. } => write!(f, "auction-update-strategy"),
+            ValenceGenericEvent::AuctionUpdateStrategy { .. } => {
+                write!(f, "auction-update-strategy")
+            }
             ValenceGenericEvent::AuctionUpdateChainHaltConfig { .. } => {
                 write!(f, "auction-update-chain-halt-config")
             }
@@ -339,7 +359,9 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
             ValenceGenericEvent::ServicesManagerUpdateCodeIdWhitelist { .. } => {
                 write!(f, "services-manager-update-code-id-whitelist")
             }
-            ValenceGenericEvent::ServicesManagerWithdraw { .. } => write!(f, "services-manager-withdraw"),
+            ValenceGenericEvent::ServicesManagerWithdraw { .. } => {
+                write!(f, "services-manager-withdraw")
+            }
             ValenceGenericEvent::ServicesManagerStartAdminChange { .. } => {
                 write!(f, "services-manager-start-admin-change")
             }
