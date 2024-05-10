@@ -295,7 +295,7 @@ mod admin {
             AdminMsgs::ChangeServerAddr { addr } => {
                 SERVER_ADDR.save(deps.storage, &deps.api.addr_validate(&addr)?)?;
 
-                let event = ValenceEventEmpty::AuctionManagerChangeServerAddr { addr };
+                let event = ValenceEvent::AuctionManagerChangeServerAddr { addr };
 
                 Ok(Response::default().add_event(event.into()))
             }

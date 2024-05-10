@@ -328,7 +328,7 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
             ValenceGenericEvent::AuctionManagerApproveAdminChange {} => {
                 write!(f, "auction-manager-approve-admin-change")
             }
-            ValenceEvent::AuctionManagerChangeServerAddr { .. } => {
+            ValenceGenericEvent::AuctionManagerChangeServerAddr { .. } => {
                 write!(f, "auction-manager-change-server-addr")
             }
 
