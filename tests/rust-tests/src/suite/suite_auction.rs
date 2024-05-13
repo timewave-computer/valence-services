@@ -626,6 +626,23 @@ impl Suite {
 
         self.astro_swap(pool_addr, coin)
     }
+
+    pub fn change_server_addr(&mut self, addr: Addr) -> &mut Self {
+        self.app
+            .execute_contract(
+                self.admin.clone(),
+                self.auctions_manager_addr.clone(),
+                &auctions_manager::msg::ExecuteMsg::Admin(Box::new(
+                    auctions_manager::msg::AdminMsgs::ChangeServerAddr {
+                        addr: addr.to_string(),
+                    },
+                )),
+                &[],
+            )
+            .unwrap();
+
+        self
+    }
 }
 
 // Queries
@@ -770,6 +787,16 @@ impl Suite {
         )
         .unwrap();
         total_got / Decimal::from_atomics(multiply, 0).unwrap()
+    }
+
+    pub fn query_server_addr(&self) -> Addr {
+        self.app
+            .wrap()
+            .query_wasm_smart(
+                self.auctions_manager_addr.clone(),
+                &auction_package::msgs::AuctionsManagerQueryMsg::GetServerAddr {},
+            )
+            .unwrap()
     }
 }
 

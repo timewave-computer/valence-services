@@ -1,6 +1,9 @@
 use core::panic;
 
-use auction::state::{ActiveAuction, ActiveAuctionStatus};
+use auction::{
+    msg::NewAuctionParams,
+    state::{ActiveAuction, ActiveAuctionStatus},
+};
 use auction_package::{error::AuctionError, states::TWAP_PRICES};
 use cosmwasm_std::{
     coin, coins, from_json, testing::mock_env, Addr, Binary, Decimal, Timestamp, Uint128,
@@ -975,4 +978,41 @@ fn test_all_pairs_query() {
     // Should be successful query and not empty
     let pairs = suite.query_auctions_manager_all_pairs();
     assert!(!pairs.is_empty())
+}
+
+#[test]
+fn test_only_server_can_open_auction() {
+    let mut suite = Suite::default();
+
+    suite.auction_funds(
+        suite.get_account_addr(0),
+        suite
+            .auction_addrs
+            .get(&suite.pair.clone().into())
+            .unwrap()
+            .clone(),
+        &coins(10_u128, suite.pair.0.clone()),
+    );
+
+    let err = suite
+        .app
+        .execute_contract(
+            suite.admin.clone(),
+            suite.auctions_manager_addr.clone(),
+            &auctions_manager::msg::ExecuteMsg::Server(
+                auctions_manager::msg::ServerMsgs::OpenAuction {
+                    pair: suite.pair,
+                    params: NewAuctionParams {
+                        start_block: None,
+                        end_block: suite.app.block_info().height + 1000,
+                    },
+                },
+            ),
+            &[],
+        )
+        .unwrap_err()
+        .downcast::<auctions_manager::error::ContractError>()
+        .unwrap();
+
+    assert_eq!(err, auctions_manager::error::ContractError::NotServer)
 }
