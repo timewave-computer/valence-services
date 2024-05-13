@@ -114,6 +114,9 @@ where
     AuctionManagerStartAdminChange {
         admin: String,
     },
+    AuctionManagerChangeServerAddr {
+        addr: String,
+    },
     AuctionManagerCancelAdminChange {},
     AuctionManagerApproveAdminChange {},
 
@@ -324,6 +327,9 @@ impl<E: serde::Serialize> fmt::Display for ValenceGenericEvent<E> {
             }
             ValenceGenericEvent::AuctionManagerApproveAdminChange {} => {
                 write!(f, "auction-manager-approve-admin-change")
+            }
+            ValenceGenericEvent::AuctionManagerChangeServerAddr { .. } => {
+                write!(f, "auction-manager-change-server-addr")
             }
 
             // auctions

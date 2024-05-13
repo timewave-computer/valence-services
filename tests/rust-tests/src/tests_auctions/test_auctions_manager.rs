@@ -307,3 +307,14 @@ fn test_update_admin_fails() {
         )
         .unwrap_err();
 }
+
+#[test]
+fn test_change_server_addr() {
+    let mut suite = Suite::default();
+    let new_server_addr = Addr::unchecked("new_server_addr");
+
+    suite.change_server_addr(new_server_addr.clone());
+
+    let server_addr = suite.query_server_addr();
+    assert_eq!(server_addr, new_server_addr);
+}
