@@ -223,8 +223,7 @@ mod admin {
 pub fn query(deps: Deps, _env: Env, msg: ServicesManagerQueryMsg) -> StdResult<Binary> {
     match msg {
         ServicesManagerQueryMsg::IsService { addr } => {
-            let is_service =
-                ADDR_TO_SERVICES.may_load(deps.storage, deps.api.addr_validate(&addr)?)?;
+            let is_service = ADDR_TO_SERVICES.has(deps.storage, deps.api.addr_validate(&addr)?);
             to_json_binary(&is_service)
         }
         ServicesManagerQueryMsg::GetServiceAddr { service } => {

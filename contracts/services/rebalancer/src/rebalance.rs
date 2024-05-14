@@ -271,7 +271,8 @@ pub fn do_rebalance(
     // is independent of other trade msg
     // This means 1 trade might fail while another pass, which means rebalance strategy was not executed 100% this cycle
     // but this will be corrected on the next rebalance cycle.
-    let msg = SubMsg::reply_on_error(
+    let msg = if !msgs.is_empty() {
+        Some(SubMsg::reply_on_error(
         WasmMsg::Execute {
             contract_addr: account.to_string(),
             msg: to_json_binary(
@@ -283,7 +284,10 @@ pub fn do_rebalance(
             funds: vec![],
         },
         REPLY_DEFAULT_REBALANCE,
-    );
+    ))
+    } else {
+        None
+    };
 
     // We edit config to save data for the next rebalance calculation
     config.last_rebalance = env.block.time;
@@ -294,7 +298,7 @@ pub fn do_rebalance(
         trades,
     };
 
-    Ok(RebalanceResponse::new(config, Some(msg), event, false))
+    Ok(RebalanceResponse::new(config, msg, event, false))
 }
 
 /// Set the min amount an auction is willing to accept for a specific token

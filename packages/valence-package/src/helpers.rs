@@ -53,16 +53,15 @@ pub fn sender_is_a_service(
     deps: DepsMut,
     info: &MessageInfo,
     manager_addr: String,
-) -> Result<Addr, ValenceError> {
-    match deps.querier.query_wasm_smart::<Option<String>>(
-        manager_addr,
-        &ServicesManagerQueryMsg::IsService {
-            addr: info.sender.to_string(),
-        },
-    )? {
-        Some(addr) => Ok(deps.api.addr_validate(&addr)?),
-        None => Err(ValenceError::UnauthorizedService),
-    }
+) -> Result<bool, ValenceError> {
+    deps.querier
+        .query_wasm_smart::<bool>(
+            manager_addr,
+            &ServicesManagerQueryMsg::IsService {
+                addr: info.sender.to_string(),
+            },
+        )
+        .map_err(ValenceError::Std)
 }
 
 /// Verify the sender is the admin of the contract

@@ -54,12 +54,12 @@ where
         service_name: String,
     },
     AccountSendFundsByService {
-        service_name: String,
+        service_addr: String,
         msgs: Vec<SubMsg>,
         atomic: bool,
     },
     AccountExecuteByService {
-        service_name: String,
+        service_addr: String,
         msgs: Vec<SubMsg>,
         atomic: bool,
     },

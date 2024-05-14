@@ -1,7 +1,7 @@
 use std::{collections::HashSet, str::FromStr};
 
 use auction_package::Pair;
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Decimal, Event, Uint128};
 
 use valence_package::services::rebalancer::PID;
 
@@ -57,6 +57,7 @@ fn test_basic_p_controller() {
 
         //get new balance
         balance = suite.get_balance(0, ATOM);
+        println!("balance: {balance}, expected: {expected_balance}",);
         // assert that the balance is as expected
         assert_eq!(balance.amount, expected_balance);
     }
@@ -96,4 +97,26 @@ fn test_min_balance_more_than_balance() {
     suite.resolve_cycle();
     let new_balance = suite.get_balance(0, ATOM);
     assert_eq!(old_balance, new_balance)
+}
+
+/// Make sure that we are not trying to send a message to the account when we don't have any trades
+#[test]
+fn test_no_msg_sent_when_no_trades() {
+    let mut config = SuiteBuilder::get_default_rebalancer_register_data();
+    // Set config to have min_balance for ATOM
+    let mut targets = SuiteBuilder::get_default_targets();
+    targets[0].bps = 9999;
+    targets[1].bps = 1;
+
+    config.targets = HashSet::from_iter(targets.iter().cloned());
+
+    let mut suite = SuiteBuilder::default()
+        .with_rebalancer_data(vec![config])
+        .build_default();
+
+    let res = suite.rebalance(None).unwrap();
+    let has_event = res.has_event(
+        &Event::new("wasm-valence-event").add_attribute("action", "account-send-funds-by-service"),
+    );
+    assert!(!has_event);
 }
