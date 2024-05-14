@@ -235,7 +235,8 @@ impl Suite {
         let pair1 = Pair::from((ATOM.to_string(), NTRN.to_string()));
         let pair2 = Pair::from((NTRN.to_string(), ATOM.to_string()));
 
-        self.rebalance(None).unwrap();
+        let res = self.rebalance(None).unwrap();
+        println!("{:?}", res);
 
         // Its fine if we can't update price yet
         let _ = self.update_price(pair1.clone());

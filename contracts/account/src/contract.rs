@@ -202,7 +202,7 @@ pub fn execute(
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             let event = ValenceEvent::AccountSendFundsByService {
-                service_name: info.sender.to_string(),
+                service_addr: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
             };
@@ -220,7 +220,7 @@ pub fn execute(
             let msgs = msgs_into_sub_msgs(msgs, atomic);
 
             let event = ValenceEvent::AccountExecuteByService {
-                service_name: info.sender.to_string(),
+                service_addr: info.sender.to_string(),
                 msgs: msgs.clone(),
                 atomic,
             };
