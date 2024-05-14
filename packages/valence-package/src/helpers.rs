@@ -61,7 +61,7 @@ pub fn sender_is_a_service(
                 addr: info.sender.to_string(),
             },
         )
-        .map_err(|e| ValenceError::Std(e))
+        .map_err(ValenceError::Std)
 }
 
 /// Verify the sender is the admin of the contract
