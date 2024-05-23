@@ -16,15 +16,16 @@ elif [[ "$CHAIN" == 'neutron' || "$CHAIN" == 'ntrn' ]]; then
   BINARY="neutrond"
   GAS_PRICES="0.075untrn"
   OWNER_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
+  AUCTIONS_MANAGER_ADDR="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 
 else
   echo "Unknown chain"
 fi
 
 if [ -z "$INIT_BY" ]; then
-  ADDRESSES="$OWNER_ADDR"
+  ADDRESSES="$OWNER_ADDR,$AUCTIONS_MANAGER_ADDR"
 else
-  ADDRESSES="$OWNER_ADDR,$INIT_BY"
+  ADDRESSES="$OWNER_ADDR,$AUCTIONS_MANAGER_ADDR,$INIT_BY"
 fi
 
 EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output json --instantiate-anyof-addresses $ADDRESSES -y"

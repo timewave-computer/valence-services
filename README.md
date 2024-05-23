@@ -4,12 +4,12 @@
 
 ## Code ids
 
-- auctions manager = `1234`
-- auction = `1239`
-- oracle = `1236`
-- rebalancer = `1233`
-- services manager = `1237`
-- account = `1238`
+- auctions manager = `1263`
+- auction = `1262`
+- oracle = `1261`
+- rebalancer = `1260`
+- services manager = `1259`
+- account = `1258`
 
 ## Owner / Admin
 
