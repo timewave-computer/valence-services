@@ -2,7 +2,6 @@ use std::{collections::HashSet, str::FromStr};
 
 use auction_package::Pair;
 use cosmwasm_std::{Decimal, Event, Uint128};
-use cosmwasm_std::{Decimal, Event, Uint128};
 
 use valence_package::services::rebalancer::PID;
 
