@@ -2,6 +2,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use auction_package::Pair;
 use cosmwasm_std::{Decimal, Event, Uint128};
+use cosmwasm_std::{Decimal, Event, Uint128};
 
 use valence_package::services::rebalancer::PID;
 
@@ -57,6 +58,7 @@ fn test_basic_p_controller() {
 
         //get new balance
         balance = suite.get_balance(0, ATOM);
+        println!("balance: {balance}, expected: {expected_balance}",);
         println!("balance: {balance}, expected: {expected_balance}",);
         // assert that the balance is as expected
         assert_eq!(balance.amount, expected_balance);
