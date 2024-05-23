@@ -58,7 +58,7 @@ fn test_basic_p_controller() {
         //get new balance
         balance = suite.get_balance(0, ATOM);
         println!("balance: {balance}, expected: {expected_balance}",);
-        
+
         // assert that the balance is as expected
         assert_eq!(balance.amount, expected_balance);
     }
