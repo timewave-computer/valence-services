@@ -259,6 +259,12 @@ pub fn do_rebalance(
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
+    // Save targets to our config
+    config.targets = target_helpers
+        .iter_mut()
+        .map(|th| th.target.clone())
+        .collect();
+
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
 

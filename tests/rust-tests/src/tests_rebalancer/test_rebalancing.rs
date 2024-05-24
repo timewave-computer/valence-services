@@ -6,7 +6,7 @@ use cosmwasm_std::{Decimal, Event, Uint128};
 use valence_package::services::rebalancer::PID;
 
 use crate::suite::{
-    suite::{ATOM, NTRN},
+    suite::{Suite, ATOM, NTRN},
     suite_builder::SuiteBuilder,
 };
 
@@ -58,6 +58,7 @@ fn test_basic_p_controller() {
         //get new balance
         balance = suite.get_balance(0, ATOM);
         println!("balance: {balance}, expected: {expected_balance}",);
+
         // assert that the balance is as expected
         assert_eq!(balance.amount, expected_balance);
     }
@@ -119,4 +120,21 @@ fn test_no_msg_sent_when_no_trades() {
         &Event::new("wasm-valence-event").add_attribute("action", "account-send-funds-by-service"),
     );
     assert!(!has_event);
+}
+
+#[test]
+fn test_targets_saved_after_rebalance() {
+    let mut suite = Suite::default();
+
+    let config = suite
+        .query_rebalancer_config(suite.account_addrs.first().unwrap().clone())
+        .unwrap();
+    assert!(config.targets[0].last_input.is_none());
+
+    suite.rebalance(None).unwrap();
+
+    let config = suite
+        .query_rebalancer_config(suite.account_addrs.first().unwrap().clone())
+        .unwrap();
+    assert!(config.targets[0].last_input.is_some());
 }
