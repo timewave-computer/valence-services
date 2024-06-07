@@ -139,6 +139,10 @@ pub fn execute_system_rebalance(
             should_pause,
         }) = rebalance_res
         else {
+            account_events.push(
+                Event::new("rebalancer-error")
+                    .add_attribute("error", rebalance_res.unwrap_err().to_string()),
+            );
             continue;
         };
 
