@@ -169,7 +169,7 @@ pub fn execute_system_rebalance(
             msgs.push(msg);
         }
     }
-
+    
     // We checked if we finished looping over all accounts or not
     // and set the status based on that
     let status = if configs_len <= limit {
@@ -258,7 +258,8 @@ pub fn do_rebalance(
             env.block.time.seconds() - config.last_rebalance.seconds(),
             0,
         )?;
-        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(MAX_PID_DT_VALUE.into()))
+        (diff.checked_div(Decimal::from_atomics(cycle_period, 0)?))?
+            .min(Decimal::new(MAX_PID_DT_VALUE.into()))
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
@@ -327,7 +328,7 @@ pub(crate) fn set_auction_min_amounts(
         {
             Some(min_amount) => {
                 sell_token.auction_min_amount =
-                    Decimal::from_atomics(min_amount.1, 0)? / sell_token.price;
+                    Decimal::from_atomics(min_amount.1, 0)?.checked_div(sell_token.price)?;
             }
             None => {
                 match MIN_AUCTION_AMOUNT.query(
@@ -339,8 +340,8 @@ pub(crate) fn set_auction_min_amounts(
                         send: min_send_amount,
                         ..
                     }) => {
-                        sell_token.auction_min_amount =
-                            Decimal::from_atomics(min_send_amount, 0)? / sell_token.price;
+                        sell_token.auction_min_amount = Decimal::from_atomics(min_send_amount, 0)?
+                            .checked_div(sell_token.price)?;
                         min_amount_limits.push((sell_token.target.denom.clone(), min_send_amount));
                         Ok(())
                     }
@@ -420,7 +421,8 @@ fn get_inputs(
             // Get current balance of the target, and calculate the value
             // safe if balance is 0, 0 / price = 0
             let current_balance = deps.querier.query_balance(account, target.denom.clone())?;
-            let balance_value = Decimal::from_atomics(current_balance.amount, 0)? / price;
+            let balance_value =
+                Decimal::from_atomics(current_balance.amount, 0)?.checked_div(price)?;
 
             total_value += balance_value;
             targets_helpers.push(TargetHelper {
@@ -520,7 +522,7 @@ pub fn verify_targets(
         let (new_target_perc, mut leftover_perc) = if min_balance_target >= total_value {
             (Decimal::one(), Decimal::zero())
         } else {
-            let perc = min_balance_target / total_value;
+            let perc = min_balance_target.checked_div(total_value)?;
             (perc, Decimal::one() - perc)
         };
 
@@ -529,23 +531,23 @@ pub fn verify_targets(
 
         let updated_targets = targets
             .into_iter()
-            .map(|mut t| {
+            .map(|mut t| -> Result<TargetHelper, ContractError> {
                 // If our target is the min_balance target, we update perc, and return t.
                 if t.target.denom == target.target.denom {
                     t.target.percentage = new_target_perc;
-                    return t;
+                    return Ok(t);
                 };
 
                 // If leftover perc is 0, we set the perc as zero for this target
                 if leftover_perc.is_zero() {
                     t.target.percentage = Decimal::zero();
-                    return t;
+                    return Ok(t);
                 }
 
                 // Calc new perc based on chosen strategy and new min_balance perc
                 match config.target_override_strategy {
                     TargetOverrideStrategy::Proportional => {
-                        let old_perc = t.target.percentage / old_leftover_perc;
+                        let old_perc = t.target.percentage.checked_div(old_leftover_perc)?;
                         t.target.percentage = old_perc * leftover_perc;
                     }
                     TargetOverrideStrategy::Priority => {
@@ -559,9 +561,9 @@ pub fn verify_targets(
                 }
 
                 new_total_perc += t.target.percentage;
-                t
+                Ok(t)
             })
-            .collect();
+            .collect::<Result<Vec<_>, ContractError>>()?;
 
         // If the new percentage is smaller then 0.9999 or higher then 1, we have something wrong in calculation
         if new_total_perc > Decimal::one()
@@ -697,6 +699,10 @@ fn generate_trades_msgs(
                     // If our sell results in less then min_balance, we sell the difference to hit min_balance
                     let diff = token_sell.balance_amount - min_balance;
 
+                    if diff.is_zero() {
+                        return;
+                    }
+                    
                     // Unwrap should be safe here because diff should be a small number
                     // and directly related to users balance
                     token_sell.value_to_trade =
@@ -709,7 +715,7 @@ fn generate_trades_msgs(
                 token_sell.value_to_trade = Decimal::zero();
                 return;
             }
-
+            
             // If we hit our max sell limit, we only sell the limit left
             // otherwise, we keep track of how much we already sold
             if token_sell.value_to_trade > max_sell {
