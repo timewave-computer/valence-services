@@ -169,7 +169,7 @@ pub fn execute_system_rebalance(
             msgs.push(msg);
         }
     }
-    
+
     // We checked if we finished looping over all accounts or not
     // and set the status based on that
     let status = if configs_len <= limit {
@@ -264,11 +264,18 @@ pub fn do_rebalance(
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
-    // Save targets to our config
-    config.targets = target_helpers
-        .iter_mut()
-        .map(|th| th.target.clone())
-        .collect();
+    // Update targets in config only the last data we need for the next rebalance calculation
+    config.targets.iter_mut().for_each(|target| {
+        let Some(target_helper) = target_helpers
+            .iter()
+            .find(|th| th.target.denom == target.denom)
+        else {
+            return;
+        };
+
+        target.last_i = target_helper.target.last_i;
+        target.last_input = target_helper.target.last_input;
+    });
 
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
@@ -702,7 +709,7 @@ fn generate_trades_msgs(
                     if diff.is_zero() {
                         return;
                     }
-                    
+
                     // Unwrap should be safe here because diff should be a small number
                     // and directly related to users balance
                     token_sell.value_to_trade =
@@ -715,7 +722,7 @@ fn generate_trades_msgs(
                 token_sell.value_to_trade = Decimal::zero();
                 return;
             }
-            
+
             // If we hit our max sell limit, we only sell the limit left
             // otherwise, we keep track of how much we already sold
             if token_sell.value_to_trade > max_sell {
