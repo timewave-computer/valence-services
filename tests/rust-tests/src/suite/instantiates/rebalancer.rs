@@ -14,6 +14,12 @@ impl From<RebalancerInstantiate> for rebalancer::msg::InstantiateMsg {
     }
 }
 
+impl From<&mut RebalancerInstantiate> for rebalancer::msg::InstantiateMsg {
+    fn from(value: &mut RebalancerInstantiate) -> Self {
+        value.msg.clone()
+    }
+}
+
 impl RebalancerInstantiate {
     pub fn default(services_manager: &str, auctions_manager: &str) -> Self {
         Self {

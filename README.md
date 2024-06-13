@@ -6,8 +6,8 @@
 
 - auctions manager = `1404`
 - auction = `1408`
-- oracle = `1407`
-- rebalancer = `1426`
+- oracle = `1446`
+- rebalancer = `1442`
 - services manager = `1405`
 - account = `1403`
 

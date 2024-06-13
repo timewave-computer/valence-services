@@ -30,6 +30,7 @@ auction-package  = { workspace = true }
 auctions-manager = { workspace = true }
 auction          = { workspace = true }
 price-oracle     = { workspace = true }
+chrono = "0.4.38"
 
 # Astro
 astroport                      = { git = "https://github.com/astroport-fi/astroport-core.git", tag = "v2.9.5" }

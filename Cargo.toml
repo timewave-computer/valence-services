@@ -61,5 +61,5 @@ thiserror       = "1.0.31"
 schemars        = "0.8.10"
 
 # dev-dependencies
-cw-multi-test = "1.1.0"
+cw-multi-test = "1.2.0"
 anyhow        = { version = "1.0.51" }

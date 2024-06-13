@@ -6,7 +6,7 @@ use auction_package::{
     helpers::{ChainHaltConfig, GetPriceResponse},
     msgs::AuctionsManagerQueryMsg,
     states::MinAmount,
-    AuctionStrategy, Pair, PriceFreshnessStrategy,
+    AuctionStrategy, Pair, Price, PriceFreshnessStrategy,
 };
 use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, Uint128};
 use cw_multi_test::{AppResponse, Executor};
@@ -691,6 +691,16 @@ impl Suite {
             .query_wasm_smart(
                 self.oracle_addr.clone(),
                 &price_oracle::msg::QueryMsg::GetPrice { pair },
+            )
+            .unwrap()
+    }
+
+    pub fn query_oracle_all_prices(&self) -> Vec<(Pair, Price)> {
+        self.app
+            .wrap()
+            .query_wasm_smart(
+                self.oracle_addr.clone(),
+                &price_oracle::msg::QueryMsg::GetAllPrices,
             )
             .unwrap()
     }

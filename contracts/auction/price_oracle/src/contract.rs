@@ -7,7 +7,9 @@ use auction_package::states::{ADMIN, PAIRS, PRICES, TWAP_PRICES};
 use auction_package::Price;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+};
 use cw2::set_contract_version;
 use valence_package::event_indexing::{ValenceEvent, ValenceGenericEvent};
 
@@ -310,6 +312,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             let price = PRICES.load(deps.storage, pair)?;
 
             Ok(to_json_binary(&price)?)
+        }
+        QueryMsg::GetAllPrices => {
+            let prices = PRICES
+                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .collect::<StdResult<Vec<_>>>()?;
+
+            Ok(to_json_binary(&prices)?)
         }
         QueryMsg::GetConfig => {
             let config = CONFIG.load(deps.storage)?;

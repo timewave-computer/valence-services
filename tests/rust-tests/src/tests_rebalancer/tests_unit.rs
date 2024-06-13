@@ -375,6 +375,8 @@ fn test_verify_target_min_balance_over_balance() {
     assert_eq!(res[2].target.percentage, Decimal::bps(0));
 }
 
+// We have 100 ATOM so our total value is 100
+// we
 #[test]
 fn test_verify_target_priority() {
     let deps = mock_dependencies();
@@ -400,7 +402,7 @@ fn test_verify_target_priority() {
             target: ParsedTarget {
                 denom: NTRN.to_string(),
                 percentage: Decimal::bps(2500),
-                min_balance: Some(160_u128.into()),
+                min_balance: Some(25_u128.into()),
                 last_input: None,
                 last_i: SignedDecimal::zero(),
             },
@@ -433,31 +435,37 @@ fn test_verify_target_priority() {
         target_helpers.clone(),
     )
     .unwrap();
+
     assert_eq!(
         res[0].target.percentage,
-        Decimal::from_str("0.133333333333333333").unwrap()
+        Decimal::from_str("0.333333333333333333").unwrap()
     );
-    assert_eq!(res[1].target.percentage, Decimal::bps(8000));
+    assert_eq!(res[1].target.percentage, Decimal::bps(5000));
     assert_eq!(
         res[2].target.percentage,
-        Decimal::from_str("0.066666666666666666").unwrap()
+        Decimal::from_str("0.166666666666666666").unwrap()
     );
 
     // Priority
     config.target_override_strategy = TargetOverrideStrategy::Priority;
 
+    // our total value is 100
+    // min_balance is 25 (price is 0.5, which means 25 / 0.5 = 50 value)
+    // so we expect the result to be 50% of target 1 and 50% target 2 (target 3 is 0)
     let res = verify_targets(
         &config,
         Decimal::from_str("100").unwrap(),
         target_helpers.clone(),
     )
     .unwrap();
-    assert_eq!(res[0].target.percentage, Decimal::bps(2000));
-    assert_eq!(res[1].target.percentage, Decimal::bps(8000));
+
+    assert_eq!(res[0].target.percentage, Decimal::bps(5000));
+    assert_eq!(res[1].target.percentage, Decimal::bps(5000));
     assert_eq!(res[2].target.percentage, Decimal::bps(0));
 
-    target_helpers[2].target.min_balance = Some(500_u128.into());
-    target_helpers[1].target.min_balance = None;
+    // total value is still 100
+    // we set min_balance to be 20 meaning (price is 0.5, which means 25 / 0.5 = 50 value)
+    target_helpers[1].target.min_balance = Some(20_u128.into());
 
     let res = verify_targets(
         &config,
@@ -465,11 +473,12 @@ fn test_verify_target_priority() {
         target_helpers.clone(),
     )
     .unwrap();
+
     assert_eq!(res[0].target.percentage, Decimal::bps(5000));
-    assert_eq!(res[1].target.percentage, Decimal::bps(0));
-    assert_eq!(res[2].target.percentage, Decimal::bps(5000));
+    assert_eq!(res[1].target.percentage, Decimal::bps(4000));
+    assert_eq!(res[2].target.percentage, Decimal::bps(1000));
 
-    target_helpers[2].target.min_balance = Some(400_u128.into());
+    target_helpers[1].target.min_balance = Some(400_u128.into());
 
     let res = verify_targets(
         &config,
@@ -477,6 +486,9 @@ fn test_verify_target_priority() {
         target_helpers.clone(),
     )
     .unwrap();
+
+    println!("{:?}", res);
+
     assert_eq!(res[0].target.percentage, Decimal::bps(5000));
     assert_eq!(res[1].target.percentage, Decimal::bps(1000));
     assert_eq!(res[2].target.percentage, Decimal::bps(4000));

@@ -72,7 +72,9 @@ fn test_min_balance() {
         .with_rebalancer_data(vec![config])
         .build_default();
 
-        let old_config = suite.query_rebalancer_config(suite.get_account_addr(0)).unwrap();
+    let old_config = suite
+        .query_rebalancer_config(suite.get_account_addr(0))
+        .unwrap();
 
     for _ in 0..10 {
         suite.resolve_cycle();
@@ -83,10 +85,16 @@ fn test_min_balance() {
     assert!(balance_atom.amount < Uint128::new(1000));
     assert!(balance_atom.amount >= Uint128::new(950));
 
-    let new_config = suite.query_rebalancer_config(suite.get_account_addr(0)).unwrap();
+    let new_config = suite
+        .query_rebalancer_config(suite.get_account_addr(0))
+        .unwrap();
 
     new_config.targets.iter().for_each(|new_target| {
-        let target = old_config.targets.iter().find(|t| t.denom == new_target.denom).unwrap();
+        let target = old_config
+            .targets
+            .iter()
+            .find(|t| t.denom == new_target.denom)
+            .unwrap();
 
         assert!(new_target.percentage == target.percentage);
     });

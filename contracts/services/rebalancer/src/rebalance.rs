@@ -518,7 +518,7 @@ pub fn verify_targets(
     // Safe to unwrap here, because we only enter the function is there is a min_balance target
     // and we error out if we don't find the target above.
     let min_balance = Decimal::from_atomics(target.target.min_balance.unwrap(), 0)?;
-    let min_balance_target = min_balance * target.price;
+    let min_balance_target = min_balance / target.price;
     let real_target = total_value * target.target.percentage;
 
     // if the target is below the minimum balance target
