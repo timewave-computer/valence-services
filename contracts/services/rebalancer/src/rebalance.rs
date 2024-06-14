@@ -259,7 +259,7 @@ pub fn do_rebalance(
             0,
         )?;
         (diff.checked_div(Decimal::from_atomics(cycle_period, 0)?))?
-            .min(Decimal::new(MAX_PID_DT_VALUE.into()))
+            .min(Decimal::from_atomics(MAX_PID_DT_VALUE, 0)?)
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
@@ -479,6 +479,7 @@ fn do_pid(
             Some(last_input) => signed_input - last_input.into(),
             None => SignedDecimal::zero(),
         };
+        println!("d: {:?} | signed_d: {:?} | signed_dt: {:?}", d, signed_d, signed_dt);
         d = d * signed_d / signed_dt;
 
         let output = p + i - d;
