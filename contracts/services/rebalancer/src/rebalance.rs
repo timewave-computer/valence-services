@@ -334,7 +334,7 @@ pub(crate) fn set_auction_min_amounts(
             .find(|min_amount| min_amount.0 == sell_token.target.denom)
         {
             Some(min_amount) => {
-                sell_token.auction_min_amount =
+                sell_token.auction_min_send_value =
                     Decimal::from_atomics(min_amount.1, 0)?.checked_div(sell_token.price)?;
             }
             None => {
@@ -347,8 +347,9 @@ pub(crate) fn set_auction_min_amounts(
                         send: min_send_amount,
                         ..
                     }) => {
-                        sell_token.auction_min_amount = Decimal::from_atomics(min_send_amount, 0)?
-                            .checked_div(sell_token.price)?;
+                        sell_token.auction_min_send_value =
+                            Decimal::from_atomics(min_send_amount, 0)?
+                                .checked_div(sell_token.price)?;
                         min_amount_limits.push((sell_token.target.denom.clone(), min_send_amount));
                         Ok(())
                     }
@@ -438,7 +439,7 @@ fn get_inputs(
                 price,
                 balance_value,
                 value_to_trade: Decimal::zero(),
-                auction_min_amount: Decimal::zero(),
+                auction_min_send_value: Decimal::zero(),
             });
 
             Ok((total_value, targets_helpers))
@@ -479,7 +480,7 @@ fn do_pid(
             Some(last_input) => signed_input - last_input.into(),
             None => SignedDecimal::zero(),
         };
-        println!("d: {:?} | signed_d: {:?} | signed_dt: {:?}", d, signed_d, signed_dt);
+
         d = d * signed_d / signed_dt;
 
         let output = p + i - d;
@@ -652,26 +653,26 @@ fn generate_trades_msgs(
             // check if the amount we intent to buy, is lower than min_amount of the sell token
             // if its not, it will be handled correctly by the main loop.
             // but if it is, it means we need to sell other token more then we intent to
-            if token_buy.value_to_trade < token_sell.auction_min_amount {
+            if token_buy.value_to_trade < token_sell.auction_min_send_value {
                 // If the amount we try to sell, is below the auction_min_amount, we need to set it to zero
                 // else we reduce the auction_min_amount value
-                if token_sell.value_to_trade < token_sell.auction_min_amount {
+                if token_sell.value_to_trade < token_sell.auction_min_send_value {
                     token_sell.value_to_trade = Decimal::zero();
                 } else {
-                    token_sell.value_to_trade -= token_sell.auction_min_amount;
+                    token_sell.value_to_trade -= token_sell.auction_min_send_value;
                 }
 
                 let pair = Pair::from((
                     token_sell.target.denom.clone(),
                     token_buy.target.denom.clone(),
                 ));
-                let amount = (token_sell.auction_min_amount * token_sell.price).to_uint_ceil();
+                let amount = (token_sell.auction_min_send_value * token_sell.price).to_uint_ceil();
                 let trade = RebalanceTrade::new(pair, amount);
 
                 token_buy.value_to_trade = Decimal::zero();
 
                 if let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) {
-                    max_sell -= token_sell.auction_min_amount;
+                    max_sell -= token_sell.auction_min_send_value;
                     msgs.push(msg);
                 };
             }
@@ -719,8 +720,13 @@ fn generate_trades_msgs(
             }
 
             // If we intent to sell less then our minimum, we set to_trade to be 0 and continue
-            if token_sell.value_to_trade < token_sell.auction_min_amount {
+            if token_sell.value_to_trade < token_sell.auction_min_send_value {
                 token_sell.value_to_trade = Decimal::zero();
+                return;
+            }
+
+            // If our buy value is lower then our sell min_send value, we do nothing and continue.
+            if token_buy.value_to_trade < token_sell.auction_min_send_value {
                 return;
             }
 
@@ -728,9 +734,6 @@ fn generate_trades_msgs(
             // otherwise, we keep track of how much we already sold
             if token_sell.value_to_trade > max_sell {
                 token_sell.value_to_trade = max_sell;
-                max_sell = Decimal::zero();
-            } else {
-                max_sell -= token_sell.value_to_trade;
             }
 
             let pair = Pair::from((
@@ -747,6 +750,7 @@ fn generate_trades_msgs(
                 token_buy.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
+                    max_sell -= token_buy.value_to_trade;
                     return;
                 };
 
@@ -761,6 +765,7 @@ fn generate_trades_msgs(
                 token_sell.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
+                    max_sell -= token_sell.value_to_trade;
                     return;
                 };
 
@@ -769,6 +774,7 @@ fn generate_trades_msgs(
             }
         });
     });
+    println!("msgs: {:?}", msgs);
 
     (msgs, trades)
 }

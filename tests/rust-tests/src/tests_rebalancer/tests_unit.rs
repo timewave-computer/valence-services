@@ -31,7 +31,7 @@ fn test_verify_target_2_denoms() {
             balance_amount: Uint128::from_str("100").unwrap(),
             balance_value: Decimal::from_str("100").unwrap(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -45,7 +45,7 @@ fn test_verify_target_2_denoms() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
     ];
 
@@ -114,7 +114,7 @@ fn test_verify_target_3_denoms() {
             balance_amount: Uint128::new(100),
             balance_value: Decimal::from_str("100").unwrap(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -128,7 +128,7 @@ fn test_verify_target_3_denoms() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -142,7 +142,7 @@ fn test_verify_target_3_denoms() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
     ];
 
@@ -227,7 +227,7 @@ fn test_verify_target_leftover_strategy() {
             balance_amount: Uint128::new(100),
             balance_value: Decimal::from_str("100").unwrap(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -241,7 +241,7 @@ fn test_verify_target_leftover_strategy() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -255,7 +255,7 @@ fn test_verify_target_leftover_strategy() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
     ];
 
@@ -337,7 +337,7 @@ fn test_verify_target_min_balance_over_balance() {
             balance_amount: Uint128::new(100),
             balance_value: Decimal::from_str("100").unwrap(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -351,7 +351,7 @@ fn test_verify_target_min_balance_over_balance() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -365,7 +365,7 @@ fn test_verify_target_min_balance_over_balance() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
     ];
 
@@ -396,7 +396,7 @@ fn test_verify_target_priority() {
             balance_amount: Uint128::new(100),
             balance_value: Decimal::from_str("100").unwrap(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -410,7 +410,7 @@ fn test_verify_target_priority() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
         TargetHelper {
             target: ParsedTarget {
@@ -424,7 +424,7 @@ fn test_verify_target_priority() {
             balance_amount: Uint128::zero(),
             balance_value: Decimal::zero(),
             value_to_trade: Decimal::zero(),
-            auction_min_amount: Decimal::zero(),
+            auction_min_send_value: Decimal::zero(),
         },
     ];
 
@@ -475,10 +475,10 @@ fn test_verify_target_priority() {
     .unwrap();
 
     assert_eq!(res[0].target.percentage, Decimal::bps(5000));
-    assert_eq!(res[1].target.percentage, Decimal::bps(4000));
+    assert_eq!(res[1].target.percentage, Decimal::bps(4000)); // 40% is the min_balance we set (20 / 0.5)
     assert_eq!(res[2].target.percentage, Decimal::bps(1000));
 
-    target_helpers[1].target.min_balance = Some(400_u128.into());
+    target_helpers[1].target.min_balance = Some(40_u128.into());
 
     let res = verify_targets(
         &config,
@@ -489,7 +489,7 @@ fn test_verify_target_priority() {
 
     println!("{:?}", res);
 
-    assert_eq!(res[0].target.percentage, Decimal::bps(5000));
-    assert_eq!(res[1].target.percentage, Decimal::bps(1000));
-    assert_eq!(res[2].target.percentage, Decimal::bps(4000));
+    assert_eq!(res[0].target.percentage, Decimal::bps(2000));
+    assert_eq!(res[1].target.percentage, Decimal::bps(8000)); // 80% is the min_balance we set (40 / 0.5)
+    assert_eq!(res[2].target.percentage, Decimal::bps(0));
 }

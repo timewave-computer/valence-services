@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use auction_package::Pair;
 use cosmwasm_std::{BlockInfo, Coin};

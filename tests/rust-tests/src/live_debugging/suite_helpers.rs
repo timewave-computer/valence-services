@@ -1,12 +1,14 @@
 use std::{
-    collections::{hash_map::RandomState, BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     process::Command,
 };
 
-use auction_package::{states::{MinAmount, PRICES}, AuctionStrategy, Pair};
-use cosmwasm_std::{from_json, to_json_binary, to_json_vec, Addr, Coin, Storage};
+use auction_package::{
+    states::{MinAmount, PRICES},
+    AuctionStrategy, Pair,
+};
+use cosmwasm_std::{from_json, to_json_binary, Addr, Coin};
 use cw_multi_test::{App, Executor};
-use cw_storage_plus::Prefixer;
 use rebalancer::state::CONFIGS;
 use valence_package::services::{
     rebalancer::{RebalancerConfig, Target},
@@ -22,9 +24,8 @@ use crate::suite::{
 };
 
 use super::{
-    helpers::concat,
     types::{MinLimitsRes, Prices, WhitelistDenoms},
-    AUCTIONS_MANAGER_ADDR, NAMESPACE_WASM, REBALANCER_ADDR,
+    AUCTIONS_MANAGER_ADDR,
 };
 
 impl SuiteBuilder {
@@ -112,16 +113,6 @@ impl SuiteBuilder {
                 let price = prices.iter().find(|(p, _)| p == &pair).unwrap().1.clone();
                 let mut oracle_storage = app.contract_storage_mut(&price_oracle_addr);
                 PRICES.save(oracle_storage.as_mut(), pair, &price).unwrap();
-                // app.execute_contract(
-                //     self.admin.clone(),
-                //     price_oracle_addr.clone(),
-                //     &price_oracle::msg::ExecuteMsg::ManualPriceUpdate {
-                //         pair: pair.clone(),
-                //         price: price.price,
-                //     },
-                //     &[],
-                // )
-                // .unwrap();
             })
         });
 
@@ -189,7 +180,7 @@ impl SuiteBuilder {
                 self.owner.clone(),
                 &account_init_msg,
                 &[],
-                format!("account"),
+                "account".to_string(),
                 Some(self.owner.to_string()),
             )
             .unwrap();
@@ -203,21 +194,18 @@ impl SuiteBuilder {
         });
 
         // register to the rebalancer with some mock data first
-        let targets: HashSet<Target, _> = HashSet::from_iter(
-            [
-                Target {
-                    denom: whitelist_denoms[0].to_string(),
-                    bps: 7500,
-                    min_balance: None,
-                },
-                Target {
-                    denom: whitelist_denoms[1].to_string(),
-                    bps: 2500,
-                    min_balance: None,
-                },
-            ]
-            .into_iter(),
-        );
+        let targets: HashSet<Target, _> = HashSet::from_iter([
+            Target {
+                denom: whitelist_denoms[0].to_string(),
+                bps: 7500,
+                min_balance: None,
+            },
+            Target {
+                denom: whitelist_denoms[1].to_string(),
+                bps: 2500,
+                min_balance: None,
+            },
+        ]);
 
         let mut mock_rebalancer_data = SuiteBuilder::get_default_rebalancer_register_data();
         mock_rebalancer_data.base_denom = "untrn".to_string();
@@ -257,7 +245,7 @@ impl SuiteBuilder {
 }
 
 impl SuiteBuilder {
-    pub fn get_auction_min_amounts(denoms: &Vec<String>) -> BTreeMap<String, MinAmount> {
+    pub fn get_auction_min_amounts(denoms: &[String]) -> BTreeMap<String, MinAmount> {
         BTreeMap::from_iter(denoms.iter().map(|denom| {
             let q_string = format!("{{\"get_min_limit\": {{\"denom\": \"{}\"}}}}", denom);
             let min_limits_output = Command::new("neutrond")

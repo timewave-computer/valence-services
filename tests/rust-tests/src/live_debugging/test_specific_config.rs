@@ -21,7 +21,7 @@ use valence_package::services::rebalancer::RebalancerConfig;
 
 use crate::{
     live_debugging::{
-        types::{AllPricesRes, Block, BlockRes, ConfigRes, Prices, WhitelistDenoms, WhitelistDenomsRes},
+        types::{AllPricesRes, BlockRes, ConfigRes, Prices, WhitelistDenoms, WhitelistDenomsRes},
         ORACLE_ADDR, REBALANCER_ADDR,
     },
     suite::suite_builder::SuiteBuilder,
@@ -32,7 +32,7 @@ use super::types::Balances;
 const ACCOUNT_ADDR: &str = "neutron1wcv0c8ktmjgtj0a5dt6zdteer2nsyawqtnm5kxt7su5063dudz8qasjl97";
 const HEIGHT: &str = "";
 
-#[ignore = "Debugging"]
+#[ignore = "For debugging mainnet data"]
 #[test]
 fn live_debugging() {
     // If we have specifig height, query by that height
@@ -52,10 +52,12 @@ fn live_debugging() {
         .output()
         .expect("Failed getting balances");
 
-        let block_info: BlockInfo =
+    let block_info: BlockInfo =
         from_json::<BlockRes>(String::from_utf8_lossy(&block_output.stdout).to_string())
             .unwrap()
-            .block.header.into();
+            .block
+            .header
+            .into();
 
     // query mainnet for the balances of the account
     let balances_output = Command::new("neutrond")
@@ -151,5 +153,15 @@ fn live_debugging() {
 
     // After we confirmed everything is in place, we can do rebalance, and read the response (events should tell us the info we need)
     let res = suite.rebalance(None).unwrap();
-    println!("Rebalance response: {:?}", res);
+    // println!("Rebalance response: {:?}", res);
+
+    // print our events for debugging
+    res.events.iter().for_each(|event| {
+        if event.ty.contains("valence") {
+            println!(
+                "Type: {} | Data: {}",
+                event.attributes[1].value, event.attributes[2].value
+            );
+        }
+    });
 }
