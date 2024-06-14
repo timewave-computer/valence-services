@@ -774,7 +774,6 @@ fn generate_trades_msgs(
             }
         });
     });
-    println!("msgs: {:?}", msgs);
 
     (msgs, trades)
 }
