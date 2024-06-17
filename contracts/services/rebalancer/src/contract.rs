@@ -5,8 +5,7 @@ use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply,
-    Response, StdError, StdResult, Uint128,
+    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError, StdResult, Uint128
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
@@ -16,6 +15,7 @@ use valence_package::helpers::{approve_admin_change, verify_services_manager, Op
 use valence_package::services::rebalancer::{
     PauseData, RebalancerExecuteMsg, SystemRebalanceStatus,
 };
+use valence_package::signed_decimal::SignedDecimal;
 use valence_package::states::{QueryFeeAction, ADMIN, SERVICES_MANAGER, SERVICE_FEE_CONFIG};
 
 use crate::error::ContractError;
@@ -302,6 +302,12 @@ pub fn execute(
 
             if let Some(pid) = data.pid {
                 config.pid = pid.into_parsed()?;
+
+                // If PID is updated, we reset the last calculation because they are no longer valid
+                config.targets.iter_mut().for_each(|t| {
+                    t.last_input = None;
+                    t.last_i = SignedDecimal::zero();
+                });
             }
 
             if let Some(max_limit_option) = data.max_limit_bps {
