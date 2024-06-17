@@ -265,17 +265,15 @@ pub fn do_rebalance(
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
     // Update targets in config only the last data we need for the next rebalance calculation
-    config.targets.iter_mut().for_each(|target| {
-        let Some(target_helper) = target_helpers
+    for target in config.targets.iter_mut() {
+        if let Some(target_helper) = target_helpers
             .iter()
             .find(|th| th.target.denom == target.denom)
-        else {
-            return;
-        };
-
-        target.last_i = target_helper.target.last_i;
-        target.last_input = target_helper.target.last_input;
-    });
+        {
+            target.last_i = target_helper.target.last_i;
+            target.last_input = target_helper.target.last_input;
+        }
+    }
 
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;

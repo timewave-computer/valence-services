@@ -49,7 +49,10 @@ pub enum QueryMsg {
     #[returns(Price)]
     GetPrice { pair: Pair },
     #[returns(Vec<(Pair, Price)>)]
-    GetAllPrices,
+    GetAllPrices {
+        from: Option<Pair>,
+        limit: Option<u32>,
+    },
     #[returns(Config)]
     GetConfig,
     #[returns(Addr)]

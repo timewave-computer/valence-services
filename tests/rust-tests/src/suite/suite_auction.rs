@@ -695,12 +695,16 @@ impl Suite {
             .unwrap()
     }
 
-    pub fn query_oracle_all_prices(&self) -> Vec<(Pair, Price)> {
+    pub fn query_oracle_all_prices(
+        &self,
+        from: Option<Pair>,
+        limit: Option<u32>,
+    ) -> Vec<(Pair, Price)> {
         self.app
             .wrap()
             .query_wasm_smart(
                 self.oracle_addr.clone(),
-                &price_oracle::msg::QueryMsg::GetAllPrices,
+                &price_oracle::msg::QueryMsg::GetAllPrices { from, limit },
             )
             .unwrap()
     }

@@ -144,7 +144,7 @@ fn live_debugging() {
     let account_config = suite
         .query_rebalancer_config(suite.account_addrs[0].clone())
         .unwrap();
-    let all_prices = suite.query_oracle_all_prices();
+    let all_prices = suite.query_oracle_all_prices(None, None);
 
     // make sure the config is set in our mock rebalancer
     assert_eq!(account_config, config);

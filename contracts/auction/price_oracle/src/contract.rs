@@ -4,13 +4,14 @@ use auction_package::helpers::{
     approve_admin_change, cancel_admin_change, start_admin_change, verify_admin,
 };
 use auction_package::states::{ADMIN, PAIRS, PRICES, TWAP_PRICES};
-use auction_package::Price;
+use auction_package::{Pair, Price};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 use valence_package::event_indexing::{ValenceEvent, ValenceGenericEvent};
 
 use crate::error::ContractError;
@@ -313,9 +314,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
             Ok(to_json_binary(&price)?)
         }
-        QueryMsg::GetAllPrices => {
+        QueryMsg::GetAllPrices { from, limit } => {
+            let from = from.map(Bound::<Pair>::exclusive);
             let prices = PRICES
-                .range(deps.storage, None, None, cosmwasm_std::Order::Ascending)
+                .range(deps.storage, from, None, cosmwasm_std::Order::Ascending)
+                .take(limit.unwrap_or(10) as usize)
                 .collect::<StdResult<Vec<_>>>()?;
 
             Ok(to_json_binary(&prices)?)
