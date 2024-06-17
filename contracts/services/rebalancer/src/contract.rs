@@ -5,7 +5,8 @@ use auction_package::Pair;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError, StdResult, Uint128
+    to_json_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Env, Event, MessageInfo, Reply,
+    Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
