@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, SubMsg, Uint128};
 use serde::Serialize;
 use valence_package::{
@@ -29,6 +30,7 @@ pub struct TargetHelper {
     pub auction_min_amount: Decimal,
 }
 
+#[cw_serde]
 pub struct RebalanceResponse<E: Serialize> {
     pub config: RebalancerConfig,
     pub msg: Option<SubMsg>,
