@@ -51,8 +51,8 @@ valence-macros  = { path = "packages/valence-macros" }
 valence-package = { path = "packages/valence-package" }
 auction-package = { path = "packages/auction-package" }
 
-cosmwasm-schema = "1.5.4"
-cosmwasm-std    = { version = "1.5.4", features = ["ibc3"] }
+cosmwasm-schema = "1.5.5"
+cosmwasm-std    = { version = "1.5.5", features = ["ibc3"] }
 cw-storage-plus = "1.2.0"
 cw-utils        = "1.0.3"
 cw2             = "1.1.2"
@@ -61,5 +61,5 @@ thiserror       = "1.0.31"
 schemars        = "0.8.10"
 
 # dev-dependencies
-cw-multi-test = "1.1.0"
+cw-multi-test = "1.2.0"
 anyhow        = { version = "1.0.51" }

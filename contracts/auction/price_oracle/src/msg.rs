@@ -1,4 +1,4 @@
-use auction_package::{helpers::GetPriceResponse, Pair};
+use auction_package::{Pair, Price};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal};
 use cw_utils::Expiration;
@@ -46,8 +46,13 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Get the minimum amount users can auction
-    #[returns(GetPriceResponse)]
+    #[returns(Price)]
     GetPrice { pair: Pair },
+    #[returns(Vec<(Pair, Price)>)]
+    GetAllPrices {
+        from: Option<Pair>,
+        limit: Option<u32>,
+    },
     #[returns(Config)]
     GetConfig,
     #[returns(Addr)]

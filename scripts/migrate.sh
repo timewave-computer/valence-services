@@ -10,13 +10,13 @@ EXECUTE_FLAGS="--gas-prices $GAS_PRICES --gas auto --gas-adjustment 1.4 --output
 # addresses
 ADMIN_ADDR="neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68"
 REBALANCER_ADDR="neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2"
-ORACLE_ADDR="neutron1pkk88zqjd478x3maws3mv7qugylhsu0sjkejj3k2w02wwhp6fqgsl7m0js"
+ORACLE_ADDR="neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf"
 SERVICES_MANAGER_ADDR="neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa"
 AUCTIONS_MANAGER_ADDR="neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz"
 
 # Code ids
-REBALANCER_CODE_ID=1260
-ORACLE_CODE_ID=1261
+REBALANCER_CODE_ID=1442
+ORACLE_CODE_ID=1446
 SERVICES_MANAGER_CODE_ID=1259
 AUCTIONS_MANAGER_CODE_ID=1263
 AUCTION_CODE_ID=1262

@@ -258,16 +258,22 @@ pub fn do_rebalance(
             env.block.time.seconds() - config.last_rebalance.seconds(),
             0,
         )?;
-        (diff / Decimal::from_atomics(cycle_period, 0)?).min(Decimal::new(MAX_PID_DT_VALUE.into()))
+        (diff.checked_div(Decimal::from_atomics(cycle_period, 0)?))?
+            .min(Decimal::from_atomics(MAX_PID_DT_VALUE, 0)?)
     };
 
     let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
 
-    // Save targets to our config
-    config.targets = target_helpers
-        .iter_mut()
-        .map(|th| th.target.clone())
-        .collect();
+    // Update targets in config only the last data we need for the next rebalance calculation
+    for target in config.targets.iter_mut() {
+        if let Some(target_helper) = target_helpers
+            .iter()
+            .find(|th| th.target.denom == target.denom)
+        {
+            target.last_i = target_helper.target.last_i;
+            target.last_input = target_helper.target.last_input;
+        }
+    }
 
     // get minimum amount we can send to each auction
     set_auction_min_amounts(deps, auction_manager, &mut to_sell, min_amount_limits)?;
@@ -326,8 +332,8 @@ pub(crate) fn set_auction_min_amounts(
             .find(|min_amount| min_amount.0 == sell_token.target.denom)
         {
             Some(min_amount) => {
-                sell_token.auction_min_amount =
-                    Decimal::from_atomics(min_amount.1, 0)? / sell_token.price;
+                sell_token.auction_min_send_value =
+                    Decimal::from_atomics(min_amount.1, 0)?.checked_div(sell_token.price)?;
             }
             None => {
                 match MIN_AUCTION_AMOUNT.query(
@@ -339,8 +345,9 @@ pub(crate) fn set_auction_min_amounts(
                         send: min_send_amount,
                         ..
                     }) => {
-                        sell_token.auction_min_amount =
-                            Decimal::from_atomics(min_send_amount, 0)? / sell_token.price;
+                        sell_token.auction_min_send_value =
+                            Decimal::from_atomics(min_send_amount, 0)?
+                                .checked_div(sell_token.price)?;
                         min_amount_limits.push((sell_token.target.denom.clone(), min_send_amount));
                         Ok(())
                     }
@@ -420,7 +427,8 @@ fn get_inputs(
             // Get current balance of the target, and calculate the value
             // safe if balance is 0, 0 / price = 0
             let current_balance = deps.querier.query_balance(account, target.denom.clone())?;
-            let balance_value = Decimal::from_atomics(current_balance.amount, 0)? / price;
+            let balance_value =
+                Decimal::from_atomics(current_balance.amount, 0)?.checked_div(price)?;
 
             total_value += balance_value;
             targets_helpers.push(TargetHelper {
@@ -429,7 +437,7 @@ fn get_inputs(
                 price,
                 balance_value,
                 value_to_trade: Decimal::zero(),
-                auction_min_amount: Decimal::zero(),
+                auction_min_send_value: Decimal::zero(),
             });
 
             Ok((total_value, targets_helpers))
@@ -470,6 +478,7 @@ fn do_pid(
             Some(last_input) => signed_input - last_input.into(),
             None => SignedDecimal::zero(),
         };
+
         d = d * signed_d / signed_dt;
 
         let output = p + i - d;
@@ -509,7 +518,7 @@ pub fn verify_targets(
     // Safe to unwrap here, because we only enter the function is there is a min_balance target
     // and we error out if we don't find the target above.
     let min_balance = Decimal::from_atomics(target.target.min_balance.unwrap(), 0)?;
-    let min_balance_target = min_balance * target.price;
+    let min_balance_target = min_balance / target.price;
     let real_target = total_value * target.target.percentage;
 
     // if the target is below the minimum balance target
@@ -520,7 +529,7 @@ pub fn verify_targets(
         let (new_target_perc, mut leftover_perc) = if min_balance_target >= total_value {
             (Decimal::one(), Decimal::zero())
         } else {
-            let perc = min_balance_target / total_value;
+            let perc = min_balance_target.checked_div(total_value)?;
             (perc, Decimal::one() - perc)
         };
 
@@ -529,23 +538,23 @@ pub fn verify_targets(
 
         let updated_targets = targets
             .into_iter()
-            .map(|mut t| {
+            .map(|mut t| -> Result<TargetHelper, ContractError> {
                 // If our target is the min_balance target, we update perc, and return t.
                 if t.target.denom == target.target.denom {
                     t.target.percentage = new_target_perc;
-                    return t;
+                    return Ok(t);
                 };
 
                 // If leftover perc is 0, we set the perc as zero for this target
                 if leftover_perc.is_zero() {
                     t.target.percentage = Decimal::zero();
-                    return t;
+                    return Ok(t);
                 }
 
                 // Calc new perc based on chosen strategy and new min_balance perc
                 match config.target_override_strategy {
                     TargetOverrideStrategy::Proportional => {
-                        let old_perc = t.target.percentage / old_leftover_perc;
+                        let old_perc = t.target.percentage.checked_div(old_leftover_perc)?;
                         t.target.percentage = old_perc * leftover_perc;
                     }
                     TargetOverrideStrategy::Priority => {
@@ -559,9 +568,9 @@ pub fn verify_targets(
                 }
 
                 new_total_perc += t.target.percentage;
-                t
+                Ok(t)
             })
-            .collect();
+            .collect::<Result<Vec<_>, ContractError>>()?;
 
         // If the new percentage is smaller then 0.9999 or higher then 1, we have something wrong in calculation
         if new_total_perc > Decimal::one()
@@ -642,26 +651,26 @@ fn generate_trades_msgs(
             // check if the amount we intent to buy, is lower than min_amount of the sell token
             // if its not, it will be handled correctly by the main loop.
             // but if it is, it means we need to sell other token more then we intent to
-            if token_buy.value_to_trade < token_sell.auction_min_amount {
+            if token_buy.value_to_trade < token_sell.auction_min_send_value {
                 // If the amount we try to sell, is below the auction_min_amount, we need to set it to zero
                 // else we reduce the auction_min_amount value
-                if token_sell.value_to_trade < token_sell.auction_min_amount {
+                if token_sell.value_to_trade < token_sell.auction_min_send_value {
                     token_sell.value_to_trade = Decimal::zero();
                 } else {
-                    token_sell.value_to_trade -= token_sell.auction_min_amount;
+                    token_sell.value_to_trade -= token_sell.auction_min_send_value;
                 }
 
                 let pair = Pair::from((
                     token_sell.target.denom.clone(),
                     token_buy.target.denom.clone(),
                 ));
-                let amount = (token_sell.auction_min_amount * token_sell.price).to_uint_ceil();
+                let amount = (token_sell.auction_min_send_value * token_sell.price).to_uint_ceil();
                 let trade = RebalanceTrade::new(pair, amount);
 
                 token_buy.value_to_trade = Decimal::zero();
 
                 if let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) {
-                    max_sell -= token_sell.auction_min_amount;
+                    max_sell -= token_sell.auction_min_send_value;
                     msgs.push(msg);
                 };
             }
@@ -697,6 +706,10 @@ fn generate_trades_msgs(
                     // If our sell results in less then min_balance, we sell the difference to hit min_balance
                     let diff = token_sell.balance_amount - min_balance;
 
+                    if diff.is_zero() {
+                        return;
+                    }
+
                     // Unwrap should be safe here because diff should be a small number
                     // and directly related to users balance
                     token_sell.value_to_trade =
@@ -705,8 +718,13 @@ fn generate_trades_msgs(
             }
 
             // If we intent to sell less then our minimum, we set to_trade to be 0 and continue
-            if token_sell.value_to_trade < token_sell.auction_min_amount {
+            if token_sell.value_to_trade < token_sell.auction_min_send_value {
                 token_sell.value_to_trade = Decimal::zero();
+                return;
+            }
+
+            // If our buy value is lower then our sell min_send value, we do nothing and continue.
+            if token_buy.value_to_trade < token_sell.auction_min_send_value {
                 return;
             }
 
@@ -714,9 +732,6 @@ fn generate_trades_msgs(
             // otherwise, we keep track of how much we already sold
             if token_sell.value_to_trade > max_sell {
                 token_sell.value_to_trade = max_sell;
-                max_sell = Decimal::zero();
-            } else {
-                max_sell -= token_sell.value_to_trade;
             }
 
             let pair = Pair::from((
@@ -733,6 +748,7 @@ fn generate_trades_msgs(
                 token_buy.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
+                    max_sell -= token_buy.value_to_trade;
                     return;
                 };
 
@@ -747,6 +763,7 @@ fn generate_trades_msgs(
                 token_sell.value_to_trade = Decimal::zero();
 
                 let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) else {
+                    max_sell -= token_sell.value_to_trade;
                     return;
                 };
 

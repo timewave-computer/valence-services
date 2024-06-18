@@ -27,7 +27,7 @@ pub struct TargetHelper {
     /// can either be to sell or to buy, depends on the calculation
     pub value_to_trade: Decimal,
     /// The minimum value we can send to the auction
-    pub auction_min_amount: Decimal,
+    pub auction_min_send_value: Decimal,
 }
 
 #[cw_serde]

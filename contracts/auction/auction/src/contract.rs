@@ -239,7 +239,7 @@ mod admin {
 
         // Verify the amount of funds we have to auction, is more then the start auction min amount
         let manager_addr = ADMIN.load(deps.storage)?;
-        let min_start_acution = MIN_AUCTION_AMOUNT
+        let min_start_auction = MIN_AUCTION_AMOUNT
             .query(&deps.querier, manager_addr, config.pair.0.clone())?
             .unwrap_or_default()
             .start_auction;
@@ -251,12 +251,12 @@ mod admin {
         AUCTION_IDS.save(deps.storage, &auction_ids)?;
 
         // if its less, refund the funds to the users
-        if total_funds < min_start_acution {
+        if total_funds < min_start_auction {
             return do_refund(
                 deps,
                 auction_ids.curr,
                 config.pair.0.clone(),
-                min_start_acution,
+                min_start_auction,
                 total_funds,
             );
         }
