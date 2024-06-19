@@ -1,4 +1,7 @@
-use cosmwasm_std::{CheckedFromRatioError, DecimalRangeExceeded, OverflowError, StdError};
+use cosmwasm_std::{
+    CheckedFromRatioError, DecimalRangeExceeded, OverflowError, SignedDecimalRangeExceeded,
+    StdError,
+};
 use cw_utils::PaymentError;
 use thiserror::Error;
 use valence_package::error::ValenceError;
@@ -13,6 +16,9 @@ pub enum ContractError {
 
     #[error(transparent)]
     OverflowError(#[from] OverflowError),
+
+    #[error(transparent)]
+    SignedDecimalRangeExceeded(#[from] SignedDecimalRangeExceeded),
 
     #[error(transparent)]
     CheckedFromRatioError(#[from] CheckedFromRatioError),

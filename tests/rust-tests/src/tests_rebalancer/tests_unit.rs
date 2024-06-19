@@ -1,11 +1,8 @@
 use std::str::FromStr;
 
-use cosmwasm_std::{testing::mock_dependencies, Decimal, Uint128};
+use cosmwasm_std::{testing::mock_dependencies, Decimal, SignedDecimal, Uint128};
 use rebalancer::{helpers::TargetHelper, rebalance::verify_targets};
-use valence_package::{
-    services::rebalancer::{ParsedTarget, TargetOverrideStrategy},
-    signed_decimal::SignedDecimal,
-};
+use valence_package::services::rebalancer::{ParsedTarget, TargetOverrideStrategy};
 
 use crate::suite::{
     suite::{ATOM, NTRN, OSMO},

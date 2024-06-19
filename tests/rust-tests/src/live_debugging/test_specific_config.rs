@@ -29,8 +29,8 @@ use crate::{
 
 use super::types::Balances;
 
-const ACCOUNT_ADDR: &str = "neutron1yd27kgnsjkeddwtuy29q9yzrnd247v6hcml6swl54dfkcwuuytqs8ha94x";
-const HEIGHT: &str = "";
+const ACCOUNT_ADDR: &str = "neutron1wcv0c8ktmjgtj0a5dt6zdteer2nsyawqtnm5kxt7su5063dudz8qasjl97";
+const HEIGHT: &str = "11453713";
 
 #[ignore = "For debugging mainnet data"]
 #[test]
@@ -149,7 +149,11 @@ fn live_debugging() {
     // make sure the config is set in our mock rebalancer
     assert_eq!(account_config, config);
     // make sure prices in oracle are matching mainnet prices
-    assert_eq!(all_prices, prices);
+    for all_price in all_prices.iter() {
+        let p = prices.iter().find(|(pair,_)| *pair == all_price.0).unwrap();
+        assert_eq!(all_price.1.price, p.1.price);
+    }
+    // assert_eq!(all_prices, prices);
 
     // After we confirmed everything is in place, we can do rebalance, and read the response (events should tell us the info we need)
     let res = suite.rebalance(None).unwrap();
@@ -164,4 +168,10 @@ fn live_debugging() {
             );
         }
     });
+
+    let new_config = suite
+        .query_rebalancer_config(suite.account_addrs[0].clone())
+        .unwrap();
+    println!("old config: {:?}", account_config);
+    println!("New config: {:?}", new_config);
 }

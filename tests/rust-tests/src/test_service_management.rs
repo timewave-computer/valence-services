@@ -1,17 +1,14 @@
 use std::{collections::HashSet, str::FromStr};
 
-use cosmwasm_std::{Addr, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Decimal, SignedDecimal, Timestamp};
 use cw_multi_test::Executor;
 use cw_utils::Expiration;
-use valence_package::{
-    services::{
-        rebalancer::{
-            ParsedPID, ParsedTarget, RebalancerConfig, RebalancerUpdateData, Target,
-            TargetOverrideStrategy, PID,
-        },
-        ValenceServices,
+use valence_package::services::{
+    rebalancer::{
+        ParsedPID, ParsedTarget, RebalancerConfig, RebalancerUpdateData, Target,
+        TargetOverrideStrategy, PID,
     },
-    signed_decimal::SignedDecimal,
+    ValenceServices,
 };
 
 use crate::suite::{
@@ -116,9 +113,9 @@ fn test_register() {
                 },
             ],
             pid: ParsedPID {
-                p: Decimal::from_str(DEFAULT_P).unwrap(),
-                i: Decimal::from_str(DEFAULT_I).unwrap(),
-                d: Decimal::from_str(DEFAULT_D).unwrap(),
+                p: SignedDecimal::from_str(DEFAULT_P).unwrap(),
+                i: SignedDecimal::from_str(DEFAULT_I).unwrap(),
+                d: SignedDecimal::from_str(DEFAULT_D).unwrap(),
             },
             max_limit: Decimal::one(),
             last_rebalance: Timestamp::from_seconds(0),
@@ -162,9 +159,9 @@ fn test_register() {
                 },
             ],
             pid: ParsedPID {
-                p: Decimal::from_str(DEFAULT_P).unwrap(),
-                i: Decimal::from_str(DEFAULT_I).unwrap(),
-                d: Decimal::from_str(DEFAULT_D).unwrap(),
+                p: SignedDecimal::from_str(DEFAULT_P).unwrap(),
+                i: SignedDecimal::from_str(DEFAULT_I).unwrap(),
+                d: SignedDecimal::from_str(DEFAULT_D).unwrap(),
             },
             max_limit: Decimal::bps(1000),
             last_rebalance: Timestamp::from_seconds(0),
@@ -420,9 +417,9 @@ fn test_update() {
                 },
             ],
             pid: ParsedPID {
-                p: Decimal::bps(10000),
-                i: Decimal::bps(5000),
-                d: Decimal::bps(5000),
+                p: SignedDecimal::bps(10000),
+                i: SignedDecimal::bps(5000),
+                d: SignedDecimal::bps(5000),
             },
             max_limit: Decimal::bps(5000),
             last_rebalance: Timestamp::from_seconds(0),

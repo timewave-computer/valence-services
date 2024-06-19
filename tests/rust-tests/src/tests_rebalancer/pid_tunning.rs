@@ -7,13 +7,10 @@ use std::{
 
 use auction_package::Pair;
 use colored::Colorize;
-use cosmwasm_std::{coin, Coin, Decimal};
+use cosmwasm_std::{coin, Coin, Decimal, SignedDecimal};
 use rgb::RGB;
 use textplots::{Chart, ColorPlot};
-use valence_package::{
-    services::rebalancer::{RebalancerData, PID},
-    signed_decimal::SignedDecimal,
-};
+use valence_package::services::rebalancer::{RebalancerData, PID};
 
 use crate::suite::{
     suite::{Suite, ATOM, NTRN},
@@ -202,25 +199,13 @@ fn terminal_play() {
 
         // Do price changes every X days
         if x % 100 == 0 && x % 200 != 0 {
-            suite.change_price_perc(
-                pair.clone(),
-                SignedDecimal::new(Decimal::from_str("0.05").unwrap(), true),
-            );
+            suite.change_price_perc(pair.clone(), SignedDecimal::from_str("0.05").unwrap());
         } else if x % 20 == 0 {
-            suite.change_price_perc(
-                pair.clone(),
-                SignedDecimal::new(Decimal::from_str("0.10").unwrap(), false),
-            );
+            suite.change_price_perc(pair.clone(), SignedDecimal::from_str("-0.10").unwrap());
         } else if x % 5 == 0 {
-            suite.change_price_perc(
-                pair.clone(),
-                SignedDecimal::new(Decimal::from_str("0.02").unwrap(), false),
-            );
+            suite.change_price_perc(pair.clone(), SignedDecimal::from_str("-0.02").unwrap());
         } else {
-            suite.change_price_perc(
-                pair.clone(),
-                SignedDecimal::new(Decimal::from_str("0.01").unwrap(), true),
-            );
+            suite.change_price_perc(pair.clone(), SignedDecimal::from_str("0.01").unwrap());
         }
 
         // Get values before rebalance
