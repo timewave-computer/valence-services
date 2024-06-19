@@ -150,7 +150,10 @@ fn live_debugging() {
     assert_eq!(account_config, config);
     // make sure prices in oracle are matching mainnet prices
     for all_price in all_prices.iter() {
-        let p = prices.iter().find(|(pair,_)| *pair == all_price.0).unwrap();
+        let p = prices
+            .iter()
+            .find(|(pair, _)| *pair == all_price.0)
+            .unwrap();
         assert_eq!(all_price.1.price, p.1.price);
     }
     // assert_eq!(all_prices, prices);

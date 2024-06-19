@@ -260,8 +260,13 @@ pub fn do_rebalance(
         (diff.checked_div(Decimal::from_atomics(cycle_period, 0)?))?
             .min(Decimal::from_atomics(MAX_PID_DT_VALUE, 0)?)
     };
-println!("dt: {:?}", dt);
-    let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt.try_into()?)?;
+    println!("dt: {:?}", dt);
+    let (mut to_sell, to_buy) = do_pid(
+        total_value,
+        &mut target_helpers,
+        config.pid.clone(),
+        dt.try_into()?,
+    )?;
 
     // Update targets in config only the last data we need for the next rebalance calculation
     for target in config.targets.iter_mut() {
