@@ -29,8 +29,8 @@ use crate::{
 
 use super::types::Balances;
 
-const ACCOUNT_ADDR: &str = "neutron1wcv0c8ktmjgtj0a5dt6zdteer2nsyawqtnm5kxt7su5063dudz8qasjl97";
-const HEIGHT: &str = "11453713";
+const ACCOUNT_ADDR: &str = "neutron1yd27kgnsjkeddwtuy29q9yzrnd247v6hcml6swl54dfkcwuuytqs8ha94x";
+const HEIGHT: &str = "";
 
 #[ignore = "For debugging mainnet data"]
 #[test]
