@@ -244,6 +244,14 @@ pub struct ParsedTarget {
     pub last_i: SignedDecimal,
 }
 
+impl ParsedTarget {
+    /// Update current target from helper,
+    pub fn update_last(&mut self, other: &ParsedTarget) {
+        self.last_input = other.last_input;
+        self.last_i = other.last_i;
+    }
+}
+
 impl From<Target> for ParsedTarget {
     fn from(value: Target) -> Self {
         ParsedTarget {
