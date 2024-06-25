@@ -289,6 +289,10 @@ impl ParsedPID {
             return Err(ValenceError::PIDErrorOver);
         }
 
+        if self.p.is_negative() || self.i.is_negative() || self.d.is_negative() {
+            return Err(ValenceError::PIDErrorNegetive);
+        }
+
         Ok(self)
     }
 }
