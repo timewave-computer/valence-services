@@ -270,8 +270,7 @@ pub fn do_rebalance(
             .iter()
             .find(|th| th.target.denom == target.denom)
         {
-            target.last_i = target_helper.target.last_i;
-            target.last_input = target_helper.target.last_input;
+            target.update_last(&target_helper.target);
         }
     }
 
