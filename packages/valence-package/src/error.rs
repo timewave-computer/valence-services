@@ -35,7 +35,7 @@ pub enum ValenceError {
     PIDErrorOver,
 
     #[error("PID values cannot be negetive")]
-    PIDErrorNegetive,
+    PIDErrorNegative,
 
     #[error("max_limit_bps must be between 1-10000")]
     InvalidMaxLimitRange,
