@@ -342,7 +342,8 @@ fn test_rebalancer_cycle_next_day_while_processing() {
     assert!(config.last_rebalance.seconds() == 0);
 
     // Do another rebalance for both accounts now.
-    suite.rebalance_with_update_block(None).unwrap();
+    let res = suite.rebalance_with_update_block(None).unwrap();
+    println!("{:?}", res);
 
     let config1 = suite
         .query_rebalancer_config(suite.get_account_addr(1))

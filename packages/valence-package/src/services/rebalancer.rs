@@ -1,7 +1,8 @@
 use auction_package::Pair;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, Addr, Api, BankMsg, CosmosMsg, Decimal, Env, MessageInfo, Timestamp, Uint128,
+    coins, Addr, Api, BankMsg, CosmosMsg, Decimal, Env, MessageInfo, SignedDecimal, Timestamp,
+    Uint128,
 };
 use cw_utils::{must_pay, Expiration};
 use std::borrow::Borrow;
@@ -9,7 +10,7 @@ use std::hash::Hash;
 use std::{collections::HashSet, hash::Hasher, str::FromStr};
 use valence_macros::valence_service_execute_msgs;
 
-use crate::{error::ValenceError, helpers::OptionalField, signed_decimal::SignedDecimal};
+use crate::{error::ValenceError, helpers::OptionalField};
 
 /// Rebalancer execute msgs.
 #[valence_service_execute_msgs]
@@ -239,7 +240,7 @@ pub struct ParsedTarget {
     /// Can only be a single one for an account
     pub min_balance: Option<Uint128>,
     /// The input we got from the last rebalance.
-    pub last_input: Option<Decimal>,
+    pub last_input: Option<SignedDecimal>,
     /// The last I value we got from the last rebalance PID calculation.
     pub last_i: SignedDecimal,
 }
@@ -275,9 +276,9 @@ pub struct PID {
 impl PID {
     pub fn into_parsed(self) -> Result<ParsedPID, ValenceError> {
         ParsedPID {
-            p: Decimal::from_str(&self.p)?,
-            i: Decimal::from_str(&self.i)?,
-            d: Decimal::from_str(&self.d)?,
+            p: SignedDecimal::from_str(&self.p)?,
+            i: SignedDecimal::from_str(&self.i)?,
+            d: SignedDecimal::from_str(&self.d)?,
         }
         .verify()
     }
@@ -285,15 +286,19 @@ impl PID {
 
 #[cw_serde]
 pub struct ParsedPID {
-    pub p: Decimal,
-    pub i: Decimal,
-    pub d: Decimal,
+    pub p: SignedDecimal,
+    pub i: SignedDecimal,
+    pub d: SignedDecimal,
 }
 
 impl ParsedPID {
     pub fn verify(self) -> Result<Self, ValenceError> {
-        if self.p > Decimal::one() || self.i > Decimal::one() {
+        if self.p > SignedDecimal::one() || self.i > SignedDecimal::one() {
             return Err(ValenceError::PIDErrorOver);
+        }
+
+        if self.p.is_negative() || self.i.is_negative() || self.d.is_negative() {
+            return Err(ValenceError::PIDErrorNegative);
         }
 
         Ok(self)

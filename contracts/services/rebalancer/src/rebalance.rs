@@ -7,7 +7,7 @@ use auction_package::{
 };
 use cosmwasm_std::{
     coins, to_json_binary, Addr, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env, Event, Order,
-    Response, StdError, SubMsg, Uint128, WasmMsg,
+    Response, SignedDecimal, StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw_storage_plus::Bound;
 use valence_package::{
@@ -17,7 +17,6 @@ use valence_package::{
         ParsedPID, PauseData, RebalanceTrade, RebalancerConfig, SystemRebalanceStatus,
         TargetOverrideStrategy,
     },
-    signed_decimal::SignedDecimal,
     CLOSEST_TO_ONE_POSSIBLE,
 };
 
@@ -262,7 +261,12 @@ pub fn do_rebalance(
             .min(Decimal::from_atomics(MAX_PID_DT_VALUE, 0)?)
     };
 
-    let (mut to_sell, to_buy) = do_pid(total_value, &mut target_helpers, config.pid.clone(), dt)?;
+    let (mut to_sell, to_buy) = do_pid(
+        total_value,
+        &mut target_helpers,
+        config.pid.clone(),
+        dt.try_into()?,
+    )?;
 
     // Update targets in config only the last data we need for the next rebalance calculation
     for target in config.targets.iter_mut() {
@@ -449,55 +453,48 @@ fn do_pid(
     total_value: Decimal,
     targets: &mut [TargetHelper],
     pid: ParsedPID,
-    dt: Decimal,
+    dt: SignedDecimal,
 ) -> Result<TradesTuple, ContractError> {
     let mut to_sell: Vec<TargetHelper> = vec![];
     let mut to_buy: Vec<TargetHelper> = vec![];
 
-    // turn values into signed decimals
-    let signed_p: SignedDecimal = pid.p.into();
-    let signed_i: SignedDecimal = pid.i.into();
-    let signed_d: SignedDecimal = pid.d.into();
-
-    let signed_dt: SignedDecimal = dt.into();
-
-    targets.iter_mut().for_each(|target| {
-        let signed_input: SignedDecimal = target.balance_value.into();
+    for target in targets.iter_mut() {
+        let signed_input: SignedDecimal = target.balance_value.try_into()?;
 
         // Reset to trade value
         target.value_to_trade = Decimal::zero();
 
-        let target_value = SignedDecimal::from(total_value * target.target.percentage);
+        let target_value: SignedDecimal = (total_value * target.target.percentage).try_into()?;
 
         let error = target_value - signed_input;
 
-        let p = error * signed_p;
-        let i = target.target.last_i + (error * signed_i * signed_dt);
+        let p = error * pid.p;
+        let i = target.target.last_i + (error * pid.i * dt);
         let mut d = match target.target.last_input {
-            Some(last_input) => signed_input - last_input.into(),
+            Some(last_input) => signed_input - last_input,
             None => SignedDecimal::zero(),
         };
 
-        d = d * signed_d / signed_dt;
+        d = d * pid.d / dt;
 
         let output = p + i - d;
 
-        target.value_to_trade = output.value();
+        target.value_to_trade = output.abs_diff(SignedDecimal::zero());
 
-        target.target.last_input = Some(target.balance_value);
+        target.target.last_input = Some(target.balance_value.try_into()?);
         target.target.last_i = i;
 
         if output.is_zero() {
-            return;
+            continue;
         }
 
-        match output.sign() {
+        match !output.is_negative() {
             // output is negative, we need to sell
             false => to_sell.push(target.clone()),
             // output is positive, we need to buy
             true => to_buy.push(target.clone()),
         }
-    });
+    }
 
     Ok((to_sell, to_buy))
 }

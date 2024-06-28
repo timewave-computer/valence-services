@@ -8,11 +8,10 @@ use auction_package::{
     states::MinAmount,
     AuctionStrategy, Pair, Price, PriceFreshnessStrategy,
 };
-use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Coin, Decimal, SignedDecimal, Uint128};
 use cw_multi_test::{AppResponse, Executor};
 use price_oracle::state::PriceStep;
 use rand::{rngs::ThreadRng, Rng};
-use valence_package::signed_decimal::SignedDecimal;
 
 use super::suite::{Suite, ATOM, DAY, DEFAULT_BLOCK_TIME, HALF_DAY, NTRN};
 
@@ -316,12 +315,8 @@ impl Suite {
 
     // price_change in percentage
     pub fn change_price_perc(&mut self, pair: Pair, price_change: SignedDecimal) {
-        let price = self.get_price(pair.clone());
-        let new_price = if price_change.is_pos() {
-            price + price * price_change.value()
-        } else {
-            price - price * price_change.value()
-        };
+        let price: SignedDecimal = self.get_price(pair.clone()).try_into().unwrap();
+        let new_price: Decimal = (price + (price * price_change)).try_into().unwrap();
 
         self.manual_update_price(pair, new_price).unwrap();
     }
