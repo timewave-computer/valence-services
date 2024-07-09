@@ -1,8 +1,22 @@
-# Neutron MAINNET Contracts
+# Valence Services
+
+This repository contains the smart contracts for the Valence Services, it includes the following contracts:
+- Auctions Manager
+- Auction
+- Oracle
+- Services Manager
+- Rebalancer
+- Account
+
+For the architecture of the Valence Services, please refer to the [Valence Services Architecture](./architecture.md)
+
+For a specific contract documentation, please refer to the README.md file of each contract.
+
+## Neutron MAINNET Contracts
 
 [![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
 
-## Code ids
+### Code ids
 
 - auctions manager = `1502`
 - auction = `1504`
@@ -11,19 +25,14 @@
 - services manager = `1503`
 - account = `1506`
 
-## Owner / Admin
-
-`neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68`
-
-## Addresses
+### Addresses
 
 - Services manager - `neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa`
 - Auctions manager - `neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz`
 - Rebalancer - `neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2`
-- Account - `neutron1pkk88zqjd478x3maws3mv7qugylhsu0sjkejj3k2w02wwhp6fqgsl7m0js`
 - Oracle - `neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf`
 
-### Auctions
+### Auctions addresses
 
 - [uatom, untrn] - `neutron1l9zmckc8j7zhutx088g6ppd9dfs45jet6dyq3pypc0gt5h9ncsvs5m4tsz`
 - [untrn, uatom] - `neutron13jppm4n77u8ud5wma9xe0dqnaz85ne9jem3r0scc009uemvh49qqxuuggf`
@@ -39,3 +48,7 @@
 - [uatom, newt] - `neutron1fyk77ttx2j3wxjj26g3d8csjzp005cxdacstfxcrdexpn8nsz79qhjhpsd`
 - [untrn, newt] - `neutron1zvw9l8c82hnvwsntpuy89p86ztfmmudd9usfmnpa2tnqws74zsxq56sczm`
 - [uusdc, newt] - `neutron1vu04szc78ae0nplwpuxjr6j592hn2d60zqtuts7w3ah6kajtxd2q2vfv59`
+
+## Security
+
+If you believe you've found a security-related issue with Covenants, please disclose responsibly by contacting the Timewave team at [security@timewave.computer](mailto:security@timewave.computer).
