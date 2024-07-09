@@ -9,6 +9,14 @@ The services manager maintains a registry of services. It allows services users 
 2. You instantiate a service
 3. You add the service to the services manager.
 
+## Service fee
+
+A service might charge fees on register and resume operations, the fee is taken directly from the account balance and sent with the register message from the account to the services manager.
+
+Currently the rebalancer is taken 1 NTRN fee on register, and resume (only if paused by the system because of low balance).
+
+The fees are sent to the rebalancer contract for verification, once the regtister meesage was verified the fees are sent back to the services manager contract.
+
 ## Talk to a service
 
 You can now talk to any service that exists on the services manager, using its name instead of its address.
