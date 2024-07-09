@@ -23,7 +23,7 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Addresses*
+**Addresses**
 If there was a particular account that experienced the error, please share the account address.
 
 **Entry point**
