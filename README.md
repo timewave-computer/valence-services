@@ -1,5 +1,5 @@
 # Valence Services
-
+![Rebalancer](https://www.valence.zone/img/rebalancer.svg)
 This repository contains the smart contracts for the Valence Services, it includes the following contracts:
 - Auctions Manager
 - Auction
