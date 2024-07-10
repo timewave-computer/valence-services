@@ -11,11 +11,18 @@ The services manager maintains a registry of services. It allows services users 
 
 ## Service fee
 
-A service might charge fees on register and resume operations, the fee is taken directly from the account balance and sent with the register message from the account to the services manager.
+Currently the rebalancer charges service fees when either of two actions are performed:
+1. Register: A fee is taken when an account registers to a service for the first time.
+2. Resume: A fee is taken when an account resumes the rebalancer service after it has been automatically paused by the system due to low balance. Note that accounts do not have to pay fees to resume the service if the account itself has paused the service.
 
-Currently the rebalancer is taken 1 NTRN fee on register, and resume (only if paused by the system because of low balance).
-
-The fees are sent to the rebalancer contract for verification, once the regtister meesage was verified the fees are sent back to the services manager contract.
+The rebalancer service fee can be queried the rebalancer service with the following message:
+```json
+ {
+  "get_service_fee": {
+    "account": "<account address>",
+    "action": "<register | resume>"
+ }
+  ```
 
 ## Talk to a service
 

@@ -1,6 +1,9 @@
 # Valence Services
 ![Rebalancer](https://www.valence.zone/img/rebalancer.svg)
 
+Valence Services houses the code for the [Valence Rebalancer](https://www.valence.zone/rebalancer). The Rebalancer enables automated balance sheet and treasury management. Use the Rebalancer to efficiently convert tokens for scheduled payments or manage your digital organization’s asset portfolio. The Rebalancer is custom-built to address the needs of blockchains, protocols, and decentralized autonomous organizations. 
+
+Learn more about the Rebalancer [here](https://www.valence.zone/blog/Rebalancer-Protocol-Asset-Management).
 
 This repository contains the smart contracts for the Valence Services. It includes the following contracts:
 - Auctions Manager
@@ -10,7 +13,9 @@ This repository contains the smart contracts for the Valence Services. It includ
 - Rebalancer
 - Account
 
-For the architecture of the Valence Services, please refer to the [Valence Services Architecture](./architecture.md)
+Here is a high level of the system for more details please refer to the [Valence Services Architecture](./architecture.md)
+
+![Top Level](./images/high-level.png)
 
 For a specific contract documentation, please refer to the README.md file of each contract.
 
