@@ -13,7 +13,7 @@ This repository contains the following contracts:
 - Rebalancer
 - Account
 
-The following is a simplified high level of the system. Detailed system diagrams and flows are presented in [Valence Services Architecture](./architecture.md)
+The following is a simplified diagram of the Valence Services system. Detailed system diagrams are presented in [Valence Services Architecture](./architecture.md)
 
 ![Top Level](./images/high-level.png)
 
