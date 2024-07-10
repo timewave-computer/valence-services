@@ -2,7 +2,7 @@
 ![Rebalancer](https://www.valence.zone/img/rebalancer.svg)
 
 
-This repository contains the smart contracts for the Valence Services, it includes the following contracts:
+This repository contains the smart contracts for the Valence Services. It includes the following contracts:
 - Auctions Manager
 - Auction
 - Oracle
