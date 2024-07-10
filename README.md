@@ -19,7 +19,13 @@ The following is a simplified diagram of the Valence Services system. Detailed s
 
 For documentation on specific contracts, please refer to the README.md file in each contract's directory.
 
-Parties (e.g. market makers) interested to participate in the Rebalancer Auctions should read the [Auctions contract documentation](./contracts//auction/auction/README.md).
+### ⚖️ DAO Treasuries
+The Rebalancer is purpose built for treasury managment. If you are a member of DAO that is interested in using the Rebalancer, please send us a [direct message on X](https://x.com/TimewaveLabs).
+
+### 💸 Market Makers
+The Rebalancer sends funds to be auctioned daily. If you are a market maker interested in bidding in these auctions and would like support, please send us a [direct message on X](https://x.com/TimewaveLabs). For more information on auctions:
+- Read the [Auctions contract documentation](./contracts//auction/auction/README.md)
+- Check out Timewave's [Auction Arbitrage Bot](https://github.com/timewave-computer/auction-arbitrage-bot) that can be used to arbitrage auctions and various DEXs
 
 ## Neutron Mainnet Contracts
 
