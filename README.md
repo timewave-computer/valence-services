@@ -14,7 +14,7 @@ For the architecture of the Valence Services, please refer to the [Valence Servi
 
 For a specific contract documentation, please refer to the README.md file of each contract.
 
-## Neutron MAINNET Contracts
+## Neutron Mainnet Contracts
 
 [![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
 
