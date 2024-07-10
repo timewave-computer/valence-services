@@ -19,6 +19,8 @@ Here is a high level of the system for more details please refer to the [Valence
 
 For a specific contract documentation, please refer to the README.md file of each contract.
 
+Parties (e.g. market makers) interested to participate in the Rebalancer Auctions should read the [Auctions contract documentation](./contracts//auction/auction/README.md).
+
 ## Neutron Mainnet Contracts
 
 [![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
