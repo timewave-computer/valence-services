@@ -5,7 +5,7 @@ Valence Services houses the code for the [Valence Rebalancer](https://www.valenc
 
 Learn more about the Rebalancer [here](https://www.valence.zone/blog/Rebalancer-Protocol-Asset-Management).
 
-This repository contains the smart contracts for the Valence Services. It includes the following contracts:
+This repository contains the following contracts:
 - Auctions Manager
 - Auction
 - Oracle
@@ -13,11 +13,11 @@ This repository contains the smart contracts for the Valence Services. It includ
 - Rebalancer
 - Account
 
-Here is a high level of the system for more details please refer to the [Valence Services Architecture](./architecture.md)
+The following is a simplified high level of the system. Detailed system diagrams and flows are presented in [Valence Services Architecture](./architecture.md)
 
 ![Top Level](./images/high-level.png)
 
-For a specific contract documentation, please refer to the README.md file of each contract.
+For documentation on specific contracts, please refer to the README.md file in each contract's directory.
 
 Parties (e.g. market makers) interested to participate in the Rebalancer Auctions should read the [Auctions contract documentation](./contracts//auction/auction/README.md).
 
