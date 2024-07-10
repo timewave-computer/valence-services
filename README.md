@@ -23,15 +23,6 @@ For a specific contract documentation, please refer to the README.md file of eac
 
 [![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
 
-### Code ids
-
-- auctions manager = `1502`
-- auction = `1504`
-- oracle = `1505`
-- rebalancer = `1501`
-- services manager = `1503`
-- account = `1506`
-
 ### Addresses
 
 - Services manager - `neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa`
