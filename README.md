@@ -53,7 +53,7 @@ For a specific contract documentation, please refer to the README.md file of eac
 
 ## Security
 
-If you believe you've found a security-related issue with Covenants, please disclose responsibly by contacting the Timewave team at [security@timewave.computer](mailto:security@timewave.computer).
+If you believe you've found a security-related issue with the contracts associated with this repository, please disclose responsibly by contacting the Timewave team at [security@timewave.computer](mailto:security@timewave.computer).
 
 ## License
 
