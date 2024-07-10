@@ -41,11 +41,20 @@ The starting price will be `2 + (2 * 20%) = 2.4` and the end price will be `2 - 
 
 ## Executables
 
-`AuctionFunds` - Send funds to be auctioned during the next auction.
+`AuctionFunds {}` - Send funds to be auctioned during the next auction.
 
-`WithdrawFunds` - Withdraw funds sent to the auction. Only funds from pending auctions can be withdrawn.
+`WithdrawFunds {}` - Withdraw funds sent to the auction. Only funds from pending auctions can be withdrawn.
 
-`Bid` - Bid in the active auction. The bid is resolved immediately.
+`Bid {}` - Bid in the active auction. The bid is resolved immediately.
+
+### Doing a bid
+
+First we need to know what the price of the auction before bidding, 2 queries are available:
+
+1. `GetPrice` - This gives us the current price of the auction.
+2. `GetAuction` - This gives us the auction `start_price`, `end_price`, `start_block`, `end_block`, which allows us to calculate the price decrease per block, and get the price in any future block. 
+
+Once we know the price and want to bid on that price, we execute `bid {}` message on the auction contract, and provide the amount of `TOKEN_2` we want to buy with, any leftovers will be returned to the bidder.
 
 ### Auction management
 
@@ -55,15 +64,15 @@ Based on the weight each seller had in the auction, we send the amount of `TOKEN
 There will be cases where we have leftover results from rounding, the leftover tokens will be added to the next auction, to mitigate the leftovers of the next auction.
 The impact of the leftover tokens is minimal per seller, the loss is less than 1 udenom (1 millionth of 1 token) per auction.
 
-`CleanAfterAuction` - Clean up storage from the closed auction that is not needed anymore.
+`CleanAfterAuction {}` - Clean up storage from the closed auction that is not needed anymore.
 
 ### Admin
 
 The admin of each auction is the Auctions Manager contract, which makes it easier for us to manage multiple auctions.
 
-`PauseAuction` - Allows us to pause the auction in case of an emergency.
+`PauseAuction {}` - Allows us to pause the auction in case of an emergency.
 
-`ResumeAuction` - Resume the auction after it was paused.
+`ResumeAuction {}` - Resume the auction after it was paused.
 
 `UpdateStrategy { strategy: AuctionStrategy }` - update the strategy of the auction, see more in the [Auction strategy](#auction-strategy) section.
 
