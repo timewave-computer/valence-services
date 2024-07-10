@@ -57,4 +57,4 @@ If you believe you've found a security-related issue with the contracts associat
 
 ## License
 
-The Covenants system is licensed under [BSL](./LICENSE).
+All materials in this repository are licensed under [BSL](./LICENSE).
