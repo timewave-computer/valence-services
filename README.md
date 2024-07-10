@@ -1,29 +1,38 @@
-# Neutron MAINNET Contracts
+# Valence Services
+![Rebalancer](https://www.valence.zone/img/rebalancer.svg)
+
+Valence Services houses the code for the [Valence Rebalancer](https://www.valence.zone/rebalancer). The Rebalancer enables automated balance sheet and treasury management. Use the Rebalancer to efficiently convert tokens for scheduled payments or manage your digital organization’s asset portfolio. The Rebalancer is custom-built to address the needs of blockchains, protocols, and decentralized autonomous organizations. 
+
+Learn more about the Rebalancer [here](https://www.valence.zone/blog/Rebalancer-Protocol-Asset-Management).
+
+This repository contains the smart contracts for the Valence Services. It includes the following contracts:
+- Auctions Manager
+- Auction
+- Oracle
+- Services Manager
+- Rebalancer
+- Account
+
+Here is a high level of the system for more details please refer to the [Valence Services Architecture](./architecture.md)
+
+![Top Level](./images/high-level.png)
+
+For a specific contract documentation, please refer to the README.md file of each contract.
+
+Parties (e.g. market makers) interested to participate in the Rebalancer Auctions should read the [Auctions contract documentation](./contracts//auction/auction/README.md).
+
+## Neutron Mainnet Contracts
 
 [![Check Set-Up & Build](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml/badge.svg)](https://github.com/timewave-computer/valence-services/actions/workflows/check.yml)
 
-## Code ids
-
-- auctions manager = `1502`
-- auction = `1504`
-- oracle = `1505`
-- rebalancer = `1501`
-- services manager = `1503`
-- account = `1506`
-
-## Owner / Admin
-
-`neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68`
-
-## Addresses
+### Addresses
 
 - Services manager - `neutron1gantvpnat0la8kkkzrnj48d5d8wxdjllh5r2w4r2hcrpwy00s69quypupa`
 - Auctions manager - `neutron13exc5wdc7y5qpqazc34djnu934lqvfw2dru30j52ahhjep6jzx8ssjxcyz`
 - Rebalancer - `neutron1qs6mzpmcw3dvg5l8nyywetcj326scszdj7v4pfk55xwshd4prqnqfwc0z2`
-- Account - `neutron1pkk88zqjd478x3maws3mv7qugylhsu0sjkejj3k2w02wwhp6fqgsl7m0js`
 - Oracle - `neutron1s8uqyh0mmh8g66s2dectf56c08y6fvusp39undp8kf4v678ededsy6tstf`
 
-### Auctions
+### Auctions addresses
 
 - [uatom, untrn] - `neutron1l9zmckc8j7zhutx088g6ppd9dfs45jet6dyq3pypc0gt5h9ncsvs5m4tsz`
 - [untrn, uatom] - `neutron13jppm4n77u8ud5wma9xe0dqnaz85ne9jem3r0scc009uemvh49qqxuuggf`
@@ -40,49 +49,10 @@
 - [untrn, newt] - `neutron1zvw9l8c82hnvwsntpuy89p86ztfmmudd9usfmnpa2tnqws74zsxq56sczm`
 - [uusdc, newt] - `neutron1vu04szc78ae0nplwpuxjr6j592hn2d60zqtuts7w3ah6kajtxd2q2vfv59`
 
-# Juno Contracts
+## Security
 
-## Code ids
+If you believe you've found a security-related issue with the contracts associated with this repository, please disclose responsibly by contacting the Timewave team at [security@timewave.computer](mailto:security@timewave.computer).
 
-- auctions manager = `3812`
-- auction = `3810`
-- price oracle = `3813`
-- rebalancer = `3814`
-- services manager = `3815`
-- account = `3811`
+## License
 
-## Token factory
-
-Token that is created by the token factory is the one that is used in our tests on juno
-
-vuusdcx - `factory/juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn/vuusdcx`
-
-## Owner
-
-The Owner address is the admin of the contracts as well as the account owner.
-
-To add the owner to the keys (in order to use scripts on testnet):
-
-```
-junod keys add valence-owner --recover
-// Enter mnemonic from below
-```
-
-- Owner Juno - `juno17s47ltx2hth9w5hntncv70kvyygvg0qr83zghn`
-- Owner Neutron - `neutron17s47ltx2hth9w5hntncv70kvyygvg0qr4ug32g`
-- Owner mnemonic - `comfort decrease casual olive mountain joke timber concert leg salt stereo ticket trim plunge matter steak glory above neither hospital agent spoil kick split`
-
-## Addresses
-
-### Juno Contracts
-
-- Services manager - `juno1h2md5367062ypuv93kpwyu84eaq04xx4lfmqwqp5fkqrwa66pynsk6qmk5`
-- Auctions manager - `juno1tp2n8fa9848355hfd98lufhm84sudlvnzwvsdsqtlahtsrdtl6astvrz9j`
-- Rebalancer - `juno18rpfddza4g3h5a05fzwq6xwepzh2t0twhetly4y5aqjyeh8cjflspa8fqr`
-- Account - `juno1rs76w568qe8z4vn9sxch7da84uauul5aek05n29tldmdra3dfk9qrar5ze`
-- Oracle - `juno14vgs85az6xlfzkczzq06agk2tv8zkdxqdue4gs08h0f60smu3jjqfryaj2`
-
-#### Auctions
-
-- (ujunox, vuusdcx) - ``
-- (vuusdcx, ujunox) - ``
+All materials in this repository are licensed under [BSL](./LICENSE).

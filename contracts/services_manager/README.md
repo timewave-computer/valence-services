@@ -9,6 +9,21 @@ The services manager maintains a registry of services. It allows services users 
 2. You instantiate a service
 3. You add the service to the services manager.
 
+## Service fee
+
+Currently the rebalancer charges service fees when either of two actions are performed:
+1. Register: A fee is taken when an account registers to a service for the first time.
+2. Resume: A fee is taken when an account resumes the rebalancer service after it has been automatically paused by the system due to low balance. Note that accounts do not have to pay fees to resume the service if the account itself has paused the service.
+
+The rebalancer service fee can be queried the rebalancer service with the following message:
+```json
+ {
+  "get_service_fee": {
+    "account": "<account address>",
+    "action": "<register | resume>"
+ }
+  ```
+
 ## Talk to a service
 
 You can now talk to any service that exists on the services manager, using its name instead of its address.
