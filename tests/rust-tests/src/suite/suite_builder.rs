@@ -562,6 +562,7 @@ impl SuiteBuilder {
             account_addrs,
             auction_addrs,
             account_code_id: self.account_code_id,
+            rebalancer_code_id: self.rebalancer_code_id,
             pair: Pair::from((ATOM.to_string(), NTRN.to_string())),
             astro_pools: pools,
         }

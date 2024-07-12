@@ -56,6 +56,7 @@ pub(crate) struct Suite {
 
     // code ids for future use
     pub account_code_id: u64,
+    pub rebalancer_code_id: u64,
 
     // astro
     pub astro_pools: HashMap<(String, String), Addr>,

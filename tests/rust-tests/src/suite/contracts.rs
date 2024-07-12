@@ -26,7 +26,8 @@ pub fn rebalancer_contract() -> Box<dyn Contract<Empty>> {
         rebalancer::contract::instantiate,
         rebalancer::contract::query,
     )
-    .with_reply(rebalancer::contract::reply);
+    .with_reply(rebalancer::contract::reply)
+    .with_migrate(rebalancer::contract::migrate);
     Box::new(contract)
 }
 

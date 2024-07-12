@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 use cw_storage_plus::Item;
@@ -13,6 +15,9 @@ pub const ADMIN: Item<Addr> = Item::new("admin");
 
 /// State for when an admin want to set someone else as admin.
 pub const ADMIN_CHANGE: Item<AdminChange> = Item::new("admin_change");
+
+/// Whitelisted account code ids that is stored on the services manager
+pub const ACCOUNT_WHITELISTED_CODE_IDS: Item<HashSet<u64>> = Item::new("wl_code_ids");
 
 #[cw_serde]
 pub struct AdminChange {

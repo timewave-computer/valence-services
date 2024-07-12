@@ -17,6 +17,7 @@ use valence_package::{
         ParsedPID, PauseData, RebalanceTrade, RebalancerConfig, SystemRebalanceStatus,
         TargetOverrideStrategy,
     },
+    states::{ACCOUNT_WHITELISTED_CODE_IDS, SERVICES_MANAGER},
     CLOSEST_TO_ONE_POSSIBLE,
 };
 
@@ -111,6 +112,8 @@ pub fn execute_system_rebalance(
     let mut min_amount_limits: Vec<(String, Uint128)> = vec![];
     let mut msgs: Vec<SubMsg> = vec![];
     let mut account_events: Vec<Event> = vec![];
+    let services_manager_addr = SERVICES_MANAGER.load(deps.storage)?;
+    let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.query(&deps.querier, services_manager_addr)?;
 
     for res in configs {
         let Ok((account, config)) = res else {
@@ -118,6 +121,23 @@ pub fn execute_system_rebalance(
         };
 
         last_addr = Some(account.clone());
+
+        // Before rebalancing, verify the account is using a whitelisted code id
+        let account_code_id = deps
+            .querier
+            .query_wasm_contract_info(account.clone())?
+            .code_id;
+
+        if !whitelist.contains(&account_code_id) {
+            // Save to the paused config
+            PAUSED_CONFIGS.save(
+                deps.storage,
+                account.clone(),
+                &PauseData::new_not_whitelisted_account_code_id(env, account_code_id, &config),
+            )?;
+            // remove from active configs
+            CONFIGS.remove(deps.storage, account.clone());
+        }
 
         // Do rebalance for the account, and construct the msg
         let rebalance_res = do_rebalance(

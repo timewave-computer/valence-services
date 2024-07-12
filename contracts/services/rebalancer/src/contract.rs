@@ -683,6 +683,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                         valence_package::services::rebalancer::PauseReason::EmptyBalance => {
                             fees.resume_fee
                         }
+                        valence_package::services::rebalancer::PauseReason::NotWhitelistedAccountCodeId(_) => {
+                            fees.resume_fee
+                        }
                         valence_package::services::rebalancer::PauseReason::AccountReason(_) => {
                             Uint128::zero()
                         }

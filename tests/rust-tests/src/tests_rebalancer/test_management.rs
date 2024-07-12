@@ -755,3 +755,29 @@ fn test_fee_withdraw() {
         admin_initial_balance.amount + Uint128::new(100_u128)
     );
 }
+
+#[test]
+fn test_not_whitelisted_account_after_register() {
+    let mut suite = Suite::default();
+
+    let account_addr = suite.account_addrs[0].clone();
+
+    // migrate the account to rebalancer code id (not a whitelisted account code id)
+    suite
+        .app
+        .migrate_contract(
+            suite.owner.clone(),
+            account_addr.clone(),
+            &valence_account::msg::MigrateMsg::NoStateChange {},
+            suite.rebalancer_code_id,
+        )
+        .unwrap();
+
+    suite.rebalance(None).unwrap();
+
+    let paused_config = suite.query_rebalancer_paused_config(account_addr).unwrap();
+    assert_eq!(
+        paused_config.reason,
+        PauseReason::NotWhitelistedAccountCodeId(suite.rebalancer_code_id)
+    );
+}

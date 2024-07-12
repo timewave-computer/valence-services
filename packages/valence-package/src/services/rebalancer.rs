@@ -149,6 +149,18 @@ impl PauseData {
             config: config.clone(),
         }
     }
+
+    pub fn new_not_whitelisted_account_code_id(
+        env: &Env,
+        code_id: u64,
+        config: &RebalancerConfig,
+    ) -> Self {
+        Self {
+            pauser: env.contract.address.clone(),
+            reason: PauseReason::NotWhitelistedAccountCodeId(code_id),
+            config: config.clone(),
+        }
+    }
 }
 
 #[cw_serde]
@@ -156,12 +168,20 @@ pub enum PauseReason {
     /// This reason can only be called if the rebalancer is pausing the account because it
     /// has an empty balance.
     EmptyBalance,
+    NotWhitelistedAccountCodeId(u64),
     /// This reason is given by the user/account, he might forget why he paused the account
     /// this will remind him of it.
     AccountReason(String),
 }
 
 impl PauseReason {
+    pub fn should_pay_fee(&self) -> bool {
+        matches!(
+            self,
+            PauseReason::EmptyBalance | PauseReason::NotWhitelistedAccountCodeId(_)
+        )
+    }
+
     pub fn is_empty_balance(&self) -> bool {
         matches!(self, PauseReason::EmptyBalance)
     }
@@ -395,7 +415,7 @@ impl ServiceFeeConfig {
         let mut msgs: Vec<CosmosMsg> = Vec::with_capacity(1);
 
         if !self.resume_fee.is_zero() {
-            if !reason.is_empty_balance() {
+            if !reason.should_pay_fee() {
                 return Ok(msgs);
             }
 
