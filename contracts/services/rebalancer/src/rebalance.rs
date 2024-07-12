@@ -688,6 +688,7 @@ fn generate_trades_msgs(
                 if let Ok(msg) = construct_msg(deps, auction_manager.clone(), trade.clone()) {
                     max_sell -= token_sell.auction_min_send_value;
                     msgs.push(msg);
+                    trades.push(trade);
                 };
             }
         }
