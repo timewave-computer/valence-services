@@ -15,7 +15,7 @@ use valence_package::services::rebalancer::RebalancerConfig;
 use valence_package::states::{ACCOUNT_WHITELISTED_CODE_IDS, ADMIN};
 
 use crate::error::ContractError;
-use crate::helpers::{get_service_addr, save_service};
+use crate::helpers::{get_service_addr, save_service, verify_account_code_id};
 use crate::msg::{InstantiateMsg, MigrateMsg};
 use crate::state::{ADDR_TO_SERVICES, SERVICES_TO_ADDR};
 
@@ -56,15 +56,7 @@ pub fn execute(
             Ok(approve_admin_change(deps, &env, &info)?)
         }
         ServicesManagerExecuteMsg::RegisterToService { service_name, data } => {
-            let sender_code_id = deps
-                .querier
-                .query_wasm_contract_info(info.sender.clone())?
-                .code_id;
-            let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
-
-            if !whitelist.contains(&sender_code_id) {
-                return Err(ContractError::NotWhitelistedContract(sender_code_id));
-            }
+            verify_account_code_id(deps.as_ref(), &info.sender)?;
 
             let service_addr = get_service_addr(deps.as_ref(), service_name.to_string())?;
 
@@ -82,15 +74,7 @@ pub fn execute(
         ServicesManagerExecuteMsg::UpdateService { service_name, data } => {
             let service_addr = get_service_addr(deps.as_ref(), service_name.to_string())?;
 
-            let sender_code_id = deps
-                .querier
-                .query_wasm_contract_info(info.sender.clone())?
-                .code_id;
-            let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
-
-            if !whitelist.contains(&sender_code_id) {
-                return Err(ContractError::NotWhitelistedContract(sender_code_id));
-            }
+            verify_account_code_id(deps.as_ref(), &info.sender)?;
 
             let msg = service_name.get_update_msg(&info, service_addr.as_ref(), data)?;
 
@@ -113,15 +97,7 @@ pub fn execute(
         } => {
             let service_addr = get_service_addr(deps.as_ref(), service_name.to_string())?;
 
-            let sender_code_id = deps
-                .querier
-                .query_wasm_contract_info(resume_for.clone())?
-                .code_id;
-            let whitelist = ACCOUNT_WHITELISTED_CODE_IDS.load(deps.storage)?;
-
-            if !whitelist.contains(&sender_code_id) {
-                return Err(ContractError::NotWhitelistedContract(sender_code_id));
-            }
+            verify_account_code_id(deps.as_ref(), &resume_for)?;
 
             let msg = service_name.get_resume_msg(resume_for, &info, service_addr.as_ref())?;
 
