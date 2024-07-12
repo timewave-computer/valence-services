@@ -619,7 +619,7 @@ mod admin {
 
                 Ok(Response::default().add_event(event.into()))
             }
-            RebalancerAdminMsg::UpdateFess { fees } => {
+            RebalancerAdminMsg::UpdateFees { fees } => {
                 SERVICE_FEE_CONFIG.save(deps.storage, &fees)?;
 
                 let event = ValenceEvent::RebalancerUpdateFees { fees };

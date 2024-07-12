@@ -43,7 +43,7 @@ pub enum RebalancerAdminMsg {
     UpdateCyclePeriod {
         period: u64,
     },
-    UpdateFess {
+    UpdateFees {
         fees: ServiceFeeConfig,
     },
     StartAdminChange {
