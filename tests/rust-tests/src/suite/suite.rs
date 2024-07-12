@@ -346,7 +346,7 @@ impl Suite {
             self.admin.clone(),
             self.rebalancer_addr.clone(),
             &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
-                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFess { fees },
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFees { fees },
             ),
             &[],
         )
