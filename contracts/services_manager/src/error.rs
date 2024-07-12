@@ -22,7 +22,7 @@ pub enum ContractError {
     #[error("This services doesn't exists: {0}")]
     ServiceDoesntExist(String),
 
-    #[error("Contract is not allowed to register to services: {0}")]
+    #[error("Contract is not using a whitelisted account code id: {0}")]
     NotWhitelistedContract(u64),
 
     #[error("Code id doesn't exist in the whitelist and can't be removed: {0}")]

@@ -56,7 +56,6 @@ pub(crate) struct Suite {
 
     // code ids for future use
     pub account_code_id: u64,
-    pub rebalancer_code_id: u64,
 
     // astro
     pub astro_pools: HashMap<(String, String), Addr>,
@@ -449,6 +448,19 @@ impl Suite {
             },
             &[],
         )
+    }
+
+    pub fn update_config_err<C: serde::ser::Serialize>(
+        &mut self,
+        sender: Addr,
+        account_position: u64,
+        service_name: ValenceServices,
+        update_data: C,
+    ) -> services_manager::error::ContractError {
+        self.update_config(sender, account_position, service_name, update_data)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
     }
 
     pub fn deregister_from_service(

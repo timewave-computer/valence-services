@@ -68,7 +68,6 @@ impl SuiteBuilder {
                 whitelists.denom_whitelist[1].clone(),
             )),
             account_code_id: builder.account_code_id,
-            rebalancer_code_id: builder.rebalancer_code_id,
             astro_pools: HashMap::new(),
         }
     }
