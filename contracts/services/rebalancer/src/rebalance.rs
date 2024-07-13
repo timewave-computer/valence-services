@@ -137,6 +137,7 @@ pub fn execute_system_rebalance(
             )?;
             // remove from active configs
             CONFIGS.remove(deps.storage, account.clone());
+            continue;
         }
 
         // Do rebalance for the account, and construct the msg
