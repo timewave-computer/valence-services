@@ -1,6 +1,6 @@
 {
   "contract_name": "services-manager",
-  "contract_version": "0.1.0",
+  "contract_version": "0.1.5",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -485,6 +485,29 @@
         "additionalProperties": false
       },
       {
+        "type": "object",
+        "required": [
+          "is_account_code_id"
+        ],
+        "properties": {
+          "is_account_code_id": {
+            "type": "object",
+            "required": [
+              "code_id"
+            ],
+            "properties": {
+              "code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Get the address of a service",
         "type": "object",
         "required": [
@@ -673,6 +696,11 @@
           "type": "string"
         }
       }
+    },
+    "is_account_code_id": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Boolean",
+      "type": "boolean"
     },
     "is_service": {
       "$schema": "http://json-schema.org/draft-07/schema#",

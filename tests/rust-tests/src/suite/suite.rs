@@ -345,7 +345,7 @@ impl Suite {
             self.admin.clone(),
             self.rebalancer_addr.clone(),
             &valence_package::services::rebalancer::RebalancerExecuteMsg::<Empty, Empty>::Admin(
-                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFess { fees },
+                valence_package::services::rebalancer::RebalancerAdminMsg::UpdateFees { fees },
             ),
             &[],
         )
@@ -448,6 +448,19 @@ impl Suite {
             },
             &[],
         )
+    }
+
+    pub fn update_config_err<C: serde::ser::Serialize>(
+        &mut self,
+        sender: Addr,
+        account_position: u64,
+        service_name: ValenceServices,
+        update_data: C,
+    ) -> services_manager::error::ContractError {
+        self.update_config(sender, account_position, service_name, update_data)
+            .unwrap_err()
+            .downcast()
+            .unwrap()
     }
 
     pub fn deregister_from_service(

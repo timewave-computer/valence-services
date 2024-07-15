@@ -13,6 +13,7 @@ use valence_package::services::{
 };
 
 use crate::suite::{
+    contracts::account_contract,
     suite::{Suite, ATOM, NTRN, TRUSTEE},
     suite_builder::SuiteBuilder,
 };
@@ -504,7 +505,7 @@ fn test_account_balance_limit() {
         .query_rebalancer_paused_config(account_addr_3.clone())
         .unwrap();
 
-    // Try to resuem without enough balance
+    // Try to resume without enough balance
     let err = suite.resume_service_err(account_position_2, ValenceServices::Rebalancer);
     assert_eq!(
         err,
@@ -753,5 +754,64 @@ fn test_fee_withdraw() {
     assert_eq!(
         admin_new_balance.amount,
         admin_initial_balance.amount + Uint128::new(100_u128)
+    );
+}
+
+#[test]
+fn test_not_whitelisted_account_after_register() {
+    let mut suite = Suite::default();
+
+    let account_addr = suite.account_addrs[0].clone();
+
+    let non_whitelisted_account_code_id = suite.app.store_code(account_contract());
+
+    // migrate the account to rebalancer code id (not a whitelisted account code id)
+    suite
+        .app
+        .migrate_contract(
+            suite.owner.clone(),
+            account_addr.clone(),
+            &valence_account::msg::MigrateMsg::NoStateChange {},
+            non_whitelisted_account_code_id,
+        )
+        .unwrap();
+
+    // Try to update config when the account code id is not whitelisted
+    let mock_rebalancer_data = SuiteBuilder::get_default_rebalancer_register_data();
+
+    let err = suite.update_config_err(
+        suite.owner.clone(),
+        0,
+        ValenceServices::Rebalancer,
+        mock_rebalancer_data,
+    );
+
+    assert_eq!(
+        err,
+        services_manager::error::ContractError::NotWhitelistedContract(
+            non_whitelisted_account_code_id
+        )
+    );
+
+    suite.rebalance(None).unwrap();
+
+    // Make sure the account is paused with the correct issue
+    let paused_config = suite.query_rebalancer_paused_config(account_addr).unwrap();
+    assert_eq!(
+        paused_config.reason,
+        PauseReason::NotWhitelistedAccountCodeId(non_whitelisted_account_code_id)
+    );
+
+    // try to resume the account
+    let err = suite
+        .resume_service(0, ValenceServices::Rebalancer)
+        .unwrap_err()
+        .downcast::<services_manager::error::ContractError>()
+        .unwrap();
+    assert_eq!(
+        err,
+        services_manager::error::ContractError::NotWhitelistedContract(
+            non_whitelisted_account_code_id
+        )
     );
 }

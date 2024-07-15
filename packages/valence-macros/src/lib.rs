@@ -173,6 +173,10 @@ pub fn valence_services_manager_query_msgs(
         IsService {
             addr: String,
         },
+        #[returns(bool)]
+        IsAccountCodeId {
+            code_id: u64,
+        },
         /// Get the address of a service
         #[returns(Addr)]
         GetServiceAddr {

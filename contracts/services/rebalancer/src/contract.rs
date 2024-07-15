@@ -619,7 +619,7 @@ mod admin {
 
                 Ok(Response::default().add_event(event.into()))
             }
-            RebalancerAdminMsg::UpdateFess { fees } => {
+            RebalancerAdminMsg::UpdateFees { fees } => {
                 SERVICE_FEE_CONFIG.save(deps.storage, &fees)?;
 
                 let event = ValenceEvent::RebalancerUpdateFees { fees };
@@ -681,6 +681,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
                     match paused_config.reason {
                         valence_package::services::rebalancer::PauseReason::EmptyBalance => {
+                            fees.resume_fee
+                        }
+                        valence_package::services::rebalancer::PauseReason::NotWhitelistedAccountCodeId(_) => {
                             fees.resume_fee
                         }
                         valence_package::services::rebalancer::PauseReason::AccountReason(_) => {

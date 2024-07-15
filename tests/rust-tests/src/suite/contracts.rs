@@ -7,7 +7,8 @@ pub fn account_contract() -> Box<dyn Contract<Empty>> {
         valence_account::contract::instantiate,
         valence_account::contract::query,
     )
-    .with_reply(valence_account::contract::reply);
+    .with_reply(valence_account::contract::reply)
+    .with_migrate(valence_account::contract::migrate);
     Box::new(contract)
 }
 
@@ -26,7 +27,8 @@ pub fn rebalancer_contract() -> Box<dyn Contract<Empty>> {
         rebalancer::contract::instantiate,
         rebalancer::contract::query,
     )
-    .with_reply(rebalancer::contract::reply);
+    .with_reply(rebalancer::contract::reply)
+    .with_migrate(rebalancer::contract::migrate);
     Box::new(contract)
 }
 
