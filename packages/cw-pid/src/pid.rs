@@ -1,5 +1,6 @@
 use cosmwasm_std::SignedDecimal;
 use serde::{Serialize, Deserialize};
+use wasm_bindgen::JsValue;
 
 #[derive(Serialize, Deserialize)]
 pub struct PID {
@@ -34,13 +35,15 @@ pub struct Input {
     last_input: SignedDecimal,
 }
 
+
 #[derive(Serialize, Deserialize)]
 pub struct Output {
     value: SignedDecimal,
     i: SignedDecimal,
 }
 
-pub fn pid(input: Input) -> Output {
+pub fn pid(input_js: JsValue) -> Output {
+    let input: Input = serde_wasm_bindgen::from_value(input_js).unwrap();
     let pid = input.pid.into_signed_decimal();
     let error = input.target - input.input;
 
