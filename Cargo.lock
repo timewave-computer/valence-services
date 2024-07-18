@@ -488,6 +488,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-pid"
+version = "0.1.5"
+dependencies = [
+ "cosmwasm-std",
+]
+
+[[package]]
 name = "cw-storage-plus"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
