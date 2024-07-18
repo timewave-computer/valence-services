@@ -7,4 +7,5 @@ description = "Package for valence set of contracts"
 license     = { workspace = true }
 
 [dependencies]
-cosmwasm-std    = { workspace = true }
+cosmwasm-std = { workspace = true }
+serde        = { workspace = true }

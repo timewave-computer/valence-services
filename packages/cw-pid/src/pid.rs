@@ -1,5 +1,7 @@
 use cosmwasm_std::SignedDecimal;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct PID {
     p: u32,
     i: u32,
@@ -22,6 +24,7 @@ pub struct SignedPID {
     d: SignedDecimal,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Input {
     pid: PID,
     input: SignedDecimal,
@@ -31,6 +34,7 @@ pub struct Input {
     last_input: SignedDecimal,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Output {
     value: SignedDecimal,
     i: SignedDecimal,
