@@ -3,10 +3,10 @@ use std::{collections::HashSet, str::FromStr};
 use auction_package::Pair;
 use cosmwasm_std::{Decimal, Event, Uint128};
 
-use valence_package::services::rebalancer::PID;
+use valence_package::services::rebalancer::{Target, PID};
 
 use crate::suite::{
-    suite::{Suite, ATOM, NTRN},
+    suite::{Suite, ATOM, NTRN, OSMO},
     suite_builder::SuiteBuilder,
 };
 
@@ -137,4 +137,34 @@ fn test_targets_saved_after_rebalance() {
         .query_rebalancer_config(suite.account_addrs.first().unwrap().clone())
         .unwrap();
     assert!(config.targets[0].last_input.is_some());
+}
+
+#[test]
+fn test_base_denom_not_in_target_list() {
+    let mut config = SuiteBuilder::get_default_rebalancer_register_data();
+    let mut new_targets = HashSet::with_capacity(2);
+
+    new_targets.insert(Target {
+        denom: ATOM.to_string(),
+        bps: 7500,
+        min_balance: None,
+    });
+
+    new_targets.insert(Target {
+        denom: OSMO.to_string(),
+        bps: 2500,
+        min_balance: None,
+    });
+
+    config.base_denom = NTRN.to_string();
+
+    config.targets = new_targets;
+
+    // Register with the config where the base denom is whitelisted but not in target list
+    let mut suite = SuiteBuilder::default()
+        .with_rebalancer_data(vec![config])
+        .build_default();
+
+    // Do a rebalance just to make sure that it doesn't panic
+    suite.rebalance(None).unwrap();
 }

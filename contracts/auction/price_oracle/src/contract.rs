@@ -21,6 +21,8 @@ use crate::state::{Config, PriceStep, ASTRO_PRICE_PATHS, CONFIG};
 const CONTRACT_NAME: &str = "crates.io:oracle";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+const TEN_DAYS: u64 = 60 * 60 * 24 * 10;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -71,7 +73,7 @@ pub fn execute(
 
             let price = if can_update_price_from_auction(&config, &env, &twap_prices) {
                 source = "auction";
-                get_avg_price(twap_prices)
+                get_weighted_avg_price(twap_prices, &env)
             } else {
                 let steps = ASTRO_PRICE_PATHS
                     .load(deps.storage, pair.clone())
@@ -248,14 +250,32 @@ fn can_update_price_from_auction(
     true
 }
 
-fn get_avg_price(vec: VecDeque<Price>) -> Price {
-    let (total_count, prices_sum) = vec.iter().fold(
+/// Calculate the weighted average price of the last 10 days
+/// Each day weight is reduced by 1, so yesterdays price would be 9, the day before 8, etc.
+/// Giving more value to the most recent prices
+fn get_weighted_avg_price(vec: VecDeque<Price>, env: &Env) -> Price {
+    let (total_weight_count, prices_sum) = vec.iter().fold(
         (Decimal::zero(), Decimal::zero()),
-        |(total_count, prices_sum), price| (total_count + Decimal::one(), prices_sum + price.price),
+        |(total_weight_count, prices_sum), price| {
+            // If the price is older than 10 days, we don't consider it
+            if price.time.seconds() + TEN_DAYS <= env.block.time.seconds() {
+                return (total_weight_count, prices_sum);
+            }
+
+            let weight = Decimal::from_ratio(
+                TEN_DAYS - (env.block.time.seconds() - price.time.seconds()),
+                1_u64,
+            );
+
+            (
+                total_weight_count + weight,
+                prices_sum + (price.price * weight),
+            )
+        },
     );
 
     Price {
-        price: prices_sum / total_count,
+        price: prices_sum / total_weight_count,
         time: vec[0].time,
     }
 }
@@ -337,5 +357,77 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     match msg {
         MigrateMsg::NoStateChange {} => Ok(Response::default()),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::VecDeque;
+
+    use auction_package::Price;
+    use cosmwasm_std::{testing::mock_env, Decimal};
+
+    #[test]
+    fn test_avg_price() {
+        let env = mock_env();
+
+        let mut prices = VecDeque::new();
+        // yesterday price was 1
+        prices.push_back(Price {
+            price: Decimal::from_ratio(1_u64, 1_u64),
+            time: env.block.time.minus_days(1),
+        });
+        // 2 days ago, price was 0.5
+        prices.push_back(Price {
+            price: Decimal::from_ratio(5_u64, 10_u64),
+            time: env.block.time.minus_days(2),
+        });
+        // weighted avg price should be more then 0.75
+        let avg_price = super::get_weighted_avg_price(prices, &env);
+        assert!(avg_price.price > Decimal::from_ratio(75_u64, 100_u64));
+
+        // Save as above, but the 2nd price is way older
+        prices = VecDeque::new();
+        // yesterday price was 1
+        prices.push_back(Price {
+            price: Decimal::from_ratio(1_u64, 1_u64),
+            time: env.block.time.minus_days(1),
+        });
+        // 9 days ago, price was 0.5
+        prices.push_back(Price {
+            price: Decimal::from_ratio(5_u64, 10_u64),
+            time: env.block.time.minus_days(9),
+        });
+        // weighted avg price should be more then 0.9,
+        let avg_price = super::get_weighted_avg_price(prices, &env);
+        assert!(avg_price.price > Decimal::from_ratio(9_u64, 10_u64));
+
+        // Save as above, but the 2nd price is way older
+        prices = VecDeque::new();
+        // yesterday price was 1
+        prices.push_back(Price {
+            price: Decimal::from_ratio(1_u64, 1_u64),
+            time: env.block.time.minus_days(1),
+        });
+        // 5 days ago, price was 0.5
+        prices.push_back(Price {
+            price: Decimal::from_ratio(5_u64, 10_u64),
+            time: env.block.time.minus_days(5),
+        });
+
+        // The weighted avg so far would be above 0.75 (which is the normal avg)
+        let avg_price = super::get_weighted_avg_price(prices.clone(), &env);
+        assert!(avg_price.price > Decimal::from_ratio(75_u64, 100_u64));
+
+        // 9 days ago, price was 2
+        prices.push_back(Price {
+            price: Decimal::from_ratio(2_u64, 1_u64),
+            time: env.block.time.minus_days(9),
+        });
+
+        // regular avg price should be 1.166
+        // but the weighted avg would be 0.9
+        let avg_price = super::get_weighted_avg_price(prices, &env);
+        assert!(avg_price.price >= Decimal::from_ratio(9_u64, 10_u64));
     }
 }

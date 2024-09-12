@@ -30,7 +30,7 @@ use crate::{
 use super::types::Balances;
 
 const ACCOUNT_ADDR: &str = "neutron1yd27kgnsjkeddwtuy29q9yzrnd247v6hcml6swl54dfkcwuuytqs8ha94x";
-const HEIGHT: &str = "";
+const HEIGHT: &str = "a";
 
 #[ignore = "For debugging mainnet data"]
 #[test]
@@ -38,6 +38,8 @@ fn live_debugging() {
     // If we have specifig height, query by that height
     let mut height_arg = vec![];
     let mut block_height = vec![];
+
+    #[allow(clippy::const_is_empty)]
     if !HEIGHT.is_empty() {
         height_arg = vec!["--height", HEIGHT];
         block_height = vec![HEIGHT];
