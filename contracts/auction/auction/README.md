@@ -1,14 +1,14 @@
 # Auction contract
 
-This is a Dutch auction contract of a pair `(TOKEN_1, TOKEN_2)`, where the sold token is always `TOKEN_1` and bought token is always `TOKEN_2`.
+This is a Dutch auction contract of a pair `(TOKEN_1, TOKEN_2)`, where the token sold in the auction is always `TOKEN_1` and bids are accepted in `TOKEN_2`.
 
 ## Dutch auction
 
-In Dutch auctions we start the auction with a high price and lower it until the auction ends. The price is lowered by a fixed amount every block, based on the strategy of the auction.
+Dutch auctions descend in price. We start the auction with a high price and lower it until the auction ends. The price is lowered by a fixed amount every block, based on the strategy of the auction.
 
-Market makers are allowed to bid in the auction based on their preferred price. Bids are resolved immediately, as long as there is `TOKEN_1` to be sold.
+Market makers may include their bids in a block based on their preferred price. Bids are resolved immediately, as long as there is `TOKEN_1` still available.
 
-The auction is finished when either the last block of the auction has been reached, or all `TOKEN_1` has been sold, whichever comes first.
+The auction completes when either the last block of the auction has been reached, or all `TOKEN_1` has been sold, whichever comes first.
 
 ## Auction life cycle
 
@@ -43,12 +43,11 @@ The auction strategy is used to calculate the starting price and end price of th
 
 `end_price_perc` is how much percentage (IN BPS) to reduce from the fair price to make the end price.
 
-Ex:
-Let say our price is `2`, and we set `start_price_perc` to 2000 BPS (20%) and `end_price_perc` to 2000 BPS (20%).
-
+> **Example:**
+> Let's say our price is `2`, and we set `start_price_perc` to 2000 BPS (20%) and `end_price_perc` to 2000 BPS (20%).
 The starting price will be `2 + (2 * 20%) = 2.4` and the end price will be `2 - (2 * 20%) = 1.6`.
 
-## Executables
+## Execute Nessages
 
 `AuctionFunds {}` - Send funds to be auctioned during the next auction.
 
@@ -56,17 +55,17 @@ The starting price will be `2 + (2 * 20%) = 2.4` and the end price will be `2 - 
 
 `Bid {}` - Bid in the active auction. The bid is resolved immediately.
 
-### Doing a bid
+### Bidding in an Auction
 
-First, we need to know the price of the auction before bidding. 2 queries are available:
+There are two useful queries for bidders:
 
-1. `GetPrice` - This gives us the current price of the auction.
-2. `GetAuction` - This gives us the auction `start_price`, `end_price`, `start_block`, `end_block`, which allows us to calculate the price decrease per block, and get the price in any future block. 
+1. `GetPrice` - This gives us the current price of the auction given the current block.
+2. `GetAuction` - This gives us the auction `start_price`, `end_price`, `start_block`, `end_block`, which allows us to calculate the price decrease per block, and determine the price in any future block. 
 
-Once we know the price and want to bid on that price, we execute the `bid {}` message on the auction contract, and provide the amount of `TOKEN_2` we want to buy with. Any leftovers will be returned to the bidder.
+Once a bidder deteremines the price they want to bid at and correspondingly the block to include their bid in, they are ready to bid. They can execute the `bid {}` message on the auction contract, and include the amount of `TOKEN_2` they want to bid with. If the bid succeeds, `TOKEN_1` is remitted to the bidder immediately according to the auction price. Any overage of `TOKEN_2` will be returned to the bidder as well.
 
 ### Selling funds
-One can send their funds to be auctioned by executing `AuctionFunds {}`. Be mindful of the start price, current price, and end price of the auction, as the effective price will depend on which block a bid is executed.
+Sellers can send their funds to be auctioned by executing `AuctionFunds {}` and including `TOKEN_1`.
 
 ### Auction management
 
@@ -112,9 +111,9 @@ We give some spare time of freshness to reflect any possible factors like starti
 
 The price range of the auction is directly influenced by the price freshness. The older the price, the bigger the range.
 
-Ex:
-Price is older than 1 day old, we multiple the strategy by 1.5, so if the strategy is to start at 20% above the price, we start at 30% above the price.
-Price is older than 2 days old, we multiple the strategy by 2, so if the strategy is to start at 20% above the price, we start at 40% above the price.
+> **Example:**
+> Price is older than 1 day old, we multiple the strategy by 1.5, so if the strategy is to start at 20% above the price, we start at 30% above the price.
+> Price is older than 2 days old, we multiple the strategy by 2, so if the strategy is to start at 20% above the price, we start at 40% above the price.
 
 Up to a maximum of 75% increase in the starting price.
 
