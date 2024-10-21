@@ -47,7 +47,7 @@ The auction strategy is used to calculate the starting price and end price of th
 > Let's say our price is `2`, and we set `start_price_perc` to 2000 BPS (20%) and `end_price_perc` to 2000 BPS (20%).
 The starting price will be `2 + (2 * 20%) = 2.4` and the end price will be `2 - (2 * 20%) = 1.6`.
 
-## Execute Nessages
+## Execute Messages
 
 `AuctionFunds {}` - Send funds to be auctioned during the next auction.
 
