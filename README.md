@@ -1,7 +1,7 @@
 # Valence Services
-![Rebalancer](https://www.valence.zone/img/rebalancer.svg)
+> ⚠️ This project is no longer actively maintained. If you have have funds in the Rebalancer, please see the bottom of this README for instructions on withdrawal. The rest of this repository is left as is for reference.
 
-Valence Services houses the code for the [Valence Rebalancer](https://www.valence.zone/rebalancer). The Rebalancer enables automated balance sheet and treasury management. Use the Rebalancer to efficiently convert tokens for scheduled payments or manage your digital organization’s asset portfolio. The Rebalancer is custom-built to address the needs of blockchains, protocols, and decentralized autonomous organizations. 
+The Rebalancer enables automated balance sheet and treasury management. Use the Rebalancer to efficiently convert tokens for scheduled payments or manage your digital organization’s asset portfolio. The Rebalancer is custom-built to address the needs of blockchains, protocols, and decentralized autonomous organizations. 
 
 Learn more about the Rebalancer [here](https://www.valence.zone/blog/Rebalancer-Protocol-Asset-Management).
 
@@ -90,3 +90,73 @@ If you believe you've found a security-related issue with the contracts associat
 ## License
 
 All materials in this repository are licensed under [BSL](./LICENSE).
+
+## Withdraw funds from the Rebalancer without the UI
+
+To withdraw assets from the Rebalancer without the UI
+### 1. Find the Valence smart contract account associated with your wallet. 
+
+<details>
+  <summary>Accounts list</summary>
+  
+| Valence Account  | Wallet/DAO Address |
+|------------------|---------------|
+| `neutron12afgur80kf3s45r22uwmx8a4fgpdg78pgdlxsj267tugm9pdp5csutssrp` | `neutron1hhpggzq6a38max92da5j2w40mrt0rwz6nt3x5u` |
+| `neutron13pvwjc3ctlv53u9c543h6la8e2cupkwcahe5ujccdc4nwfgann7ss0xynz` | `neutron180fak0g68gfjs42lsgnp8ptfamq7ysc820tm3pxawswx0zqkv85smp2z59` |
+| `neutron173hvzyja4447jlqkkvjdejjwlwk9eaam27q2psm3evy70f7z34pq5247np` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron1e5smuf8r5xzpfdgem2p8z52wfw97pl2lj4679es9u9d6hv5552eq6ghewc` | `neutron1lqhw66n563pr2vszv4zqhjp7akwpd74vfj5gukh2crw45t5kfmvsa96ujv` |
+| `neutron1hr8r6fjaxeskedhzk0af7f06fsgkcm2sqy8c627rl7y7efq9sazqgemn0c` | `neutron1sxfdv7w9rvdhhtzf22pwg5ue4sha562hf2h0m8zxdxye0d9whwvsqxnzh7` |
+| `neutron1k0s4wlxgzglj4q7d7q5pal0y5plwkzgxwtw5kus7y8zksflpkldsejszkc` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron1phz37ak3zxmj9gpz9qsyvl8sntkdtllnp992jgqyfhxr4gyp8rcsfccjus` | `neutron1wa23amy9vpt9qavhsurg044vyghpakse6jdz6lkyg2lmjhuplelqtvfnjz` |
+| `neutron1pp8yswp0qufxagdff3xapte08hxe6y72k7c5len6e7fz5djgncks2deguy` | `neutron1sap0cdw8jsdy79c8947z2qjeeh9w5dgmza6gvnqkc4p8889su8lq395jnn` |
+| `neutron1pwml2hk6j45agal89te9vkm4q8k7txllec0c6ypc9mwdznqy848sn60w73` | `neutron10ktvxsnxzmz9fpxq2cwf2zdy8fclzlc0rczscljl0484ga5gnmgsvl4na5` |
+| `neutron1qkf4cnt0e6lgvdyg5lfrf274zlsrv553mmrmgrq4yyep2r0jpa9s46jlt3` | `neutron15p3a5qm9jc0yuukcphgln2mk4yh2aqqr0g4y5adzupmrdlg8xewsskrj49` |
+| `neutron1yd27kgnsjkeddwtuy29q9yzrnd247v6hcml6swl54dfkcwuuytqs8ha94x` | `neutron1v7ntl4lfmr4eusqhfw3gwx9rwj3ap5g3e5x8gey7xlsftnusl74qkex332` |
+| `neutron1yq30m0c6vuq666uc3xv5q0re9cvfprg7tsatrhzcx63sqj7vq62qpt4qx7` | `neutron1cm9ckhh8839tpwvpqqqsdvvra32z5p8w97trje` |
+| `neutron12f9yu8xf8j9hwhnd205suufuz3g64dgyfj348nt2pj4m6s5hhcxqmfcrg5` | `neutron1ckwz27dr3qhn2uegkvdkvw26wl5sslp7303axx` |
+| `neutron12kqnluj54h0suutyegt2trwx95xsejsxkpcl2qv0ydsnvq22fdus60589s` | `neutron1jek9anexgx76e9j429crjawanl0gxwu7j4zf29al8662mygeynpq0ydfw5` |
+| `neutron12trh6edcs88j5265ugkpprqnpsctpsd3u29w69ye9gseghauuj7ssyfh5m` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron13m6jlu54p2eycz89xh23l3lqxyykrnff0t9sfyw7pyzm2czut6es9pammv` | `neutron1vf2g5yc3d2k757qkuccpl787020wretfe9lenm` |
+| `neutron14m6pmlcw70s0stqzaxfktq0jl73xnj43tngc3p4ss7f4strf530q2jkevt` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron17vkk95rdepxflvm7dpjpdsl8xh697paltdgwl5flck9f4wuxd0kqtauj49` | `neutron19v2mmxeev53uxrxnq86d929ws4rw3ev86g5n9s` |
+| `neutron19nd99fe02ktl8fz32mhqnpq7fgnejdccjv24ejr68gl5ed3d472qypzqnf` | `neutron1d8c92vzp5lxgvaxhl34c2hv5uvtjc08tl4epz3efyyxgt4zwdc5qvtnefx` |
+| `neutron1adl9puhcdqwpm9smljsye3uz22wlsa0mfvkz3vzdkl722mdfpqms97ywhr` | `neutron1xct7ff53e554rpt0x7dt7meqjupmrx8c9na8tzrvj475gcxcfpysjf8vnd` |
+| `neutron1d0sr3zh8sqa86vhgdpclh9g2zfdw4hauwtyaqa39mq79ehkjd3fqcp8k85` | `neutron1a8ahlylac8kqrkgdfnynmdsu9dvclrdrdgznpl` |
+| `neutron1ekacf890uzenyhnxpttlunmp44cupqz6l2j72vtq5xa60zsz6tpsxekq40` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron1fzac93v0f7vpqqevpyc3d4jg6dtcvk27zsgpdzppvtd9y9pmnwdsw2vxns` | `neutron15cwfpelqcgzpzaq2q85pglqyljm6ulu54xjgdl` |
+| `neutron1glutzh6mcmxne8n8ntmgye3tzmejapxcmv23zwpd5hdsrtuva77syx539q` | `neutron13s5agflvjpv3gyjvyfzunnlql40ekfslmu3v2l` |
+| `neutron1n4zq32dup5g9ltzgcugr3m2ejcmgyxna0068t6209sl7fs3w7z4qqtvtmw` | `neutron100t2cl9f8880ffa5khgn742f7ful08yefnynv6` |
+| `neutron1pkk88zqjd478x3maws3mv7qugylhsu0sjkejj3k2w02wwhp6fqgsl7m0js` | `neutron1phx0sz708k3t6xdnyc98hgkyhra4tp44et5s68` |
+| `neutron1taxegcvyuxrvucrk9k5w055xswn8gchefrfk3plggpl8yq8dktuser2475` | `neutron1ep2umj6kn34g2ttjalsc5r9w8pt7sv4xpaxzsa` |
+| `neutron1vw0zuapgkpnq49ffyvkt4s4chy9lnf78s2ezuwwvd95lq065fpes277xkt` | `neutron17k6l4snzahlyy074f64tpynmuvsj8z33ky7vnqcfhjvyluev7yqsexhcde` |
+| `neutron1wcv0c8ktmjgtj0a5dt6zdteer2nsyawqtnm5kxt7su5063dudz8qasjl97` | `neutron1flwfk39vstue66h8ljm3x5lvc8pe0y7sl7kqmj2es4r7jh5et7qq0efexk` |
+| `neutron1y43le75tp3wf8l92szhmmxrxt863sqc5mxfllgrr72h5xn0f0euqrugv6c` | `neutron199srlulg9ztpdu7p6w7umnx8k3hqnyj2rtnwpl` |
+</details>
+
+
+### 2. Execute the following message on the Valence smart contract account from your wallet. 
+
+You can use celatone. Or if you used DAO DAO initially to create your Valence account, then you can propose a smart contract execute message as an action on the Valence account.
+
+```json
+{
+  "execute_by_admin": {
+    "msgs": [
+      {
+        "bank": {
+          "send": {
+            "to_address": "your ntrn address",
+            "amount": [
+              {
+                "denom": "denom as string(e.g., untrn or ibc/xyz)",
+                "amount": "amount as string"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+```
+
+
